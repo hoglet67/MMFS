@@ -49,6 +49,7 @@ PAGE=MA+&10CF
 RAMBufferSize=MA+&10D0			; HIMEM-PAGE
 ForceReset=MA+&10D3
 TubePresentIf0=MA+&10D6
+CardSort=MA+&10D7
 
 buf%=MA+&E00
 cat%=MA+&E00
@@ -90,7 +91,7 @@ ENDIF
 .title
 	EQUS "MMFS",0
 .version
-	EQUS "1.01",0
+	EQUS "1.02",0
 .copyright
 	EQUS "(C)2011 Mather",0
 	EQUB _DEVICE_

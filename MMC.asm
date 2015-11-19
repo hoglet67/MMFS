@@ -11,8 +11,6 @@ set_blklen=&50
 read_single_block=&51
 write_block=&58
 
-cardsort%=&80
-
 	\\ **** Reset MMC Command Sequence ****
 	\\ A=cmd, token=&FF
 .MMC_SetCommand
@@ -60,7 +58,7 @@ attempts%=&C2
 	JMP ifail
 .il0
 	LDA #&01
-	STA cardsort%
+	STA CardSort
 	LDA #&48
 	JSR MMC_SetCommand
 	LDA #&01
@@ -74,7 +72,7 @@ attempts%=&C2
 	BEQ isdhc
 
 	LDA #&02
-	STA cardsort%
+	STA CardSort
 .il1
 	\\ CMD1
 	LDA #send_op_cond
@@ -89,7 +87,7 @@ attempts%=&C2
 	CMP #0
 	BNE il1
 	LDA #&02
-	STA cardsort%
+	STA CardSort
 	JMP iok
 
 .isdhc
@@ -122,7 +120,7 @@ attempts%=&C2
 	PLA
 	BNE iok
 	LDA #2
-	STA cardsort%
+	STA CardSort
 
 	\\ Set blklen=512
 .iok
@@ -646,7 +644,7 @@ read16str%=MA+&1000
 .setCommandAddress
 {
 \\ Skip multiply for SDHC cards (cardsort = 01)
-	LDA cardsort%
+	LDA CardSort
 	CMP #2
 	BNE setCommandAddressSDHC
 \\ Convert to bytes by multiplying by 256
@@ -679,7 +677,7 @@ read16str%=MA+&1000
 
 .incCommandAddress
 {
-	LDA cardsort%
+	LDA CardSort
 	CMP #2
 	BNE incCommandAddressSDHC
 \\ Add 512 to address (Sector always even)
