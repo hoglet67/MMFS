@@ -91,7 +91,7 @@ ENDIF
 .title
 	EQUS "MMFS",0
 .version
-	EQUS "1.02",0
+	EQUS "1.04",0
 .copyright
 	EQUS "(C)2011 Mather",0
 	EQUB _DEVICE_
@@ -2615,7 +2615,7 @@ ENDIF
 	CMP #&0B
 IF _MASTER_
 	BCC label4
-	CMP #&26
+	CMP #&28
 	BCS SERVICE_NULL
 	CMP #&21
 	BCC SERVICE_NULL
@@ -2672,6 +2672,9 @@ IF _MASTER_
 	EQUW SERVICE_NULL-1		; 23
 	EQUW SERVICE24_RequiredPWS-1	; 24
 	EQUW SERVICE25_fs_info-1	; 25
+	EQUW SERVICE_NULL-1		; 26
+	EQUW SERVICE27_Reset-1		; 27
+
 ENDIF
 
 
@@ -2942,6 +2945,30 @@ IF _MASTER_
 	EQUB filehndl%+1
 	EQUS "    SFMM"
 }
+
+.SERVICE27_Reset
+{
+	PHA
+	TXA
+	PHA
+	TYA
+	PHA
+	LDA #&FD
+	LDX #&00
+	LDY #&FF
+	JSR OSBYTE
+	CPX #$01
+	BNE srv27_notpowerup
+	\ If this is not done, you get a Bad Sum error with autoboot on power on
+	JSR VIDRESET
+.srv27_notpowerup
+	PLA
+	TAY
+	PLA
+	TAX
+	PLA
+	RTS 
+}		
 ENDIF	; End of MASTER ONLY service calls
 
 	\ Test if MMFS by checking first file handle
