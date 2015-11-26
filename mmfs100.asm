@@ -91,7 +91,7 @@ ENDIF
 .title
 	EQUS "MMFS",0
 .version
-	EQUS "1.04",0
+	EQUS "1.05",0
 .copyright
 	EQUS "(C)2011 Mather",0
 	EQUB _DEVICE_
@@ -2957,11 +2957,11 @@ IF _MASTER_
 	LDX #&00
 	LDY #&FF
 	JSR OSBYTE
-	CPX #$01
-	BNE srv27_notpowerup
+	CPX #$00
+	BEQ srv27_softbreak
 	\ If this is not done, you get a Bad Sum error with autoboot on power on
 	JSR VIDRESET
-.srv27_notpowerup
+.srv27_softbreak
 	PLA
 	TAY
 	PLA
