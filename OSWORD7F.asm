@@ -67,6 +67,8 @@ Rfault=&FF
 	STA owfdcop%
 	CMP #&53			; read
 	BEQ owrw
+	CMP #&57			; read deleted data
+	BEQ owrw
 	CMP #&4B			; write
 	BNE owuknown
 
