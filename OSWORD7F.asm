@@ -23,7 +23,6 @@ Rfault=&FF
 	LDA (owbptr%),Y
 	BMI ownoreset
 	JSR SetCurrentDrive_Adrive
-	JSR MMC_BEGIN2
 
 .ownoreset
 	\ Copy buffer address to &BC-&BD;&1074-&1075
@@ -141,6 +140,8 @@ Rfault=&FF
 
 	\\ Get mmc addr of 1st sector
 .owsk3
+	JSR MMC_BEGIN2
+        
 	LDX CurrentDrv
 	JSR DiskStartX
 
