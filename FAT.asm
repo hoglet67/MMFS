@@ -111,9 +111,29 @@ fatclustsize%=&C3	; byte
 	INC sec%+2
 .skipinc1
 
+	\\ &11-&12  Number of root directory entries (224)
+	\\		  0 for FAT32. 512 is recommended for FAT16.
+	LDA cat%+&11
+	ORA cat%+&12
+	BEQ fat32
+	\\ Make FAT16 look like FAT32
+	\\ &16-&17 Sectors per FAT for FAT16
+	\\ &24-&27 Sectors per FAT for FAT32
+	LDA cat%+&16
+	STA cat%+&24
+	LDA cat%+&17
+	STA cat%+&25
+	LDA #0
+	STA cat%+&26
+	STA cat%+&27
+.fat32
+
 	\\ fat size = fat sectors * 2
-	ASL cat%+&16
-	ROL cat%+&17
+
+	ASL cat%+&24
+	ROL cat%+&25
+	ROL cat%+&26
+	ROL cat%+&27
 	BCS faterr1
 
 	\\ sec = sec + fat copies * fat size
@@ -121,14 +141,14 @@ fatclustsize%=&C3	; byte
 .loop
 	CLC
 	LDA sec%
-	ADC cat%+&16
+	ADC cat%+&24
 	STA sec%
 	LDA sec%+1
-	ADC cat%+&17
+	ADC cat%+&25
 	STA sec%+1
-	BCC skipinc2
-	INC sec%+2
-.skipinc2
+	LDA sec%+2
+	ADC cat%+&26
+	STA sec%+2
 	DEX
 	BNE loop
 	JMP MMC_ReadCatalogue		; Root Dir
