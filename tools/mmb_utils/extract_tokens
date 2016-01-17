@@ -1,0 +1,24 @@
+#!/usr/bin/perl
+
+$ROM="basic2.rom";
+$START=0x071;
+$END=0x36c;
+
+open(F,"<$ROM") or die "$ROM: $!\n";
+
+$cmd="";
+seek F,$START,0;
+while (tell(F)<=$END)
+{
+  $ch=getc(F);
+  if (ord($ch) < 128)
+  {
+    $cmd .="$ch";
+  }
+  else
+  {
+    my $flag=getc(F);
+    printf("  %d => ['%s',0x%02X],\n",ord($ch),$cmd,ord($flag));
+    $cmd="";
+  }
+}

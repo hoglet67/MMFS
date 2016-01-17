@@ -1,0 +1,71 @@
+#!/usr/bin/perl -w
+use strict;
+
+use FindBin;
+# Simple wrapper so you can do "beeb dcat" or similar.  In this
+# way you just need to symlink this "beeb" program into your PATH
+# (eg $HOME/bin) and that's it.
+
+my $INSTALL_DIR="";
+
+# Set this one variable if the program can't work out the symlink
+# target properly!
+# $INSTALL_DIR="/where/you/installed/the/program";
+
+my $prog=$0; $prog=~s!^.*/!!;
+
+if (!$INSTALL_DIR)
+{
+  $INSTALL_DIR=$FindBin::Bin;
+  my $prog2=$INSTALL_DIR . "/$prog";
+  die "Can not find myself in $INSTALL_DIR\n" unless -x $prog2;
+  if ( -l $prog2 )
+  {
+    $INSTALL_DIR=readlink $prog2;
+    $INSTALL_DIR=~s!/[^/]*$!!;
+  }
+  $prog2=$INSTALL_DIR . "/$prog";
+  die "Can not find myself in $INSTALL_DIR\n" unless -x $prog2;
+}
+
+my %all_cmds;
+map { s!^.*/!!; s/\.pl$//; $all_cmds{$_}=1; } <$INSTALL_DIR/*.pl>;
+if (!@ARGV)
+{
+  print "Syntax: $prog command [args]\n";
+  print "  Possible commands:\n";
+
+  foreach (sort keys %all_cmds)
+  {
+    print "    $_\n";
+  }
+  exit;
+}
+
+my $opt=$ARGV[0];
+$opt=~s/\.pl$//;
+shift @ARGV;
+
+# Pretend *. - maps to "info"
+$opt="info" if $opt eq ".";
+
+# If the option ends in a "." then find what commands match
+if ($opt =~ /\.$/)
+{
+  my $match;
+  foreach (sort keys %all_cmds)
+  {
+    if ($_ =~ /^$opt/)
+    {
+      die "Ambiguous: $opt matches multiple commands\n" if $match;
+      $match=$_;
+    }
+  }
+  $opt=$match if $match;
+}
+
+die "Bad command: $opt\n" unless $all_cmds{$opt};
+
+my $cmd="$INSTALL_DIR/$opt.pl";
+
+exec($cmd,@ARGV);

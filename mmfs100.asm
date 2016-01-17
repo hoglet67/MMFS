@@ -5,24 +5,12 @@
 
 \** MAIN CODE **\
 
-_MASTER_=TRUE				; Master version
 _DEVICE_='U'				; Device: U=User Port, M=Memory Mapped
-
-IF NOT _MASTER_				; MODEL A/B ONLY
-_SWRAM_=FALSE				; Sideways RAM Version
-_ROMS_=TRUE				; Include *ROMS command	(i.e. No DFS or 8271 DFS)
-_UTILS_=TRUE				; Include utilites (*DUMP etc.) (i.e. No DFS)
-_TUBEHOST_=TRUE 			; Include Tube Host (i.e. no DFS or DFS 0.90)
-ENDIF
 
 \ MA/MP constants must be even numbers
 IF _MASTER_
 	CPU 1				; 65C12
 	MA=&C000-&0E00			; Offset to Master hidden static workspace
-	_SWRAM_=FALSE
-	_ROMS_=FALSE
-	_UTILS_=FALSE
-	_TUBEHOST_=FALSE
 ELIF _SWRAM_
 	MA=&B600-&0E00
 	UTILSBUF=&BF			; Utilities buffer page
@@ -91,7 +79,7 @@ ENDIF
 .title
 	EQUS "MMFS",0
 .version
-	EQUS "1.08",0
+	EQUS "1.08",0     \ #VERSION#
 .copyright
 	EQUS "(C)2011 Mather",0
 	EQUB _DEVICE_
@@ -7068,12 +7056,4 @@ IF _UTILS_
 ENDIF
 IF _TUBEHOST_
 	INCLUDE "TubeHost230.asm"
-ENDIF
-
-IF_MASTER_
-SAVE "MAMMFS", &8000, &C000
-ELIF _SWRAM_
-SAVE "SWMMFS", &8000, &C000
-ELSE
-SAVE "MMFS", &8000, &C000
 ENDIF

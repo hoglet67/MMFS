@@ -1,0 +1,8 @@
+nohup.out
+*~
+#*
+*.bak
+
+not_in_git/
+build/
+releases/

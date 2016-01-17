@@ -1,0 +1,487 @@
+Beeb Utilities to manipulate MMB and SSD files
+Copyright (C) 2012-2015 Stephen Harris
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+===================================================================
+
+HOW TO INSTALL
+
+Something like
+mkdir /usr/local/beeb
+cd /usr/local/beeb
+tar xvf ..../mmb_utils.tar
+ln -s /usr/local/beeb/beeb  /usr/local/bin/beeb
+
+===================================================================
+
+For all the commands that work on MMB files, the default MMB is called
+"BEEB.MMB" but this can be changed with "-f otherfile" if used as the
+first parameter.
+
+So
+  beeb dinfo 2
+would do a "*INFO" for all files in image 2 in BEEB.MMB
+  beeb dinfo -f other.MMB 2
+would do a "*INFO" for all files in image 2 in other.MMB
+
+Other commands that work on normal files do not need "-f" as the first
+option because they typically always require an filename (no default)
+e.g
+  beeb info filename.ssd
+  beeb list MYPROG
+SSD filenames may be entered as type:filename (eg stl:mydisk.ssd).  See
+the following section on BEEB_UTILS_DFS for the meaning of "type".
+
+We never allow disk images in the MMB to be referred to by name; you
+must always use the slot number.
+
+One environment variable may be used:
+  BEEB_UTILS_DFS
+This alters how the catalgue is read.  The format is type:filename
+  Default type is Acorn
+  Default filename is BEEB.MMB
+If there is no : in the value then it is read as a filename with type "acorn"
+examples
+  stl:/mnt/beeb/beeb.mmb
+  /mnt/beeb/beeb.mmb
+  watford:
+
+Allowed values for type are
+  SOLIDISK  (or STL)
+  WATFORD
+  OPUS  (or DDOS)  ---- UNTESTED!!
+  DISKDOCTOR (or DISCDOCTOR)
+  ACORN (same as empty)
+What this changes is how the "extra byte" information and extra catalogues
+are read.
+
+This value may also be set in $HOME/.beeb_utils_dfs
+If the environment variable is set then it overrides the contents of the
+file, thus a default may be set but overridden as necessary
+
+Be careful if setting it wrong; eg if reading a Solidisk disk with
+a deleted file in the first catalogue then you will see a file with &7F
+as the directory if you're not in SOLIDISK mode!
+
+===================================================================
+MMB Impacting commands
+===================================================================
+* daccess
+    Does similar to *DLOCK and *DUNLOCK but using "*ACCESS" type syntax
+        lock disk 40: beeb daccess 40 L
+      unlock disk 40: beeb daccess 40
+
+* dblank_mmb
+    Creates blank 128Mb MMB file
+
+* dcat
+    Catalogue: Show disk images stored in the MMB
+
+* dget_ssd
+    Extracts an SSD from an MMB
+
+* dgetfile
+    Extracts all the files from an SSD stored in an MMB
+    A few characters are renamed to an _
+         :<>|`'/\*?"
+    to keep the extracted filename "sane".  The leading "$." is removed
+    (other BBC directory names are retained).
+    If two files would be extracted with the same name then a -### count is
+    added to the end.
+
+    For each file a .inf is also created in the form
+      Filename LOAD EXEC [Locked] CRC=####
+    The Filename is the original BBC Filename.
+    This "inf" file is compatble to the bbcim extraction tool from
+    W.H.Scholten
+
+* dform
+    Puts a blank SSD onto the MMB.  Allows you to title the disk at the
+    same time
+      beeb dform 20 NewDisk
+
+* dinfo
+    Does an effective *INFO *.* for an SSD stored in an MMB
+    (If the disk is multi-catalogue then the catalogue sector is also
+     shown)
+
+* dkill
+    Marks a disk in a slot as Unformatted  (*DKILL)
+    If the optional R flag is passed then it "restores" the image
+    (*DRESTORE).
+      beeb dkill 10
+      beeb dkill 10 R
+    A -y flag will force answer "yes" to override locked disks and won't
+    ask you if you're sure; use with care
+      beeb dkill -y 10
+
+* dlabel
+    Changes the label for disk in slot that shows with with *DCAT
+    Note: this does not change the SSD title
+
+* donboot
+    Shows the current "boot disk" settings, and lets you change them.
+    Will not let you set an unformatted disk unless -y flag is used
+    eg
+      beeb donboot -y 1 300
+
+* dput_ssd
+    Writes an SSD to an MMB.  You can't write into a slot that's in
+    use (so dkill it first if you want to replace it).  The MMB
+    catalogue name for this disk is set to the SSDs name
+
+===================================================================
+SSD Impacting commands
+===================================================================
+Commands that update SSDs (eg delete, access, compact, putfile)
+will not work on multi-catalogue disks.  The update commands
+are mostly meant to create new SSDs for putting into MMBs.  Read commands
+should work on multi-catalogues.
+
+* access
+    *ACCESS equivalent
+    e.g.
+      beeb access mydisk.ssd A.*
+      beeb access mydisk.ssd B.* L
+    Defaults to '$.' if no directory specified.
+    Remember to quote shell characters if necessary!
+
+* blank_ssd
+    Creates a new blank 200Kb SSD image
+
+* compact
+     *COMPACT equivalent.
+
+* delete
+     Deletes files from an SSD. e.g
+       beeb delete mydisk.ssd A.TESTFIL
+     Multiple filenames can be used.  Directory defaults to '$'.
+     We attempt to handle BBC wildcards as well.  e.g.
+       beeb delete mydisk.ssd E.*
+     It will ask a y/n question for each file before deleting.
+     Optional parameter "-y" will skip the asking and will, instead,
+     display the files deleted
+       beeb delete Foo/RAM_Manager_2.ssd -y E.*
+       Deleted E.OE00
+       Deleted E.ASM
+       Deleted E.CONVERT
+       Deleted E.SE00
+       Deleted E.E1770
+       Deleted E.EXMON
+
+    Remember you might need to quote on the command line to prevent the
+    shell doing filename expansion!
+      beeb delete Foo/dd.ssd \*
+
+* getfile
+    Extracts all the files from an SSD
+    See dgetfile for details.
+
+* info
+    Does an effective *INFO *.* for an SSD
+
+* merge_dsd
+    Will take two SSD image and interleave them into a single DSD image
+
+* opt4
+    *OPT4 equivalent
+
+* putfile
+    Puts all specified files onto an SSD.
+      beeb putfile myssd file1 file2 file3 file4...
+    Can use wildcards, eg
+      beeb putfile myssd mydir/*
+    This will attempt to read .inf files to work out load/exec/locked and
+    filename.  If inf file doesn't exist then it'll use the name of the
+    file with load/exec values of 0.
+
+    e.g
+      % ls -l mydir 
+      total 16
+      -rw-r--r-- 1 sweh sweh  6 Mar 20 21:12 Test1
+      -rw-r--r-- 1 sweh sweh 15 Mar 20 21:12 X.Test2
+      -rw-r--r-- 1 sweh sweh 13 Mar 20 21:13 foo
+      -rw-r--r-- 1 sweh sweh 39 Mar 20 21:13 foo.inf
+    We can see there are three files, but one has a .inf file
+
+      % cat mydir/foo.inf 
+      $.FOO   FF1900 FF8023  Locked CRC=AB7A
+    This means that "foo" is really called $.FOO
+    
+    So lets add these to a new SSD
+      % beeb blank_ssd myssd
+      Blank myssd created
+      % beeb putfile myssd mydir/*
+      % beeb info myssd
+      Disk title:  (1)  Disk size: &320 - 200K
+      Boot Option: 0 (None)   File count: 3
+      
+      Filename: Lck Lo.add Ex.add Length Sct
+      $.FOO      L  FF1900 FF8023 00000D 004
+      X.Test2       000000 000000 00000F 003
+      $.Test1       000000 000000 000006 002
+    note that case was preserved, and Test1 was put into $.
+
+    There is an optional -c flag which will *COMPACT the disk before
+    adding files.
+ 
+    The SSD is only saved if all the files get added properly.
+
+* rename
+    *RENAME
+    beeb rename myfile.ssd o.oldname n.newname
+
+* split_dsd
+    Will take a DSD image and de-interleave it into two SSD images
+
+* title
+    Does an effective *TITLE for an SSD
+
+===================================================================
+Utility Programs (file commands)
+===================================================================
+
+* beeb
+    Simple wrapper so you can do "beeb dcat" or similar.  In this
+    way you just need to symlink this "beeb" program into your PATH
+    (eg $HOME/bin) and that's it.
+
+    You may need to set the one variable in the file:
+      # $INSTALL_DIR="/where/you/installed/the/program";
+    if the program can't work out the symlink target properly
+
+    In good BBC style, a "." will act as a wildcard.  So "beeb i."
+    might match "beeb info".  If multiple commands might match then an
+    "Ambiguous" error message is returned.
+
+* dump
+    *DUMP
+
+* list
+    Lists a basic program. 
+       "-o #" applies LISTO options
+       "-t XXX" uses the XXX decoder
+           basic2 == BASIC 2 (default)
+           basic4 == BASIC 4
+           z80 == BASIC 4 for Z80
+           arm == BASIC from the Arc
+           b4w == BASIC for Windows
+    eg
+      beeb list myfile -o 7
+     (Extra LISTO option "8" adds a space after each token)
+
+    If you want a prettier lister (eg html, colour etc) then bbclist
+      from W.H.Scholten produces nice output.
+
+* type
+    *TYPE (converts BBC to Unix line endings)
+
+===================================================================
+Disk format
+===================================================================
+MMB consists of 32 sectors (8Kb) of data, split into 16 byte blocks.
+The first block of 8 chars is is in the format
+ aa bb cc dd AA BB CC DD
+where AAaa BBbb CCcc DDdd are the images inserted at boot time.  Default
+is 00 01 02 03 00 00 00 00
+"*ONBOOT 3 500" would make dd=F4 DD=01  (&01F4=500)
+
+The next 8 bytes (completing the 16 byte block) are unused and are
+typically all zero.
+
+After that comes 511 blocks which consist of
+  DISKNAME(12 chars)
+  unused (3 chars)
+  STATUS(1 char)  0 ==> locked (readonly); 15=>Readwrite; 240=>Unformatted
+                 255 => invalid
+
+In theory the DISKNAME should match the disk TITLE in each place, but it
+can get out of sync.  *RECAT on the MMC Utils ROM reads the title from
+each SSD and updates this name.
+
+Then each SSD is a chunk of 200Kb data following.  So disk 'n' starts
+at 'n'*204800+8192.  That's all there is to an MMB.
+
+An SSD is a simple 200K (80track 10 sector) image.  Since it's literally
+an image it follows the standard Acorn DFS layout.
+
+Sector 0 is split into 32 * 8byte records.  Record 0 is the first 8
+characters of the disk title.  Records 1->31 have filename (7 chars)
+and directory(1 char).  If the high bit of the directory is set then
+the file is locked.
+
+Sector 1 is similarly split into 32*8 bytes but a lot more complicated.
+Bytes 0->3 are the last 4 characters of the disk title.  The title is NULL
+  terminated if it's shorter than 12 chars.
+Byte 4 is (BCD) the "write cycle".  In theory every write should update
+  that, but really... who cares?
+Byte 5 is "number of files"*8
+Byte 6: bits 4 and 5 encode the "*OPT 4" value
+        bits 0 and 1 are the high bits for "number of sectors"
+Byte 7 is the low 8 bits of "number of sectors"
+
+Now for a "double density" disk, you need 11 bits to encode the disk
+size, so Solidisk and others used byte 6 bit 2 (unused) for this.
+This code will always assume this bit is part of the sector size.
+
+See "Solidisk chained catalgues" (below) for a minor variation on this.
+
+Now we have the remaining 31 records, which match file equivalent
+files in sector 0.  They are laid out like this:
+  LL LL EE EE SS SS XX YY
+where "LLLL" is the load address, "EEEE" is the exec address, "SSSS" is
+the size, and "YY" is the start sector.  "XX" is the fun one.
+  bits 0+1 are high bits of sector start
+  bits 2+3 are high bits of load address
+  bits 4+5 are high bits of size
+  bits 6+7 are high bits of exec address
+
+That makes 10 bits for start sector and 18 bits for size.
+
+But on a 320K disk you need 11 bits for stat sector and 19 bits for size.
+So Solidisk steals bits 2 and 3 ("load address").  bit 2 is added to the
+sector, bit 3 to the size.  This means we have now only have 8 bits for
+the load address.  So, by trial and error (and disk sector editing -
+Solidisk DDFS comes with *DZAP :-)) I found that Solidisk reuses the
+high bits of the "exec" address as the high bits of the "load" address.
+
+
+Solidisk chained catalogues
+---------------------------
+Solidisk also has the concept of "chained catalogues".  If
+byte 2 & 192 == 192 then the low nibble of byte 2 and byte 3 point to
+the next catalogue, where another 30 files might be stored.
+
+So looking at a hex dump of the first 8 bytes of sector 1:
+  00000100  00 00 C0 21 35 F8 03 20   ...!5.. 
+
+You'll notice &102 and &103 have odd values in them.  We can see that
+&102 AND 192 == 192 so &102 AND 63 and &103 point to the next
+catalogue.  In this case we have a second catalogue at sector &021.
+Yes, this means disk titles are be limited to 10 characters.
+
+And here it is:
+00002100  3F 3F 3F 3F 3F 3F 3F 3F   ????????
+00002108  46 49 4C 45 36 30 20 24   FILE60 $
+00002110  46 49 4C 45 35 39 20 24   FILE59 $
+
+Obviously the "title" doesn't mean anything in secondary catalogues!
+
+We note a funky entry in the 2nd catalogue:
+000021f8  3F 3F 3F 3F 3F 3F 3F BF   ???????.
+and its associated data:
+000022f8  00 00 00 00 00 21 00 02   .....!..
+
+Basically this an "invisible" file that pretends to fill up the disk from
+sector 2 to where this new catalogue starts.  It's a cheap kludge so that
+programs like *COMPACT can work on this catalogue without worrying about
+what is before.  Everything in earlier catalogues is now frozen.  So what
+happens if you delete or change a file in an earlier catalogue?  That
+value gets marked "deleted", thus:
+  000000a8  46 49 4C 45 31 30 20 FF   FILE10 .
+(Basically the directory is set to &FF).  The space isn't reclaimed, but
+DDFS now ignores it.
+
+Looking, again at the 2nd catalogue, at the "data" sector:
+00002200  00 21 C0 41 30 F8 03 20   .!.A0.. 
+Oops, a third catalog at sector &41.  This follows the same pattern, but
+we get:
+000041d0  46 49 4C 45 36 32 20 24   FILE62 $
+000041d8  46 49 4C 45 36 31 20 24   FILE61 $
+000041e0  3F 3F 3F 3F 3F 3F 3F BF   ???????.
+000041e8  3F 3F 3F 3F 3F 3F 3F 3F   ????????
+
+Ah ha, the locked ?.??????? entry is the locked file again, and all entries
+after that are just ?.??????? because they haven't been used yet.  This
+means that the locked ?.??????? entry is a good "end of catalogue" marker
+because it'll always be the first entry written (so the last in the sector)
+when a 2ndary catalogue is created.
+
+===================================================================
+OPUS DDOS
+===================================================================
+
+Opus does things differently to everyone else.  It's a little bizarre,
+but...
+
+Basically, for a double-density disk (only!) they split the drive into
+sub-drives.  Drive 0 is really split into drive 0A to 0H.  Now some of
+these drives may be of zero length and so empty.  Each of these drives
+can be a maximum of 252K in size (&3F0 sectors).  See what they did
+there?  They avoided the whole problem of handling sector sizes over
+2^10 long, or file sizes over 2^18 long so the catalogues are Acorn
+standard.  To add more space, the catalogues actually live outside
+of the "drive", so files in the drive are allocated from sector zero.
+
+Now an Opus disk is 18 sectors per track, and allocations are done
+per track.
+
+Track 0
+  Sector  0, 1 : catalogue A
+  Sector  2, 3 : catalogue B
+  Sector  4, 5 : catalogue C
+  Sector  6, 7 : catalogue D
+  Sector  8, 9 : catalogue E
+  Sector 10,11 : catalogue F
+  Sector 12,13 : catalogue G
+  Sector 14,15 : catalogue H
+  Sector    16 : Disk allocation table
+  Sector    17 : unused
+Tracks 1 to 79 are the data.
+
+The disk allocation table is small.  http://beebwiki.jonripley.com/Opus_DDOS
+has some details, but #4 doesn't seem to match.  We see that bytes 1,2,3,4
+allow for different format of disks (eg 40 track, 35 track) and even
+different densities.  But the standard 80-track double density disk will
+be as follows:
+    byte 0: &20
+  byte 1,2: disk size (&5A0)
+    byte 3: sector per track (&12)
+    byte 4: &50  (but I've also seen &FF in testing!)
+  byte  8, 9: track start for A
+  byte 10,11: track start for B
+  byte 12,13: track start for C
+  byte 14,15: track start for D
+  byte 16,17: track start for E
+  byte 18,19: track start for F
+  byte 20,21: track start for G
+  byte 22,23: track start for H
+So
+  00001000  20 05 A0 12 50 00 00 00    ...P...
+  00001008  01 00 39 00 00 00 00 00   ..9.....
+  00001010  00 00 00 00 00 00 00 00   ........
+  00001018  00 00 00 00 00 00 00 00   ........
+We have two disks (A, starting at track 1, and B, starting at track &39).
+The other disks are not defined.
+
+This is wasteful of data (a whole unused sector!) but given we have 360K
+of data rather than 200K of the original Acorn format, I guess Opus figured
+this was a fair trade off.
+
+
+Changelog
+=========
+2015/05/30 - Make opt4 a function (lazy lazy; it should always have been!)
+           - split add_file_to_ssd into a function that loads inf as
+             necessary and into add_content_to_ssd() 
+               add_content_to_ssd($image,$fname,$data,$load,$exec,$locked);
+             e.g.
+               add_content_to_ssd($image,"!BOOT","*BASIC\r",0,0,1);
+
+2015/06/01 - Add some binmode() calls to let this work better on Windows
+           - safety check on $ENV{HOME} since Windows doesn't define this
+
+2015/07/11 - merge_dsd program added

@@ -5,11 +5,11 @@
 \\ mmbeeb USER PORT MMC DEVICE
 
 \ User VIA registers
-iorb%=&FE60
-ddrb%=&FE62
-sr%=&FE6A
-acr%=&FE6B
-ier%=&FE6E
+iorb%=_VIA_BASE
+ddrb%=_VIA_BASE + &02
+sr%  =_VIA_BASE + &0A
+acr% =_VIA_BASE + &0B
+ier% =_VIA_BASE + &0E
 
 	\\ Reset the User VIA
 .MMC_DEVICE_RESET
