@@ -79,7 +79,7 @@ ENDIF
 .title
 	EQUS "MMFS",0
 .version
-	EQUS "1.10",0     \ #VERSION#
+	EQUS "1.11",0     \ #VERSION#
 .copyright
 	EQUS "(C)2011 Mather",0
 	EQUB _DEVICE_

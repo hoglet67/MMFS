@@ -18,18 +18,24 @@ Rfault=&FF
 
 .Osword7F_8271_Emulation
 {
-	\ Set drive?
+	\ Copy buffer address to &BC-&BD;&1074-&1075
+	\ This needs to be called before MMC_BEGIN2
+	LDY #1
+	LDX #2
+	JSR CopyVarsB0BA
+
 	LDY #0
+	STY byteslastsec%
+	\ Set drive?
 	LDA (owbptr%),Y
 	BMI ownoreset
 	JSR SetCurrentDrive_Adrive
-
 .ownoreset
-	\ Copy buffer address to &BC-&BD;&1074-&1075
-	STY byteslastsec%
-	INY
-	LDX #2
-	JSR CopyVarsB0BA
+
+	\ We are relying on this to copy &BC,&BD to &1090,&1091
+	\ which is the LS bytes of the tube transfer address.
+	\ so this must happen, even if the current drive is not set.
+	JSR MMC_BEGIN2
 
 	LDY #5
 	LDA (owbptr%),Y			; no. of parameters
@@ -142,8 +148,6 @@ Rfault=&FF
 
 	\\ Get mmc addr of 1st sector
 .owsk3
-	JSR MMC_BEGIN2
-        
 	LDX CurrentDrv
 	JSR DiskStartX
 
