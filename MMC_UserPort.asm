@@ -24,10 +24,10 @@ ENDIF
 
 	\\ Reset the User VIA
 .MMC_DEVICE_RESET
-	LDA #ddrmask
-	STA ddrb%
 	LDA #(0 + msbits)
 	STA iorb%
+	LDA #ddrmask
+	STA ddrb%
 	LDA acr%
 	AND #&E3
 	STA acr%
@@ -123,14 +123,14 @@ NEXT
 	\\ ie for clear bit (User Port only)
 .waitresp_up
 {
-	LDA #(1 + msbits)
-	LDX #(3 + msbits)
 	LDY #0
 .wrup
 	DEY
 	BEQ wrup_timeout
-	STA iorb%
+	LDX #(1 + msbits)
+	LDA #(3 + msbits)
 	STX iorb%
+	STA iorb%
 	LDA sr%
 	AND #1
 	BNE wrup
