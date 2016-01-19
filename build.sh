@@ -1,15 +1,10 @@
 #!/bin/bash
 
-mkdir -p releases
-
 rm -rf build
 mkdir -p build
 
 # Create a blank SSD image
 tools/mmb_utils/blank_ssd.pl build/mmfs.ssd
-
-# A hack, because beebasm doesn't allow string variables
-VERSION=`grep "#VERSION#" mmfs100.asm  | cut -d\" -f2 | tr . _`
 
 for top in  top_*.asm
 do
@@ -35,9 +30,3 @@ do
 done
 
 tools/mmb_utils/info.pl  build/mmfs.ssd
-
-release=releases/mmfs_${VERSION}_$(date +"%Y%m%d_%H%M").zip
-cd build
-zip -qr ../${release} *
-cd ..
-unzip -l ${release}
