@@ -11,11 +11,22 @@ sr%  =_VIA_BASE + &0A
 acr% =_VIA_BASE + &0B
 ier% =_VIA_BASE + &0E
 
+IF _TURBOMMC
+   temp    = &cf
+   ddrmask = &1F \\ 0001 1111
+   msbits  = &08 \\ 0000 1000
+   msmask  = &E9 \\ 1110 1001
+ELSE
+   ddrmask = &03 \\ 0000 0011
+   msbits  = &00 \\ 0000 0000
+   msmask  = &FD \\ 1111 1101
+ENDIF
+
 	\\ Reset the User VIA
 .MMC_DEVICE_RESET
-	LDA #3
+	LDA #ddrmask
 	STA ddrb%
-	LDA #0
+	LDA #(0 + msbits)
 	STA iorb%
 	LDA acr%
 	AND #&E3
@@ -28,9 +39,9 @@ ier% =_VIA_BASE + &0E
 	\\ Read byte (User Port)
 	\\ Write FF
 .MMC_GetByte
-	LDX #1
+	LDX #(1 + msbits)
 .UP_ReadByteX
-	LDA #3
+	LDA #(3 + msbits)
 	STX iorb%			;\0
 	STA iorb%
 .UP_ReadBits7
@@ -56,45 +67,23 @@ ier% =_VIA_BASE + &0E
 	\\ Ignore byte in
 .UP_WriteByte
 	ASL A
-	ROL A				;\0
+IF _TURBOMMC
+    STA temp
+ENDIF
+
+FOR N, 0, 7
+IF _TURBOMMC
+    ROL temp
+    LDA temp
+    ORA #msbits
+ELSE
+    ROL A
+ENDIF
+	AND #msmask
 	STA iorb%
-	ORA #2
+	ORA #(2 + msbits)
 	STA iorb%
-	ROL A				;\1
-	AND #&FD
-	STA iorb%
-	ORA #2
-	STA iorb%
-	ROL A				;\2
-	AND #&FD
-	STA iorb%
-	ORA #2
-	STA iorb%
-	ROL A				;\3
-	AND #&FD
-	STA iorb%
-	ORA #2
-	STA iorb%
-	ROL A				;\4
-	AND #&FD
-	STA iorb%
-	ORA #2
-	STA iorb%
-	ROL A				;\5
-	AND #&FD
-	STA iorb%
-	ORA #2
-	STA iorb%
-	ROL A				;\6
-	AND #&FD
-	STA iorb%
-	ORA #2
-	STA iorb%
-	ROL A				;\7
-	AND #&FD
-	STA iorb%
-	ORA #2
-	STA iorb%
+NEXT        
 	RTS
 
 	\\ *** Send &FF to MMC Y times ***
@@ -104,7 +93,7 @@ ier% =_VIA_BASE + &0E
 .MMC_Clocks
 
 {
-	LDX #1
+	LDX #(1 + msbits)
 .clku1
 	JSR UP_ReadByteX		; Writes &FF
 	DEY
@@ -134,8 +123,8 @@ ier% =_VIA_BASE + &0E
 	\\ ie for clear bit (User Port only)
 .waitresp_up
 {
-	LDA #1
-	LDX #3
+	LDA #(1 + msbits)
+	LDX #(3 + msbits)
 	LDY #0
 .wrup
 	DEY
@@ -145,8 +134,8 @@ ier% =_VIA_BASE + &0E
 	LDA sr%
 	AND #1
 	BNE wrup
-	LDX #1
-	LDA #3
+	LDX #(1 + msbits)
+	LDA #(3 + msbits)
 .wrup_timeout
 	RTS
 }
@@ -156,7 +145,7 @@ ier% =_VIA_BASE + &0E
 .MMC_WaitForData
 {
 
-	LDX #1
+	LDX #(1 + msbits)
 .wlu1
 	JSR UP_ReadByteX
 	CMP #&FE
@@ -168,7 +157,7 @@ ier% =_VIA_BASE + &0E
 .MMC_Read256
 {
 
-	LDX #1
+	LDX #(1 + msbits)
 	LDY TubeNoTransferIf0
 	BNE rdub2T20
 
@@ -188,7 +177,7 @@ ier% =_VIA_BASE + &0E
 	\\ to datptr ***
 .MMC_ReadBLS
 {
-	LDX #1
+	LDX #(1 + msbits)
 	LDY TubeNoTransferIf0
 	BNE rdub2T1
 .rdub2
@@ -217,7 +206,7 @@ ier% =_VIA_BASE + &0E
 	STA CurrentCat
 
 	LDY #0
-	LDX #1
+	LDX #(1 + msbits)
 .rdbuf2
 	JSR UP_ReadByteX
 	STA buf%,Y
@@ -248,7 +237,7 @@ ier% =_VIA_BASE + &0E
 	CMP #5
 	BNE errWrite2
 
-	LDX #1
+	LDX #(1 + msbits)
 .ewu2
 	JSR UP_ReadByteX
 	CMP #&FF
