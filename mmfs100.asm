@@ -1769,7 +1769,7 @@ cmdtab4= cmdtable4-cmdtable1
 	\\ Copy valuable data from static workspace (sws) to 
 	\\ private workspace (pws)
 	\\ (sws data 10C0-10EF, and 1100-11BF)
-IF NOT _SWRAM_
+IF NOT(_SWRAM_)
 .SaveStaticToPrivateWorkspace
 {
 	JSR RememberAXY
@@ -1973,7 +1973,7 @@ titlestr%=MA+&1000
 
 .DiskTrapOption
 {
-IF NOT _MASTER_				; Master DFS always has higher priority
+IF NOT(_MASTER_)			; Master DFS always has higher priority
 	\ Bit 6 of the PagedROM_PrivWorkspaces = disable *DISC, *DISK commands etc.
 	TYA				; *OPT 5,Y
 	PHP
@@ -2389,7 +2389,7 @@ gdopt%=&B7
 	BCC initMMFS
 
 .CMD_DISC
-IF NOT _MASTER_
+IF NOT(_MASTER_)
 	LDX PagedRomSelector_RAMCopy	; Are *DISC,*DISK disabled?
 	LDA PagedROM_PrivWorkspaces,X
 	AND #&40
@@ -2673,7 +2673,7 @@ ENDIF
 	JMP CMD_CARD
 }
 
-IF NOT _MASTER_ AND NOT _SWRAM_
+IF NOT(_MASTER_) AND NOT(_SWRAM_)
 .SERVICE01_claim_absworkspace		; A=1 Claim absolute workspace
 {
 	CPY #&17			; Y=current upper limit
@@ -2699,10 +2699,10 @@ ELSE
 	PHA				; Save Y=PWS Page
 ENDIF
 
-IF NOT _SWRAM_
+IF NOT(_SWRAM_)
 	STA &B1				; Set (B0) as pointer to PWSP
 	LDY PagedROM_PrivWorkspaces,X
-	IF NOT _MASTER_			; Preserve bit 6
+	IF NOT(_MASTER_)		; Preserve bit 6
 		TYA
 		AND #&40
 		ORA &B1
@@ -2756,7 +2756,7 @@ IF _MASTER_
 	BMI srv3_exit			; PWS in hidden ram
 ENDIF
 
-IF NOT _SWRAM_
+IF NOT(_SWRAM_)
 	INY 				; taken 1 or 2 pages for pwsp
 	IF _UTILS_
 		INY			; Utilities need a page too
@@ -2788,7 +2788,7 @@ ENDIF
 .jmpunreccmd
 	JMP UnrecCommandTextPointer
 .NotCmdTable22
-IF NOT _MASTER_
+IF NOT(_MASTER_)
 	IF _UTILS_ OR _ROMS_
 		LDX #cmdtab2
 		BNE jmpunreccmd
@@ -2863,7 +2863,7 @@ ENDIF
 	JMP Prthelp_Xtable
 }
 
-IF NOT _SWRAM_
+IF NOT(_SWRAM_)
 .SERVICE0A_claim_statworkspace		; A=&A Claim Static Workspace
 {
 	\\ Another ROM wants the absolute workspace
@@ -3456,7 +3456,7 @@ ENDIF	; End of MASTER ONLY service calls
 	STA RAMBufferSize		; HIMEM page-OSHWM page
 	RTS 
 
-IF NOT _SWRAM_
+IF NOT(_SWRAM_)
 .ClaimStaticWorkspace
 	LDX #&0A
 	JSR osbyte8F_servreq		; Issue service request &A
@@ -3475,7 +3475,7 @@ IF NOT _SWRAM_
 	STA &B0
 	LDX PagedRomSelector_RAMCopy	; point to Private Workspace
 	LDA PagedROM_PrivWorkspaces,X
-IF NOT _MASTER_
+IF NOT(_MASTER_)
 	AND #&3F			; bits 7 & 6 are used as flags
 ENDIF
 	STA &B1
