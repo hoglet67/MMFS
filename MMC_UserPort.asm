@@ -9,6 +9,7 @@ iorb%=_VIA_BASE
 ddrb%=_VIA_BASE + &02
 sr%  =_VIA_BASE + &0A
 acr% =_VIA_BASE + &0B
+ifr% =_VIA_BASE + &0D
 ier% =_VIA_BASE + &0E
 
 IF _TURBOMMC
@@ -22,15 +23,14 @@ ELSE
    msmask  = &FD \\ 1111 1101
 ENDIF
 
+
 	\\ Reset the User VIA
 .MMC_DEVICE_RESET
 	LDA #(0 + msbits)
 	STA iorb%
 	LDA #ddrmask
 	STA ddrb%
-	LDA acr%
-	AND #&E3
-	STA acr%
+	JSR ShiftRegMode0
 	LDA #&1C
 	STA ier%
 	RTS
@@ -83,7 +83,7 @@ ENDIF
 	STA iorb%
 	ORA #(2 + msbits)
 	STA iorb%
-NEXT        
+NEXT
 	RTS
 
 	\\ *** Send &FF to MMC Y times ***
@@ -153,68 +153,91 @@ NEXT
 	RTS
 }
 
+	\\ The read code below now operates in turbo mode on all hardware
+	\\ using shift register mode 2.
+
 	\\ *** Read 256 bytes to datptr ***
 .MMC_Read256
-{
-
-	LDX #(1 + msbits)
-	LDY TubeNoTransferIf0
-	BNE rdub2T20
-
-.rdlu2
-	JSR UP_ReadByteX
-	STA (datptr%),Y
-	INY
-	BNE rdlu2
-	RTS
-
-.rdub2T20
-	LDY #0
-	JMP rdub2T2
-}
+	LDX #0
+	BEQ MMC_ReadX
 
 	\\ *** Read "byteslastsector" bytes
 	\\ to datptr ***
 .MMC_ReadBLS
-{
-	LDX #(1 + msbits)
-	LDY TubeNoTransferIf0
-	BNE rdub2T1
-.rdub2
-	JSR UP_ReadByteX
+	LDX byteslastsec%
+
+.MMC_ReadX
+	JSR ShiftRegMode2
+	LDA TubeNoTransferIf0
+	BNE MMC_ReadToTube
+
+.MMC_ReadToMemory
+	JSR WaitForShiftDone
 	STA (datptr%),Y
 	INY
-	DEC byteslastsec%
-	BNE rdub2
+	DEX
+	BNE MMC_ReadToMemory
 	RTS
-}
 
-.rdub2T1
-	LDY byteslastsec%
-.rdub2T2
-	JSR UP_ReadByteX
+.MMC_ReadToTube
+	JSR WaitForShiftDone
 	STA TUBE_R3_DATA
-	DEY
-	BNE rdub2T2
+	DEX
+	BNE MMC_ReadToTube
 	RTS
 
 
 	\\ **** Read 256 bytes to buffer ****
 .MMC_ReadBuffer
-{
-	LDA #&FF
-	STA CurrentCat
+	LDX #&FF
+	STX CurrentCat
+	INX
 
-	LDY #0
-	LDX #(1 + msbits)
+	JSR ShiftRegMode2
+
 .rdbuf2
-	JSR UP_ReadByteX
-	STA buf%,Y
+	JSR WaitForShiftDone
+	STA buf%, Y
 	INY
+	DEX
 	BNE rdbuf2
 	RTS
-}
 
+.WaitForShiftDone
+{
+	LDA #4
+.loop
+	BIT ifr%	 \\ wait for the SR interrupt flag to be set
+	BEQ loop
+	CPX #1	   \\ if the last byte, then return to mode zero, so we don't shift an extra byte
+	BNE notLastByte
+	JSR ShiftRegMode0
+.notLastByte		
+	LDA sr%	  \\ read the data byte, and clear the SR interrupt flag
+	RTS
+}		
+		
+.ShiftRegMode0
+	LDA acr%   \\ Set SR Mode to mode 0
+	AND #&E3   \\ 11100011 = SR Mode 0  
+	STA acr%   \\ CB1 is now an input
+	LDA ddrb%  \\ Set PB1 to being an output
+	ORA #&02   \\ 00000010
+	STA ddrb%
+	RTS
+
+.ShiftRegMode2
+	LDA ddrb%  \\ Set PB1 to being an input
+	AND #&FD   \\ 11111101 
+	STA ddrb%
+	LDA acr%
+	AND #&E3   \\ 11100011
+	ORA #&08   \\ 00001000 = SR Mode 2
+	STA acr%
+	LDA sr%	   \\ Start the first read
+	LDY #0	 \\ Set the memory index to zero
+	RTS
+		
 	\\ **** Send Data Token to card ****
 .MMC_SendingData
 {
