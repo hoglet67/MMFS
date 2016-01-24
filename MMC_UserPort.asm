@@ -35,15 +35,22 @@ ENDIF
     STA ier%
     RTS
 
-
     \\ Read byte (User Port)
     \\ Write FF
 .MMC_GetByte
-    LDX #(1 + msbits)
 .UP_ReadByteX
-    LDA #(3 + msbits)
-    STX iorb%           ;\0
-    STA iorb%
+{
+    JSR ShiftRegMode2
+    LDA #4
+.wait
+    BIT ifr%            \\ Bit 2 of IFR is the Shift Reg Interrupt flag
+    BEQ wait
+    JSR ShiftRegMode0
+    LDA sr%
+    RTS
+}
+        
+    \\ This is always entered with X and A with the correct values
 .UP_ReadBits7
     STX iorb%           ;\1
     STA iorb%
@@ -51,6 +58,8 @@ ENDIF
     STA iorb%
     STX iorb%           ;\3
     STA iorb%
+        
+    \\ This is always entered with X and A with the correct values
 .UP_ReadBits4
     STX iorb%           ;\4
     STA iorb%
@@ -175,6 +184,7 @@ ENDIF
     LDA TubeNoTransferIf0
     BNE MMC_ReadToTube
 
+    LDY #0
 .MMC_ReadToMemory
     JSR WaitForShiftDone
     STA (datptr%),Y
@@ -199,6 +209,7 @@ ENDIF
 
     JSR ShiftRegMode2
 
+    LDY #0
 .rdbuf2
     JSR WaitForShiftDone
     STA buf%, Y
@@ -386,7 +397,6 @@ ENDIF
     ORA #&08   \\ 00001000 = SR Mode 2
     STA acr%
     LDA sr%    \\ Start the first read
-    LDY #0   \\ Set the memory index to zero
     RTS
 
 IF _TURBOMMC
