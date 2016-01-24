@@ -26,7 +26,7 @@ ENDIF
 
     \\ Reset the User VIA
 .MMC_DEVICE_RESET
-    LDA #(0 + msbits)
+    LDA #(3 + msbits)
     STA iorb%
     LDA #ddrmask
     STA ddrb%
@@ -385,6 +385,38 @@ NEXT
     LDY #0   \\ Set the memory index to zero
     RTS
 
+IF _TURBOMMC
+.ShiftRegMode6        \\ Sequence here is important to avoid brief bus conflicts
+    LDA #&17          \\ 00010111
+                      \\ PB0=1 sets MOSI to 1 (not very important)
+                      \\ PB1=1 sets SCLK to 1 (important to avoid glitches)
+                      \\ PB2=1 disables buffer connecting MISO to CB2
+                      \\ PB3=0 enables  buffer connecting CB2 to MOSI
+                      \\ PB4=1 disables buffer connecting PB0 to MOSI
+    STA iorb%         \\ Flip the direction of the data bus
+    LDA ddrb%         \\ Set PB1 to being an input
+    AND #&FD          \\ 11111101
+    STA ddrb%         \\ Briefly the clock will float
+    LDA acr%          \\ Change the SR mode last, to avoid conflicts
+    AND #&E3          \\ 11100011
+    ORA #&18          \\ 00011000 = SR Mode 6
+    STA acr%          \\ CB1, CB2 are both outputs
+    RTS
+
+.ShiftRegMode6Exit    \\ Sequence here is important to avoid brief bus conflicts
+    JSR ShiftRegMode0 \\ CB1,2 are both inputs
+                      \\ Briefly the clock will float
+                      \\ PB1 is set as an output again
+    LDA #&0B          \\ 00001011
+                      \\ PB0=1 sets MOSI to 1 (not very important)
+                      \\ PB1=1 sets SCLK to 1 (important to avoid glitches)
+                      \\ PB2=0 enables  buffer connecting MISO to CB2
+                      \\ PB3=1 disables buffer connecting CB2 to MOSI
+                      \\ PB4=0 enables  buffer connecting PB0 to MOSI
+    STA iorb%         \\ Flip the direction of the data bus
+    RTS
+ENDIF
+
     \\ **** Send Data Token to card ****
 .MMC_SendingData
 {
@@ -418,34 +450,78 @@ NEXT
     \\ **** Write 256 bytes from dataptr% ****
 .MMC_Write256
 {
+IF _TURBOMMC
+    JSR ShiftRegMode6
+ENDIF
     LDY TubeNoTransferIf0
     BNE wruT1
 
 .wru1
     LDA (datptr%),Y
+IF _TURBOMMC
+    STA sr%
+    LDA #4
+.wait
+    BIT ifr%
+    BEQ wait
+ELSE
     JSR UP_WriteByte
+ENDIF
     INY
     BNE wru1
+IF _TURBOMMC
+    BEQ ShiftRegMode6Exit
+ELSE
     RTS
+ENDIF
+}
 
 .wruT1
+{
     LDY #0
 .wruT2
     LDA TUBE_R3_DATA
+IF _TURBOMMC
+    STA sr%
+    LDA #4
+.wait
+    BIT ifr%
+    BEQ wait
+ELSE
     JSR UP_WriteByte
+ENDIF
     INY
     BNE wruT2
+IF _TURBOMMC
+    BEQ ShiftRegMode6Exit
+ELSE
     RTS
+ENDIF
 }
 
     \\ **** Write 256 bytes from buffer ****
 .MMC_WriteBuffer
 {
     LDY #0
+IF _TURBOMMC
+    JSR ShiftRegMode6
+ENDIF
 .wbu1
     LDA buf%,Y
+IF _TURBOMMC
+    STA sr%
+    LDA #4
+.wait
+    BIT ifr%
+    BEQ wait
+ELSE
     JSR UP_WriteByte
+ENDIF
     INY
     BNE wbu1
+IF _TURBOMMC
+    BEQ ShiftRegMode6Exit
+ELSE
     RTS
+ENDIF
 }
