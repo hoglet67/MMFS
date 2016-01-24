@@ -66,25 +66,29 @@ ENDIF
     \\ Write byte (User Port)
     \\ Ignore byte in
 .UP_WriteByte
-    ASL A
+{
 IF _TURBOMMC
-    STA temp
-ENDIF
-
-FOR N, 0, 7
-IF _TURBOMMC
-    ROL temp
-    LDA temp
-    ORA #msbits
+    PHA
+    JSR ShiftRegMode6
+    PLA
+    STA sr%
+    LDA #4
+.wait
+    BIT ifr%
+    BEQ wait
+    JMP ShiftRegMode6Exit
 ELSE
-    ROL A
+    ASL A
+    FOR N, 0, 7
+        ROL A
+        AND #msmask
+        STA iorb%
+        ORA #2
+        STA iorb%
+    NEXT
 ENDIF
-    AND #msmask
-    STA iorb%
-    ORA #(2 + msbits)
-    STA iorb%
-NEXT
     RTS
+}
 
     \\ *** Send &FF to MMC Y times ***
     \\ Y=0=256
