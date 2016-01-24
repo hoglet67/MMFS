@@ -7,6 +7,10 @@ _VIA_BASE=&FE60         ; Base Address of 6522 VIA
 _TUBE_BASE=&FEE0        ; Base Address of Tube
 _TURBOMMC=1             ; 1 = build for TurboMMC, and enable PB2-4 as outputs
 
+MACRO BASE_NAME
+	EQUS "Master MMFS Turbo"
+ENDMACRO
+
 INCLUDE "mmfs100.asm"
 
 SAVE "build/MAMMFST", &8000, &C000

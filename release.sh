@@ -3,7 +3,7 @@
 ./build.sh
 
 # A hack, because beebasm doesn't allow string variables
-VERSION=`grep "#VERSION#" mmfs100.asm  | cut -d\" -f2 | tr . _`
+VERSION=`grep "#VERSION#" VERSION.asm  | cut -d\" -f2 | tr . _`
 
 mkdir -p releases
 

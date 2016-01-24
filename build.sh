@@ -5,6 +5,7 @@ mkdir -p build
 
 # Create a blank SSD image
 tools/mmb_utils/blank_ssd.pl build/mmfs.ssd
+echo
 
 for top in  top_*.asm
 do
@@ -27,6 +28,10 @@ do
 
     # Add into the SSD
     tools/mmb_utils/putfile.pl build/mmfs.ssd build/${name}
+
+    # Report end of code
+    grep "code ends at" build/${name}.log
 done
 
+echo
 tools/mmb_utils/info.pl  build/mmfs.ssd

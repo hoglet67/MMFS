@@ -19,6 +19,7 @@ ELSE
 ENDIF
 MP=HI(MA)
 
+INCLUDE "VERSION.asm"
 INCLUDE "SYSVARS.asm"			; OS constants
 
 DirectoryParam=&CC
@@ -57,10 +58,11 @@ tubeid%=&0A			; See Tube Application Note No.004 Page 7
 
 ORG &8000
 IF _SWRAM_
-	GUARD &B600
+    guard_value=&B600
 ELSE
-	GUARD &C000
+    guard_value=&C000
 ENDIF
+	GUARD guard_value
 
 	\\ ROM Header
 .langentry
@@ -77,11 +79,11 @@ ENDIF
 .binversion
 	EQUB &7B
 .title
-	EQUS "MMFS",0
+    BUILD_NAME
 .version
-	EQUS "1.16",0     \ #VERSION#
+    BUILD_VERSION
 .copyright
-	EQUS "(C)2011 Mather",0
+    BUILD_COPYRIGHT
 	EQUB _DEVICE_
 IF _SWRAM_
 	EQUS "RAM"
@@ -2385,7 +2387,7 @@ gdopt%=&B7
 .AUTOBOOT
 	LDA &B3				; ?&B3=value of Y on call 3
 	JSR PrintString
-	EQUS "Acorn MMFS",13,13
+    BOOT_NAME
 	BCC initMMFS
 
 .CMD_DISC
@@ -7057,3 +7059,5 @@ ENDIF
 IF _TUBEHOST_
 	INCLUDE "TubeHost230.asm"
 ENDIF
+
+PRINT "    code ends at",~P%," (",(guard_value - P%), "bytes free )"
