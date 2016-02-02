@@ -12,6 +12,3 @@ MACRO BASE_NAME
 ENDMACRO
 
 INCLUDE "mmfs100.asm"
-
-SAVE "build/MAMMFS", &8000, &C000
-        

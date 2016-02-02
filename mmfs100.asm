@@ -7061,3 +7061,5 @@ IF _TUBEHOST_
 ENDIF
 
 PRINT "    code ends at",~P%," (",(guard_value - P%), "bytes free )"
+
+SAVE "", &8000, &C000
