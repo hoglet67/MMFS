@@ -3,6 +3,12 @@
 rm -rf build
 mkdir -p build
 
+# Set the BEEBASM executable for the platform
+BEEBASM=tools/beebasm/beebasm.exe
+if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+    BEEBASM=tools/beebasm/beebasm
+fi
+
 # Create a blank SSD image
 tools/mmb_utils/blank_ssd.pl build/mmfs.ssd
 echo
@@ -13,7 +19,7 @@ do
     echo "Building $name..."
 
     # Assember the ROM
-    tools/beebasm/beebasm -i ${top} -v >& build/${name}.log
+    $BEEBASM -i ${top} -v >& build/${name}.log
 
     # Check if ROM has been build, otherwise fail early
     if [ ! -f build/${name} ]
@@ -31,6 +37,9 @@ do
 
     # Report end of code
     grep "code ends at" build/${name}.log
+    
+    # Report build checksum
+    echo "    mdsum is "`md5sum <build/${name}`
 done
 
 echo
