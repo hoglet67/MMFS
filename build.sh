@@ -9,38 +9,53 @@ if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     BEEBASM=tools/beebasm/beebasm
 fi
 
-# Create a blank SSD image
-tools/mmb_utils/blank_ssd.pl build/mmfs.ssd
-echo
-
-for top in  top_*.asm
+# Device:
+# M is MemoryMapped IO based (typically &FE18, for BeebEm)
+# U is normal User Port VIA based
+for device in M U
 do
-    name=`echo ${top%.asm} | cut -c5-`
-    echo "Building $name..."
+    build=build/${device}
+    mkdir -p ${build}
+    ssd=${build}/mmfs.ssd
+    rm -f ${ssd}
+    # Configure the device to be assembled
+    echo "_DEVICE_ = '"$device"'" > DEVICE.asm
+    # Create a blank SSD image
+    tools/mmb_utils/blank_ssd.pl ${ssd}
+    echo
 
-    # Assember the ROM
-    $BEEBASM -i ${top} -o build/${name} -v >& build/${name}.log
+    for top in  top_*.asm
+    do
+        name=`echo ${top%.asm} | cut -c5-`
+        echo "Building ${device}/$name..."
 
-    # Check if ROM has been build, otherwise fail early
-    if [ ! -f build/${name} ]
-    then
-        cat build/${name}.log
-        echo "build failed to create ${name}"
-        exit
-    fi
+        # Assember the ROM
+        $BEEBASM -i ${top} -o ${build}/${name} -v >& ${build}/${name}.log
 
-    # Create the .inf file
-    echo -e "\$."${name}"\t8000\t8000" > build/${name}.inf
+        # Check if ROM has been build, otherwise fail early
+        if [ ! -f ${build}/${name} ]
+        then
+            cat ${build}/${name}.log
+            echo "build failed to create ${device}/${name}"
+            exit
+        fi
 
-    # Add into the SSD
-    tools/mmb_utils/putfile.pl build/mmfs.ssd build/${name}
+        # Create the .inf file
+        echo -e "\$."${name}"\t8000\t8000" > ${build}/${name}.inf
 
-    # Report end of code
-    grep "code ends at" build/${name}.log
-    
-    # Report build checksum
-    echo "    mdsum is "`md5sum <build/${name}`
+        # Add into the SSD
+        tools/mmb_utils/putfile.pl ${ssd} ${build}/${name}
+
+        # Report end of code
+        grep "code ends at" ${build}/${name}.log
+
+        # Report build checksum
+        echo "    mdsum is "`md5sum <${build}/${name}`
+
+        # Add a .rom suffix
+        mv ${build}/${name} ${build}/${name}.rom
+    done
+    echo
+    tools/mmb_utils/info.pl  ${ssd}
 done
-
-echo
-tools/mmb_utils/info.pl  build/mmfs.ssd
+rm -f DEVICE.asm

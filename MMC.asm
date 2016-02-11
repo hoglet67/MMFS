@@ -91,10 +91,10 @@ attempts%=&C2
 	JMP iok
 
 .isdhc
-	JSR UP_ReadByteX
-	JSR UP_ReadByteX
-	JSR UP_ReadByteX
-	JSR UP_ReadByteX
+	JSR MMC_GetByte
+	JSR MMC_GetByte
+	JSR MMC_GetByte
+	JSR MMC_GetByte
 .isdhc2
 	LDA #&77
 	JSR MMC_SetCommand
@@ -111,12 +111,12 @@ attempts%=&C2
 	JSR MMC_DoCommand
 	CMP #&00
 	BNE ifail
-	JSR UP_ReadByteX
+	JSR MMC_GetByte
 	AND #&40
 	PHA
-	JSR UP_ReadByteX
-	JSR UP_ReadByteX
-	JSR UP_ReadByteX
+	JSR MMC_GetByte
+	JSR MMC_GetByte
+	JSR MMC_GetByte
 	PLA
 	BNE iok
 	LDA #2

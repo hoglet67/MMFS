@@ -5,8 +5,9 @@
 
 \** MAIN CODE **\
 
-_DEVICE_='U'				; Device: U=User Port, M=Memory Mapped
-
+\ Device: U=User Port, M=Memory Mapped
+INCLUDE "DEVICE.asm"
+        
 \ MA/MP constants must be even numbers
 IF _MASTER_
 	CPU 1				; 65C12
