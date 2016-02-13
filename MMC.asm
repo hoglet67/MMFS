@@ -501,19 +501,19 @@ read16sec%=&B3	; 3 byte sector value
 read16str%=MA+&1000
 
 .MMC_ReadDiscTitle
+{
 	JSR SetLEDS
 	LDA #0
 	STA TubeNoTransferIf0
 
-	LDA #read_single_block
-	JSR MMC_SetCommand
-	LDA read16sec%
-	STA par%+2
-	LDA read16sec%+1
-	STA par%+1
-	LDA read16sec%+2
-	STA par%
-
+	LDX #2
+.loop
+	LDA read16sec%, X
+	STA sec%, X
+	DEX
+	BPL loop
+	
+	JSR MMC_SetupRead
 	JSR MMC_StartRead
 	LDA #&00			; LO(read16str%)
 	STA datptr%
@@ -533,7 +533,7 @@ read16str%=MA+&1000
 	JSR MMC_Clocks
 
 	JMP ResetLEDS
-
+}
 
 	\\ **** CHECK MMC STATUS ****
 	\\ Preserves AXY, and values in BC-C5
