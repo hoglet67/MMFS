@@ -5638,20 +5638,17 @@ INCLUDE "MMC.asm"
 	RTS
 
 	\ Include FAT routines here
-IF _FAT
+
 INCLUDE "FAT.asm"
-ENDIF
-        
+
 	\\ *****  Reset MMC_SECTOR  *****
 	\\ (MMC_SECTION is the card address of 
 	\\ Sector 0 of the image file.)
 
 	\\ Default image: BEEB.MMB
 .MMC_Sector_Reset	
-IF _FAT
 	LDX #&A
 	JSR CopyDOSFilename
-ENDIF
 
 	\\ Search for Image File
 	\\ Name at file at fatfilename%
@@ -5666,7 +5663,7 @@ ENDIF
 	STA MMC_SECTOR+1
 	STA MMC_SECTOR+2
 	JSR ResetCRC7
-IF _FAT
+
 	JSR FATLoadRootDirectory
 	JSR FATSearchRootDirectory
 	BCS fileerr
@@ -5677,12 +5674,7 @@ IF _FAT
 	STA MMC_SECTOR+1
 	LDA sec%+2
 	STA MMC_SECTOR+2
-ELSE
-	LDA #&FF
-	STA MMC_SECTOR
-	STA MMC_SECTOR+1
-	STA MMC_SECTOR+2
-ENDIF
+
 	JMP ResetCRC7
 
 .fileerr
@@ -5693,7 +5685,6 @@ ENDIF
 }
 
 	\\ Copy filename to search for to fatfilename%
-IF _FAT
 .CopyDOSFilename
 {
 	LDY #&A
@@ -5706,8 +5697,7 @@ IF _FAT
 .filemmb
 	EQUS "BEEB    MMB"
 }
-ENDIF
-        
+
 	\\ **** Check drive not write protected ****
 .CheckWriteProtect
 	LDX CurrentDrv
@@ -5822,25 +5812,13 @@ ENDIF
 	SEC
 	LDA sec%
 	ORA #&1F			; 32
-IF _FAT
 	ADC MMC_SECTOR
-ELSE
-	ADC #0
-ENDIF
 	STA sec%
 	LDA sec%+1
-IF _FAT
 	ADC MMC_SECTOR+1
-ELSE
-	ADC #0
-ENDIF
 	STA sec%+1
 	LDA sec%+2
-IF _FAT
 	ADC MMC_SECTOR+2
-ELSE
-	ADC #0
-ENDIF
 	STA sec%+2
 	RTS
 
@@ -6180,7 +6158,6 @@ ENDIF
 .DiskTableSec
 	AND #&7E
 	CLC
-IF _FAT
 	ADC MMC_SECTOR
 	STA sec%
 	LDA MMC_SECTOR+1
@@ -6189,12 +6166,6 @@ IF _FAT
 	LDA MMC_SECTOR+2
 	ADC #0
 	STA sec%+2
-ELSE
-	STA sec%
-	LDA #0
-	STA sec%+1
-	STA sec%+2
-ENDIF
 .ldtloaded
 	RTS
 
