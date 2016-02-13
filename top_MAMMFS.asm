@@ -5,7 +5,8 @@ _UTILS_=FALSE           ; Include utilites (*DUMP etc.) (i.e. No DFS)
 _TUBEHOST_=FALSE        ; Include Tube Host (i.e. no DFS or DFS 0.90)
 _VIA_BASE=&FE60         ; Base Address of 6522 VIA
 _TUBE_BASE=&FEE0        ; Base Address of Tube
-_TURBOMMC=0             ; 1 = build for TurboMMC, and enable PB2-4 as outputs
+_TURBOMMC=FALSE         ; TRUE = build for TurboMMC, and enable PB2-4 as outputs
+_FAT=TRUE               ; TRUE = include the FAT layer; false = exclude
 
 MACRO BASE_NAME
 	EQUS "Master MMFS"
