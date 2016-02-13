@@ -49,8 +49,9 @@ VID=MA+&10E0				; VID
 DRIVE_INDEX0=VID 			; 4 bytes
 DRIVE_INDEX4=VID+4			; 4 bytes
 MMC_SECTOR=VID+8			; 3 bytes
-MMC_CIDCRC=VID+&B			; 2 bytes
-CHECK_CRC7=VID+&D			; 1 byte
+MMC_SECTOR_VALID=VID+&B			; 1 bytes
+MMC_CIDCRC=VID+&C			; 2 bytes
+CHECK_CRC7=VID+&E			; 1 byte
 
 filesysno%=&04			; Filing System Number
 filehndl%=&50			; First File Handle - 1
@@ -5659,14 +5660,14 @@ INCLUDE "FAT.asm"
 	STY MMC_CIDCRC
 
 	LDA #0
-	STA MMC_SECTOR
-	STA MMC_SECTOR+1
-	STA MMC_SECTOR+2
+	STA MMC_SECTOR_VALID
 	JSR ResetCRC7
 
 	JSR FATLoadRootDirectory
+	BCC nofat
 	JSR FATSearchRootDirectory
 	BCS fileerr
+.nofat
 
 	LDA sec%
 	STA MMC_SECTOR
@@ -5674,6 +5675,8 @@ INCLUDE "FAT.asm"
 	STA MMC_SECTOR+1
 	LDA sec%+2
 	STA MMC_SECTOR+2
+	LDA #&FF
+	STA MMC_SECTOR_VALID
 
 	JMP ResetCRC7
 

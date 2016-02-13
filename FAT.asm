@@ -20,8 +20,9 @@ fatclustsize%=&C3	; byte
 	STA sec%+2
 	JSR MMC_ReadCatalogue		; MBR?
 	JSR isfat
-	BEQ fat
-	BNE faterr1			; Not FAT16
+	BEQ fat				; FAT not recognised Assume sector 0 is start of image
+	CLC				; return C=0 to indicate no FAT
+	RTS
 
 	\\ FAT signature word?
 .isfat
@@ -151,7 +152,9 @@ fatclustsize%=&C3	; byte
 	STA sec%+2
 	DEX
 	BNE loop
-	JMP MMC_ReadCatalogue		; Root Dir
+	JSR MMC_ReadCatalogue		; Root Dir
+	SEC				; return C=1 to indicate FAT
+	RTS
 }
 	
 
