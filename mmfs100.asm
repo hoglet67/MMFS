@@ -3641,7 +3641,12 @@ ENDIF
 	JSR RememberAXY			; Close any SPOOL orE XEC files
 .CloseSPOOLEXECfiles
 	LDA #&77
-	JMP OSBYTE			; (Causes ROM serv.call &10)
+IF _SWRAM_
+	JMP OSBYTE
+ELSE
+	JSR OSBYTE			; (Causes ROM serv.call &10)
+	JMP SERVICE0A_claim_statworkspace
+ENDIF
 
 	\ *CLOSE
 .CMD_CLOSE
