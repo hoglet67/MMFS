@@ -286,9 +286,17 @@ attempts%=&C2
 	RTS
 
 .rdblk
+IF _LARGEFILES
 	LDX seccount%
+	BNE rb1
+	LDA seccount%+1
 	BEQ rb1_exit			; nothing to do
 
+.rb1
+ELSE
+	LDX seccount%
+	BEQ rb1_exit			; nothing to do
+ENDIF
 	LDA #1
 	JSR MMC_RWBlock_CheckIfToTube
 
@@ -296,13 +304,25 @@ attempts%=&C2
 	ROR sec%
 	ROR skipsec%
 	BPL rb2
+IF _LARGEFILES
+	INX
+	STX seccount%
+	BNE rb2
+	INC seccount%+1
+.rb2
+ELSE
 	INX
 .rb2
 	STX seccount%
+ENDIF
 	ASL sec%			; sec always even
 
 	JSR MMC_SetupRead
 
+IF _LARGEFILES
+	LDA seccount%+1
+	BNE rb3
+ENDIF
 	LDX seccount%
 	CPX #3
 	BCS rb3				; X>2 = more than 2 sectors
@@ -338,16 +358,22 @@ attempts%=&C2
 	\\ increment MMC sector
 	JSR incCommandAddress
 
+IF _LARGEFILES
+	LDA #&FE
+	JSR dec_seccount
+	BEQ rb1_exit
+	LDA seccount%+1
+	BNE rb6_loop
+ELSE
 	LDX seccount%			; X>=2
 	DEX
 	DEX
 	BEQ rb1_exit
-
 	STX seccount%
+ENDIF
 	CPX #3
 	BCS rb6_loop
 	JMP rb4_loop
-
 
 .rb9
 	JSR MMC_StartRead
@@ -392,7 +418,7 @@ attempts%=&C2
 }
 
 	\\ **** Write data block from memory ****
-.wb1
+.wb1_exit
 	RTS
 
 .MMC_WriteBlock
@@ -402,8 +428,16 @@ attempts%=&C2
 	JMP ResetLEDS
 
 .wrblk
+IF _LARGEFILES
 	LDX seccount%
-	BEQ wb1				; nothing to do!
+	BNE wb1
+	LDA seccount%+1
+	BEQ wb1_exit			; nothing to do
+.wb1
+ELSE
+	LDX seccount%
+	BEQ wb1_exit			; nothing to do!
+ENDIF
 
 	LDA #0
 	JSR MMC_RWBlock_CheckIfToTube
@@ -439,8 +473,13 @@ attempts%=&C2
 	JSR MMC_WriteBuffer
 	JSR MMC_Write256
 	JSR MMC_EndWrite
+IF _LARGEFILES
+	LDA #&FF
+	JSR dec_seccount
+ELSE
 	DEC seccount%
-	BEQ wb1				; finished
+ENDIF
+	BEQ wb1_exit			; finished
 	INC datptr%+1
 
 	\\ sector+=2
@@ -448,6 +487,10 @@ attempts%=&C2
 	JSR incCommandAddress
 
 .wb2
+IF _LARGEFILES
+	LDA seccount%+1
+	BNE wb3
+ENDIF
 	LDX seccount%
 	BEQ wb5				; finished
 	DEX
@@ -485,14 +528,39 @@ attempts%=&C2
 	JSR MMC_Write256
 	INC datptr%+1
 	JSR MMC_EndWrite
+IF _LARGEFILES
+	LDA #&FE
+	JSR dec_seccount
+ELSE
 	DEC seccount%
 	DEC seccount%
+ENDIF
 	BNE wb4
 
 .wb5
 	RTS
 }
 
+IF _LARGEFILES
+\\ Decrement a 16-bit sector count
+\\ Call with A=-1 (&FF) to decrement by 1
+\\ Call with A=-2 (&FE) to decrement by 2
+\\ On exit:
+\\ X = value of seccount%
+\\ Z flag if seccount%,seccount%+1 zero
+.dec_seccount
+{
+	CLC
+	ADC seccount%
+	STA seccount%
+	TAX
+	LDA #&FF
+	ADC seccount%+1
+	STA seccount%+1
+	ORA seccount%
+	RTS
+}
+ENDIF
 
 	\\ *** Read the disc title to read16str% ***
 	\\ *** read16sec% contains the address   ***

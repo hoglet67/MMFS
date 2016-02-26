@@ -26,6 +26,9 @@ Rfault=&FF
 
 	LDY #0
 	STY byteslastsec%
+IF _LARGEFILES
+	STY seccount%+1
+ENDIF
 	\ Set drive?
 	LDA (owbptr%),Y
 	BMI ownoreset

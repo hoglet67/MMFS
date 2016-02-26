@@ -5,6 +5,8 @@
 
 \** MAIN CODE **\
 
+_LARGEFILES=TRUE
+
 \ Device: U=User Port, M=Memory Mapped
 INCLUDE "DEVICE.asm"
         
@@ -5567,7 +5569,11 @@ errptr%=&B8
 
 datptr%=&BC
 sec%=&BE
+IF _LARGEFILES
+seccount%=&CE
+ELSE
 seccount%=&C1
+ENDIF
 skipsec%=&C2
 byteslastsec%=&C3
 
@@ -5862,12 +5868,21 @@ INCLUDE "FAT.asm"
 	LSR A
 	LSR A
 	AND #3
+IF _LARGEFILES
+	STA seccount%+1
+ELSE
 	BNE errBlockSize
+ENDIF
 	LDA MA+&1094
 	STA byteslastsec%
 	BEQ cvskip2
 	INC seccount%
+IF _LARGEFILES
+	BNE cvskip2
+	INC seccount%+1
+ELSE
 	BEQ errBlockSize
+ENDIF
 
 	\\ check for overflow
 .cvskip2
@@ -5876,7 +5891,11 @@ INCLUDE "FAT.asm"
 	ADC seccount%
 	TAX
 	PLA
+IF _LARGEFILES
+	ADC seccount%+1
+ELSE
 	ADC #0
+ENDIF
 	CMP #3
 	BCC cvnoof
 	BNE errOverflow
@@ -5885,10 +5904,12 @@ INCLUDE "FAT.asm"
 .cvnoof
 	RTS
 
+IF NOT(_LARGEFILES)
 .errBlockSize
 	JSR ReportError
 	EQUB &FF
 	EQUS "Block too big",0
+ENDIF
 
 .errOverflow
 	JSR errDISK
