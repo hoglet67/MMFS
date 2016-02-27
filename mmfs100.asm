@@ -2457,11 +2457,13 @@ ENDIF
 	\\ else reset fs to defaults.
 
 IF _SWRAM_
-	LDA MA+&10D3
+	LDA ForceReset
 	BMI initdfs_noreset
+	LDA #&FF					; Now clear the force reset flag
+	STA ForceReset				; so the reset only happens once
 ELSE
 	JSR SetPrivateWorkspacePointerB0
-	LDY #&D3
+	LDY #<ForceReset
 	LDA (&B0),Y			; A=PWSP+&D3 (-ve=soft break)
 	BPL initdfs_reset		; Branch if power up or hard break
 
@@ -2765,7 +2767,7 @@ IF NOT(_SWRAM_)
 	CPY &B1				; Private workspace may have moved!
 	BEQ samepage			; If same as before
 
-	LDY #&D3
+	LDY #<ForceReset
 	STA (&B0),Y			; PWSP?&D3=0
 .samepage
 ENDIF
@@ -2775,10 +2777,10 @@ ENDIF
 	DEX 
 
 IF _SWRAM_
-	STX MA+&10D3
+	STX ForceReset
 ELSE
 	TXA				; A= FF=soft,0=power up,1=hard
-	LDY #&D3
+	LDY #<ForceReset
 	AND (&B0),Y
 	STA (&B0),Y			; So, PWSP?&D3 is +ve if:
 	PHP				; power up, hard reset or PSWP page has changed
@@ -3519,7 +3521,7 @@ IF NOT(_SWRAM_)
 	LDX #&0A
 	JSR osbyte8F_servreq		; Issue service request &A
 	JSR SetPrivateWorkspacePointerB0
-	LDY #&D3
+	LDY #<ForceReset
 	LDA #&FF
 	STA (&B0),Y			; Data valid in SWS
 	STA ForceReset
