@@ -5,8 +5,6 @@
 
 \** MAIN CODE **\
 
-_LARGEFILES=TRUE
-
 \ Device: U=User Port, M=Memory Mapped
 INCLUDE "DEVICE.asm"
         
@@ -1779,6 +1777,10 @@ IF NOT(_SWRAM_)
 .SaveStaticToPrivateWorkspace
 {
 	JSR RememberAXY
+IF _DEBUG
+	JSR PrintString
+	EQUB "Saving workspace", 13
+ENDIF
 
 	LDA &B0
 	PHA
@@ -2409,6 +2411,10 @@ ENDIF
 {
 	JSR ReturnWithA0		; On entry: if A=0 then boot file
 	PHA 
+IF _DEBUG
+	JSR PrintString
+	EQUB "Starting MMFS", 13
+ENDIF
 	LDA #&06
 	JSR Go_FSCV			; new filing system
 
@@ -2469,6 +2475,10 @@ ELSE
 
 	JSR ClaimStaticWorkspace
 
+IF _DEBUG
+	JSR PrintString
+	EQUB "Restoring workspace", 13
+ENDIF
 	LDY #&00			; ** Restore copy of data
 .copyfromPWStoSWS_loop
 	LDA (&B0),Y			; from private wsp
@@ -2508,6 +2518,11 @@ ENDIF
 	\ Set to defaults
 
 .setdefaults
+IF _DEBUG
+	JSR PrintString
+	EQUB "Setting MMFS defaults", 13
+	NOP
+ENDIF
 	JSR FSDefaults
 
 	\ INITIALISE VID VARIABLES
@@ -2584,8 +2599,39 @@ ENDIF
 	RTS
 }
 
+IF _DEBUG
+.PrintAXY
+	PHA
+	JSR PrintString
+	EQUB "A="
+	NOP
+	JSR PrintHex
+	JSR PrintString
+	EQUB ";X="
+	NOP
+	TXA
+	JSR PrintHex
+	JSR PrintString
+	EQUB ";Y="
+	NOP
+	TYA
+	JSR PrintHex
+	JSR PrintString
+	EQUB 13
+	NOP
+	PLA
+	RTS
+ENDIF
 .MMFS_SERVICECALLS
 {
+IF _DEBUG
+	PHA
+	JSR PrintString
+	EQUB "Service "
+	NOP
+	JSR PrintAXY
+	PLA
+ENDIF  
 IF _TUBEHOST_
 	JSR SERVICE09_TUBEHelp		; Tube service calls
 ENDIF
@@ -3014,6 +3060,12 @@ ENDIF	; End of MASTER ONLY service calls
 	CMP #&0C
 	BCS filev_unknownop
 	STX &B5				; Save X
+IF _DEBUG
+	JSR PrintString
+	EQUB "FSCV "
+	NOP
+	JSR PrintAXY
+ENDIF
 	TAX 
 	LDA fscv_table2,X
 	PHA 
@@ -3641,6 +3693,10 @@ ENDIF
 
 .fscv6_shutdownfilesys
 	JSR RememberAXY			; Close any SPOOL orE XEC files
+IF _DEBUG
+	JSR PrintString
+	EQUB "Shutting down MMFS", 13
+ENDIF
 .CloseSPOOLEXECfiles
 	LDA #&77
 IF _SWRAM_
