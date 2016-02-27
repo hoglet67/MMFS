@@ -39,7 +39,7 @@ PAGE=MA+&10CF
 RAMBufferSize=MA+&10D0			; HIMEM-PAGE
 ForceReset=MA+&10D3
 TubePresentIf0=MA+&10D6
-CardSort=MA+&10D7
+CardSort=MA+&10DE
 
 buf%=MA+&E00
 cat%=MA+&E00
