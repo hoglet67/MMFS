@@ -3729,8 +3729,8 @@ ENDIF
 .CloseFiles_Yhandle
 	LDA #&20			; Update catalogue if write only
 	STA MA+&1086
-	TYA
-	BEQ CloseAllFiles	; If y=0 Close all files
+	TYA 
+	BEQ CloseAllFiles_Osbyte77	; If y=0 Close all files
 	JSR CheckChannel_Yhndl_exYintch
 
 .CloseFile_Yintch
