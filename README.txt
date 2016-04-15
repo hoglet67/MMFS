@@ -60,6 +60,10 @@ User Port     SD Card
       PB0 ==> S_MOSI (Din)
        0V ==> S_SEL  (Select)
 
+With this hardware, the 6522 shift register mode 2 can be used to
+provide high speed reads ("turbo reads"). This feature was introduced
+in MMFS 1.13.
+
 TurboMMC Interface Hardware
 ===========================
 
@@ -82,5 +86,7 @@ User Port     SD Card
       CB2 ==> S_MOSI (Din)
        0V ==> S_SEL  (Select)
 
-Currently this second mode (which would support fast writes using
-6522 Shift Register Mode 6), is not used by MMFS.
+With this hardware, the 6522 shift register modes 2 and 6 can be used
+to provide high speed reads ("turbo reads") and high speed writes
+("turbo writes") respectively. This feature was introduced in MMFS
+1.15.
