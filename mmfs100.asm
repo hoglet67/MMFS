@@ -3694,26 +3694,29 @@ ENDIF
 	RTS 
 
 .fscv6_shutdownfilesys
-	JSR RememberAXY			; Close any SPOOL orE XEC files
+	JSR RememberAXY
 IF _DEBUG
 	JSR PrintString
 	EQUB "Shutting down MMFS", 13
+	NOP
 ENDIF
-.CloseSPOOLEXECfiles
-	LDA #&77
-IF _SWRAM_
-	JMP OSBYTE
+IF not(_SWRAM_)
+   JSR CloseSPOOLEXECfiles
+	JMP SERVICE0A_claim_statworkspace ; save static to private workspace 
 ELSE
-	JSR OSBYTE			; (Causes ROM serv.call &10)
-	JMP SERVICE0A_claim_statworkspace
+	;; fall through into CloseSPOOLEXECfiles
 ENDIF
+
+.CloseSPOOLEXECfiles
+	LDA #&77			   ; Close any SPOOL or EXEC files
+	JMP OSBYTE			; (Causes ROM serv.call &10)
 
 	\ *CLOSE
 .CMD_CLOSE
 	LDA #&20
 	STA MA+&1086
 .CloseAllFiles_Osbyte77
-	JSR fscv6_shutdownfilesys
+	JSR CloseSPOOLEXECfiles
 .CloseAllFiles
 {
 	LDA #&00			; intch=intch+&20
