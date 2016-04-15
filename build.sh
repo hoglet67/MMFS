@@ -3,6 +3,9 @@
 rm -rf build
 mkdir -p build
 
+VERSION=`grep '#VERSION#' VERSION.asm | cut -d\" -f2`
+echo "Building MMFS $VERSION"
+
 # Set the BEEBASM executable for the platform
 BEEBASM=tools/beebasm/beebasm.exe
 if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
@@ -22,6 +25,7 @@ do
     echo "_DEVICE_ = '"$device"'" > DEVICE.asm
     # Create a blank SSD image
     tools/mmb_utils/blank_ssd.pl ${ssd}
+    tools/mmb_utils/title.pl ${ssd} "MMFS $device $VERSION"
     echo
 
     for top in  top_*.asm
