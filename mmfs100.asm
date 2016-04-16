@@ -3698,9 +3698,9 @@ ENDIF
 IF _DEBUG
 	JSR PrintString
 	EQUB "Shutting down MMFS", 13
-	NOP
 ENDIF
-IF not(_SWRAM_)
+IF _MASTER_
+	NOP
    JSR CloseSPOOLEXECfiles
 	JMP SERVICE0A_claim_statworkspace ; save static to private workspace 
 ELSE
