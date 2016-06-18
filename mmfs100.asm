@@ -2467,9 +2467,9 @@ ELSE
 	LDA (&B0),Y			; A=PWSP+&D3 (-ve=soft break)
 	BPL initdfs_reset		; Branch if power up or hard break
 
-	PLA 
-	PHA 
-	BEQ initdfs_reset		; Branch if boot file
+	\PLA 
+	\PHA 
+	\BEQ initdfs_reset		; Branch if boot file
 
 	LDY #&D4
 	LDA (&B0),Y			; A=PWSP+&D4
@@ -2529,9 +2529,9 @@ ENDIF
 
 	\ INITIALISE VID VARIABLES
 	\ Don't reset if booting
-	PLA
-	PHA
-	BEQ initdfs_noreset
+	\PLA
+	\PHA
+	\BEQ initdfs_noreset
 	
 	JSR VIDRESET
 
@@ -2828,7 +2828,7 @@ ENDIF
 	JSR OSBYTE			; X=int.key.no
 	TXA 
 	BMI jmpAUTOBOOT
-	CMP #&51			; "S" KEY
+	CMP #&65			; "M" KEY
 	BNE srv3_exit
 	LDA #&78			; write current keys pressed info
 	JSR OSBYTE
