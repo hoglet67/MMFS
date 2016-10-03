@@ -98,10 +98,17 @@ ENDIF
 
 	\ Illuminate Caps Lock & Shift Lock
 .SetLEDS
+IF _ELECTRON_
+   LDA &282
+   EOR #&80
+   STA &282
+   STA &FE07
+ELSE
 	LDX #&6
 	STX &FE40
 	INX
 	STX &FE40
+ENDIF
 	RTS
 
 	\ Reset LEDs

@@ -1,4 +1,5 @@
 _MASTER_=TRUE           ; Master version
+_ELECTRON_=FALSE        ; Electron version
 _SWRAM_=FALSE           ; Sideways RAM Version
 _ROMS_=FALSE            ; Include *ROMS command (i.e. No DFS or 8271 DFS)
 _UTILS_=FALSE           ; Include utilites (*DUMP etc.) (i.e. No DFS)
