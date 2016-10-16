@@ -7299,6 +7299,12 @@ IF _BP12K_
         TAX
         PLA
         PLP
+        \ SFTODO The next line is obviously a massive hack and defeats the
+        \ point, *but* with it not commented out, Acheton runs. So what's going
+        \ wrong is a side-effect of this code - *probably* something using the
+        \ ROM number with b7 set - not a result of this code itself upsetting
+        \ anything.
+        \ jmp PageOut12K \ SFTODO TEMP HACK
         RTS
 }
 
