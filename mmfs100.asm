@@ -7309,6 +7309,11 @@ IF _BP12K_
         RTS
 ENDIF
 
+\ SFTODO: It would be nice - I'm thinking of perhaps someone *replacing* the DFS
+\ ROM with the B+12K ROM version - if we could allow things like *ROMS to be
+\ built and live in the part of the ROM which is shadowed by the RAM workspace,
+\ since they probably don't actually need access to it.
+
 PRINT "    code ends at",~P%," (",(guard_value - P%), "bytes free )"
 
 SAVE "", &8000, &C000
