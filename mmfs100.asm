@@ -2477,6 +2477,11 @@ ENDIF
 	STA (&B0),Y
 	INY 
 	LDA PagedRomSelector_RAMCopy
+IF _BP12K_
+        \ SFTODO: Depending how a tidier implementation works we might not want
+        \ this.
+        AND #&7F
+ENDIF
 	STA (&B0),Y
 	INY 
 	DEX 
