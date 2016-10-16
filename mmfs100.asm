@@ -2015,11 +2015,10 @@ IF _BP12K_
 	LDA PagedRomSelector_RAMCopy
         AND #&7F
         TAX
-	LDA PagedROM_PrivWorkspaces,X
 ELSE
 	LDX PagedRomSelector_RAMCopy
-	LDA PagedROM_PrivWorkspaces,X
 ENDIF
+	LDA PagedROM_PrivWorkspaces,X
 	AND #&BF			; Clear bit 6
 	PLP
 	BEQ skip
@@ -2686,6 +2685,11 @@ IF _MASTER_
 .lbl3	\ Note: 00 = PWS in normal ram, 11 = PWS in hidden ram
 ELSE
 	PHA
+IF _BP12K_
+        LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        TAX
+ENDIF
 	LDA PagedROM_PrivWorkspaces,X
 	BMI romdisabled			; if bit 7 set
 .lbl1	PLA
