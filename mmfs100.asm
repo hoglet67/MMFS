@@ -7204,7 +7204,11 @@ IF _BP12K_
         TYA
         PHA
         \ SFTODO: We have no right to use &70 zero page here, but this will do
-        \ for a proof of concept.
+        \ for a proof of concept. As a partial workaround for incompatibilities,
+        \ let's stash the old values on the stack - this is imperfect
+        \ (interrupts) but will help see if the POC basically works.
+        LDA &70:PHA
+        LDA &71:PHA
         LDA #0
         STA &70
         LDA #&7F
@@ -7240,6 +7244,8 @@ IF _BP12K_
 .done
         STX PagedRomSelector_RAMCopy
         STX &FE30
+        PLA:STA &71
+        PLA:STA &70
         PLA
         TAY
         PLA
