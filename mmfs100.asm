@@ -2011,8 +2011,15 @@ IF NOT(_MASTER_)			; Master DFS always has higher priority
 	\ Bit 6 of the PagedROM_PrivWorkspaces = disable *DISC, *DISK commands etc.
 	TYA				; *OPT 5,Y
 	PHP
+IF _BP12K_
+	LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        TAX
+	LDA PagedROM_PrivWorkspaces,X
+ELSE
 	LDX PagedRomSelector_RAMCopy
 	LDA PagedROM_PrivWorkspaces,X
+ENDIF
 	AND #&BF			; Clear bit 6
 	PLP
 	BEQ skip
@@ -2424,7 +2431,13 @@ gdopt%=&B7
 
 .CMD_DISC
 IF NOT(_MASTER_)
+IF _BP12K_
+        LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        TAX
+ELSE
 	LDX PagedRomSelector_RAMCopy	; Are *DISC,*DISK disabled?
+ENDIF
 	LDA PagedROM_PrivWorkspaces,X
 	AND #&40
 	BEQ CMD_CARD
@@ -2701,8 +2714,17 @@ ENDIF
 	PHA
  
 	\ Restore A & X values
+IF _BP12K_
+        TXA
+        PHA
+        LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        TAX
+        PLA
+ELSE
 	TXA
 	LDX PagedRomSelector_RAMCopy
+ENDIF
 	LSR A
 	CMP #&0B
 	BCC label3
@@ -2827,7 +2849,13 @@ ELSE
 	STA (&B0),Y			; PWSP?&D4=0 = PWSP "full"
 ENDIF
 
+IF _BP12K_
+        LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        TAX
+ELSE
 	LDX PagedRomSelector_RAMCopy 	; restore X & A, Y=Y+2
+ENDIF
 	PLA
 	TAY
 	LDA #&02
@@ -3004,8 +3032,15 @@ IF _MASTER_
 	DEX
 	BPL srv25_loop
 
+IF _BP12K_
+        LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        TAX
+        LDA #&25
+ELSE
 	LDA #&25
 	LDX PagedRomSelector_RAMCopy
+ENDIF
 	RTS
 
 .fsinfo
