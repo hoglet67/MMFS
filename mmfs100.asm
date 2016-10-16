@@ -3613,6 +3613,9 @@ ENDIF
 	EQUW &FF2D	; FSCV
 
 	\ Extended vector table
+        \ SFTODO: It might well be possible to arrange for the 12K bank to be
+        \ paged in ready for us by setting b7 on the ROM bank in the extended
+        \ vector.
 .extendedvectors_table
 	EQUW FILEV_ENTRY
 	BRK
