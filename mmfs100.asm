@@ -12,6 +12,10 @@ INCLUDE "DEVICE.asm"
 IF _MASTER_
 	CPU 1				; 65C12
 	MA=&C000-&0E00			; Offset to Master hidden static workspace
+ELIF _BP12K_
+        MA=&8200-&0E00
+        UTILSBUF=(&BF-&B6)+&82
+        MAEND=(UTILSBUF+1)<<8
 ELIF _SWRAM_
 	MA=&B600-&0E00
 	UTILSBUF=&BF			; Utilities buffer page
@@ -59,7 +63,7 @@ tubeid%=&0A			; See Tube Application Note No.004 Page 7
 
 
 ORG &8000
-IF _SWRAM_
+IF _SWRAM_ AND NOT(_BP12K_)
     guard_value=&B600
 ELSE
     guard_value=&C000
@@ -423,6 +427,12 @@ ENDIF
 	BPL rdafsp_cpyfnloop
 	RTS
 }
+
+; SFTODO: Bit of a wasteful (given how tight space is) alignment here
+IF _BP12K_
+        SKIPTO MA+&0E00
+        SKIPTO MAEND
+ENDIF
 
 .prt_filename_Yoffset
 {
