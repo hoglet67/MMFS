@@ -4383,11 +4383,11 @@ ENDIF
 	JSR RememberAXY
 	JMP bp_entry
 .BPUTV_ENTRY
+        BP12K_NEST
 	JSR RememberAXY
 	JSR CheckChannel_Yhndl_exYintch
 .bp_entry
 {
-        BP12K_NEST
 	PHA 
 	LDA MA+&110C,Y
 	BMI errFILEREADONLY
