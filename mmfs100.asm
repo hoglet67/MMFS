@@ -61,6 +61,15 @@ filesysno%=&04			; Filing System Number
 filehndl%=&50			; First File Handle - 1
 tubeid%=&0A			; See Tube Application Note No.004 Page 7
 
+MACRO BP12K_NEST
+    IF _BP12K_
+        JSR PageIn12K
+        JSR nested
+        JMP PageOut12K
+    .nested
+    ENDIF
+ENDMACRO
+
 
 ORG &8000
 IF _SWRAM_ AND NOT(_BP12K_)
@@ -2668,6 +2677,7 @@ ELSE
 	BMI romdisabled			; if bit 7 set
 .lbl1	PLA
 ENDIF
+        BP12K_NEST \ SFTODO: Massively unacceptable performance hit on every service call!
 
 	CMP #&12
 	BEQ SERVICE12_init_filesystem
@@ -3041,9 +3051,9 @@ ENDIF	; End of MASTER ONLY service calls
 .fsc	JMP (FSCV)
 }
 
-
 .FILEV_ENTRY
 {
+        BP12K_NEST
 	JSR RememberXYonly
 	PHA
 	JSR parameter_fsp
@@ -3076,6 +3086,7 @@ ENDIF	; End of MASTER ONLY service calls
 	RTS 
 
 .FSCV_ENTRY
+        BP12K_NEST
 	CMP #&0C
 	BCS filev_unknownop
 	STX &B5				; Save X
@@ -3097,6 +3108,7 @@ ENDIF
 
 .GBPBV_ENTRY
 {
+        BP12K_NEST
 	CMP #&09
 	BCS gbpbv_unrecop
 	JSR RememberAXY
@@ -3832,6 +3844,7 @@ ENDIF
 	\ OSFIND: A=&40 ro, &80 wo, &C0 rw
 .FINDV_ENTRY
 {
+        BP12K_NEST
 	AND #&C0			; Bit 7=open for output
 	BNE findvnot0_openfile		; Bit 6=open for input
 	JSR RememberAXY
@@ -4066,6 +4079,7 @@ ENDIF
 
 .ARGSV_ENTRY
 {
+        BP12K_NEST
 	JSR RememberAXY
 	CMP #&FF
 	BEQ ChannelBufferToDisk_Yhandle_A0	; If file(s) to media
@@ -4239,6 +4253,7 @@ ENDIF
 
 .BGETV_ENTRY
 {
+        BP12K_NEST
 	JSR RememberXYonly
 	JSR CheckChannel_Yhndl_exYintch
 	TYA 				; A=Y
@@ -4372,6 +4387,7 @@ ENDIF
 	JSR CheckChannel_Yhndl_exYintch
 .bp_entry
 {
+        BP12K_NEST
 	PHA 
 	LDA MA+&110C,Y
 	BMI errFILEREADONLY
@@ -7166,6 +7182,83 @@ IF _UTILS_
 ENDIF
 IF _TUBEHOST_
 	INCLUDE "TubeHost230.asm"
+ENDIF
+
+IF _BP12K_
+        \ This code must be outside the 12K private RAM bank, so it can run
+        \ successfully without us having copied our code into that bank.
+        IF P%<&B000
+            SKIPTO &B000
+        ENDIF
+
+.PageIn12K
+{
+        \ SFTODO: We will copy our ROM code to the private RAM bank far too
+        \ often with this implementation, but it's an acceptable penalty for a
+        \ proof of concept implementation.
+
+        PHP
+        PHA
+        TXA
+        PHA
+        TYA
+        PHA
+        \ SFTODO: We have no right to use &70 zero page here, but this will do
+        \ for a proof of concept.
+        LDA #0
+        STA &70
+        LDA #&7F
+        STA &71
+
+        LDA PagedRomSelector_RAMCopy
+        ORA #&80
+        TAX
+        LDY #255
+        BNE start_loop
+.loop
+        LDA (&70),Y
+        STX PagedRomSelector_RAMCopy
+        STX &FE30
+        STA (&70),Y
+.start_loop
+        TXA
+        AND #&7F
+        STA PagedRomSelector_RAMCopy
+        STA &FE30
+        INY
+        BNE loop
+        INC &71
+        LDA &71
+        CMP #&B0
+        BEQ done
+        CMP #&82
+        BNE loop
+        LDA #HI(MAEND)
+        STA &71
+        BNE loop
+
+.done
+        STX PagedRomSelector_RAMCopy
+        STX &FE30
+        PLA
+        TAY
+        PLA
+        TAX
+        PLA
+        PLP
+        RTS
+}
+
+.PageOut12K
+        PHP
+        PHA
+        LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        STA PagedRomSelector_RAMCopy
+        STA &FE30
+        PLA
+        PLP
+        RTS
 ENDIF
 
 PRINT "    code ends at",~P%," (",(guard_value - P%), "bytes free )"
