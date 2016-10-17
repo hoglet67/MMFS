@@ -2695,7 +2695,6 @@ ENDIF
 	BMI romdisabled			; if bit 7 set
 .lbl1	PLA
 ENDIF
-        BP12K_NEST \ SFTODO: Massively unacceptable performance hit on every service call!
 
 	CMP #&12
 	BEQ SERVICE12_init_filesystem
@@ -2775,6 +2774,7 @@ ENDIF
 
 
 .SERVICE12_init_filesystem		; A=&12 Initialise filing system
+        BP12K_NEST
 	CPY #filesysno%			; Y=ID no. (4=dfs etc.)
 	BNE label3
 	JSR RememberAXY
@@ -2805,6 +2805,10 @@ IF _MASTER_
 ELSE
 	TYA
 	PHA				; Save Y=PWS Page
+ENDIF
+
+IF _BP12K_
+        JSR Init12K
 ENDIF
 
 IF NOT(_SWRAM_)
@@ -2882,6 +2886,7 @@ ENDIF
 
 .SERVICE03_autoboot			; A=3 Autoboot
 {
+        BP12K_NEST
 	JSR RememberAXY
 	STY &B3				; if Y=0 then !BOOT
 	LDA #&7A			; Keyboard scan
@@ -2897,6 +2902,7 @@ ENDIF
 }
 
 .SERVICE04_unrec_command		; A=4 Unrec Command
+        BP12K_NEST
 	JSR RememberAXY
 	LDX #cmdtab22			; UTILS commands
 .jmpunreccmd
@@ -2915,6 +2921,7 @@ ENDIF
 
 .SERVICE08_unrec_OSWORD
 {
+        BP12K_NEST
 	JSR RememberAXY
 
 	LDY &EF				; Y = Osword call
@@ -7231,12 +7238,8 @@ IF _BP12K_
             SKIPTO &B000
         ENDIF
 
-.PageIn12K
+.Init12K
 {
-        \ SFTODO: We will copy our ROM code to the private RAM bank far too
-        \ often with this implementation, but it's an acceptable penalty for a
-        \ proof of concept implementation.
-
         PHP
         PHA
         TXA
@@ -7282,8 +7285,6 @@ IF _BP12K_
         BNE loop
 
 .done
-        STX PagedRomSelector_RAMCopy
-        STX &FE30
         PLA:STA &71
         PLA:STA &70
         PLA
@@ -7292,14 +7293,19 @@ IF _BP12K_
         TAX
         PLA
         PLP
-        \ SFTODO The next line is obviously a massive hack and defeats the
-        \ point, *but* with it not commented out, Acheton runs. So what's going
-        \ wrong is a side-effect of this code - *probably* something using the
-        \ ROM number with b7 set - not a result of this code itself upsetting
-        \ anything.
-        \ jmp PageOut12K \ SFTODO TEMP HACK
         RTS
 }
+
+.PageIn12K
+        PHP
+        PHA
+        LDA PagedRomSelector_RAMCopy
+        ORA #&80
+        STA PagedRomSelector_RAMCopy
+        STA &FE30
+        PLA
+        PLP
+        RTS
 
 .PageOut12K
         PHP
