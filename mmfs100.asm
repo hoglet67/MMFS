@@ -3041,15 +3041,8 @@ IF _MASTER_
 	DEX
 	BPL srv25_loop
 
-IF _BP12K_
-        LDA PagedRomSelector_RAMCopy
-        AND #&7F
-        TAX
-        LDA #&25
-ELSE
 	LDA #&25
 	LDX PagedRomSelector_RAMCopy
-ENDIF
 	RTS
 
 .fsinfo
