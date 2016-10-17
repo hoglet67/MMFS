@@ -5699,6 +5699,11 @@ errptr%=&B8
 ; SFTODO: Bit of a wasteful (given how tight space is) alignment here
 IF _BP12K_
         SKIPTO MA+&0E00
+        ; The tube host code can live in this region; it doesn't access our
+        ; workspace and we won't page in the private 12K bank when calling this.
+IF _TUBEHOST_ AND (_BP12K_)
+	INCLUDE "TubeHost230.asm"
+ENDIF
         SKIPTO MAEND
 ENDIF
 
@@ -7224,7 +7229,7 @@ ENDIF
 IF _UTILS_
 	INCLUDE "Utilities.asm"
 ENDIF
-IF _TUBEHOST_
+IF _TUBEHOST_ AND NOT(_BP12K_)
 	INCLUDE "TubeHost230.asm"
 ENDIF
 
