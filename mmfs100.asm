@@ -3650,9 +3650,6 @@ ENDIF
 	EQUW &FF2D	; FSCV
 
 	\ Extended vector table
-        \ SFTODO: It might well be possible to arrange for the 12K bank to be
-        \ paged in ready for us by setting b7 on the ROM bank in the extended
-        \ vector.
 .extendedvectors_table
 	EQUW FILEV_ENTRY
 	BRK
@@ -5694,7 +5691,7 @@ errptr%=&B8
 	JMP &100
 }
 
-; SFTODO: Bit of a wasteful (given how tight space is) alignment here
+; SFTODO: Slightly wasteful of space here
 IF _BP12K_
         SKIPTO MA+&0E00
         ; The tube host code can live in this region; it doesn't access our
@@ -7318,11 +7315,6 @@ IF _BP12K_
         PLP
         RTS
 ENDIF
-
-\ SFTODO: It would be nice - I'm thinking of perhaps someone *replacing* the DFS
-\ ROM with the B+12K ROM version - if we could allow things like *ROMS to be
-\ built and live in the part of the ROM which is shadowed by the RAM workspace,
-\ since they probably don't actually need access to it.
 
 PRINT "    code ends at",~P%," (",(guard_value - P%), "bytes free )"
 
