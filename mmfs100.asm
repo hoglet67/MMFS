@@ -13,8 +13,12 @@ IF _MASTER_
 	CPU 1				; 65C12
 	MA=&C000-&0E00			; Offset to Master hidden static workspace
 ELIF _BP12K_
-        MA=&8200-&0E00
-        UTILSBUF=(&BF-&B6)+&82
+        ; Memory at &Axxx has the (to us) undesirable property it accesses the
+        ; shadow RAM. We therefore can't have any code which needs to access
+        ; user memory there. To use as much of it as possible up harmlessly,
+        ; we situate our workspace in that range.
+        MA=&A200-&0E00
+        UTILSBUF=(&BF-&B6)+HI(MA+&0E00)
         MAEND=(UTILSBUF+1)<<8
 ELIF _SWRAM_
 	MA=&B600-&0E00
@@ -436,12 +440,6 @@ ENDIF
 	BPL rdafsp_cpyfnloop
 	RTS
 }
-
-; SFTODO: Bit of a wasteful (given how tight space is) alignment here
-IF _BP12K_
-        SKIPTO MA+&0E00
-        SKIPTO MAEND
-ENDIF
 
 .prt_filename_Yoffset
 {
@@ -5413,7 +5411,6 @@ ENDIF
 	RTS
 }
 
-
 .CMD_FREE
 	SEC 				; \\\\\\\\\ *FREE
 	BCS Label_A7F7
@@ -5699,6 +5696,12 @@ errptr%=&B8
 	JMP &100
 }
 
+; SFTODO: Bit of a wasteful (given how tight space is) alignment here
+IF _BP12K_
+        SKIPTO MA+&0E00
+        SKIPTO MAEND
+ENDIF
+
 	\\ *********** MMC HARDWARE CODE **********
 
 datptr%=&BC
@@ -5714,25 +5717,9 @@ byteslastsec%=&C3
 cmdseq%=MA+&1087
 par%=MA+&1089
 
+	\ Include FAT routines here
 
-	\\ Include Low Level MMC Code here
-
-IF _DEVICE_='U'
-	INCLUDE "MMC_UserPort.asm"
-ELIF _DEVICE_='M'
-	INCLUDE "MMC_MemoryMapped.asm"
-ENDIF
-
-.errWrite2
-	TYA
-	JSR ReportMMCErrS
-	EQUB &C5
-	EQUS "MMC Write response fault "
-	BRK
-
-	\\ Include high level MMC code here
-
-INCLUDE "MMC.asm"
+INCLUDE "FAT.asm"
 
 
 	\ **** Calculate Check Sum (CRC7) ****
@@ -5783,9 +5770,6 @@ INCLUDE "MMC.asm"
 	STA CHECK_CRC7
 	RTS
 
-	\ Include FAT routines here
-
-INCLUDE "FAT.asm"
 
 	\\ *****  Reset MMC_SECTOR  *****
 	\\ (MMC_SECTION is the card address of 
@@ -6439,6 +6423,26 @@ ENDIF
 	SEC
 	RTS
 
+
+
+	\\ Include Low Level MMC Code here
+
+IF _DEVICE_='U'
+	INCLUDE "MMC_UserPort.asm"
+ELIF _DEVICE_='M'
+	INCLUDE "MMC_MemoryMapped.asm"
+ENDIF
+
+.errWrite2
+	TYA
+	JSR ReportMMCErrS
+	EQUB &C5
+	EQUS "MMC Write response fault "
+	BRK
+
+	\\ Include high level MMC code here
+
+INCLUDE "MMC.asm"
 
 
 	\\ *DRECAT
@@ -7275,7 +7279,7 @@ IF _BP12K_
         LDA &71
         CMP #&B0
         BEQ done
-        CMP #&82
+        CMP #HI(MA+&0E00)
         BNE loop
         LDA #HI(MAEND)
         STA &71
