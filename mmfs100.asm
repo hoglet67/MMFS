@@ -2476,9 +2476,7 @@ ENDIF
 	INY 
 	LDA PagedRomSelector_RAMCopy
 IF _BP12K_
-        \ SFTODO: Depending how a tidier implementation works we might not want
-        \ this.
-        AND #&7F
+        ORA #&80
 ENDIF
 	STA (&B0),Y
 	INY 
@@ -3088,7 +3086,6 @@ ENDIF	; End of MASTER ONLY service calls
 
 .FILEV_ENTRY
 {
-        BP12K_NEST
 	JSR RememberXYonly
 	PHA
 	JSR parameter_fsp
@@ -3121,7 +3118,6 @@ ENDIF	; End of MASTER ONLY service calls
 	RTS 
 
 .FSCV_ENTRY
-        BP12K_NEST
 	CMP #&0C
 	BCS filev_unknownop
 	STX &B5				; Save X
@@ -3143,7 +3139,6 @@ ENDIF
 
 .GBPBV_ENTRY
 {
-        BP12K_NEST
 	CMP #&09
 	BCS gbpbv_unrecop
 	JSR RememberAXY
@@ -3882,7 +3877,6 @@ ENDIF
 	\ OSFIND: A=&40 ro, &80 wo, &C0 rw
 .FINDV_ENTRY
 {
-        BP12K_NEST
 	AND #&C0			; Bit 7=open for output
 	BNE findvnot0_openfile		; Bit 6=open for input
 	JSR RememberAXY
@@ -4117,7 +4111,6 @@ ENDIF
 
 .ARGSV_ENTRY
 {
-        BP12K_NEST
 	JSR RememberAXY
 	CMP #&FF
 	BEQ ChannelBufferToDisk_Yhandle_A0	; If file(s) to media
@@ -4291,7 +4284,6 @@ ENDIF
 
 .BGETV_ENTRY
 {
-        BP12K_NEST
 	JSR RememberXYonly
 	JSR CheckChannel_Yhndl_exYintch
 	TYA 				; A=Y
@@ -4421,7 +4413,6 @@ ENDIF
 	JSR RememberAXY
 	JMP bp_entry
 .BPUTV_ENTRY
-        BP12K_NEST
 	JSR RememberAXY
 	JSR CheckChannel_Yhndl_exYintch
 .bp_entry
