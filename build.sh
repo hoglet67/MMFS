@@ -59,6 +59,8 @@ do
         # Add a .rom suffix
         mv ${build}/${name} ${build}/${name}.rom
     done
+    # Copy utilities
+    tools/mmb_utils/putfile.pl ${ssd} utilities/bin/*
     echo
     tools/mmb_utils/info.pl  ${ssd}
 done
