@@ -129,7 +129,29 @@ ENDIF
     DEY
     BNE dcmdu1
     JSR waitresp_up
+IF _DEBUG_MMC
+    JSR UP_ReadBits7        
+    PHP
+    PHA
+    PHA
+    LDY #7
+.dcmdu2
+    LDA cmdseq%,X
+    JSR PrintHex
+    INX
+    DEY
+    BNE dcmdu2
+    LDA #':'
+    JSR OSWRCH
+    PLA
+    JSR PrintHex
+    JSR OSNEWL       
+    PLA
+    PLP
+    RTS
+ELSE
     JMP UP_ReadBits7
+ENDIF
 }
 
     \\ wait for response bit
