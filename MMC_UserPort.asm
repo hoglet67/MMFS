@@ -133,17 +133,17 @@ IF _DEBUG_MMC
     JSR UP_ReadBits7        
     PHP
     PHA
-    PHA
-    LDY #7
+    LDY #0
 .dcmdu2
-    LDA cmdseq%,X
+    LDA cmdseq%,Y
     JSR PrintHex
-    INX
-    DEY
+    INY
+    CPY #7
     BNE dcmdu2
     LDA #':'
     JSR OSWRCH
     PLA
+    PHA
     JSR PrintHex
     JSR OSNEWL       
     PLA
