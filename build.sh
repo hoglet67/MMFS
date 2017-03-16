@@ -15,7 +15,7 @@ fi
 # Device:
 # M is MemoryMapped IO based (typically &FE18, for BeebEm)
 # U is normal User Port VIA based
-for device in M U
+for device in M U E
 do
     build=build/${device}
     mkdir -p ${build}

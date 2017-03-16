@@ -5655,6 +5655,8 @@ IF _DEVICE_='U'
 	INCLUDE "MMC_UserPort.asm"
 ELIF _DEVICE_='M'
 	INCLUDE "MMC_MemoryMapped.asm"
+ELIF _DEVICE_='E'
+	INCLUDE "MMC_ElkPlus1.asm"
 ENDIF
 
 .errWrite2
