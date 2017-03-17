@@ -1,44 +1,76 @@
 \\ EXPERIMENTAL DRIVER FOR ELK PLUS 1
 \\ WITH MMC CONNECTED TO PRINTER PORT
-        
 
 data%=&FC71
 status%=&FC72
 
-one%=&FF
+\\ MOSI is connected to D0
+\\ SCK is connected to D1
+\\ MISO is connected to Ack
+
+clockbit%=&02
         
-\\ RESET DEVICE
-.MMC_DEVICE_RESET
-	RTS
+one_clockhigh%=&FF
+one_clocklow%=&FF-clockbit%
+
+\\ This is unused on the Electron, according to the EAUG
+sr%=&F8
+
+\\ Start of Plus One specific code
 
 \\ Read byte (User Port)
 \\ Write FF
 .MMC_GetByte
 .P1_ReadByte
-    LDX #one%
-FOR n, 0, 7        
+    LDA #one_clockhigh%
+    LDX #one_clocklow%
+FOR n, 0, 7
     STX data%
+    STA data%
     ROL status%
-    ROL A
+    ROL sr%
 NEXT
+    LDA sr%
     RTS
-        
-\\ This is always entered with X with the correct values
+
+\\ This is always entered with A and X with the correct values
 .P1_ReadBits7
 FOR n, 0, 2
     STX data%
+    STA data%
     ROL status%
-    ROL A
+    ROL sr%
 NEXT
-        
- \\ This is always entered with X with the correct values
+
+ \\ This is always entered with A and X with the correct values
 .P1_ReadBits4
 FOR n, 0, 3
     STX data%
+    STA data%
     ROL status%
-    ROL A
-NEXT        
+    ROL sr%
+NEXT
+    LDA sr%
     RTS
+
+\\ wait for response bit
+\\ ie for clear bit
+.P1_WaitResp
+{
+    LDA #one_clockhigh%
+    LDX #one_clocklow%
+    LDY #0
+.loop
+    DEY
+    BEQ timeout
+    STX data%
+    STA data%
+    ROL status%
+    BCS loop
+.timeout
+    ROL sr%
+    RTS
+}
 
 \\ Write byte (User Port)
 \\ Ignore byte in
@@ -47,10 +79,20 @@ NEXT
     ASL A
 FOR N, 0, 7
     ROL A
+    AND #&FD
+    STA data%
+    ORA #clockbit%
     STA data%
 NEXT
     RTS
 }
+
+\\ More generic code below tis point
+
+
+\\ RESET DEVICE
+.MMC_DEVICE_RESET
+    RTS
 
 \\ *** Send &FF to MMC Y times ***
 \\ Y=0=256
@@ -81,7 +123,7 @@ NEXT
     BNE loop1
     JSR P1_WaitResp
 IF _DEBUG_MMC
-    JSR P1_ReadBits7        
+    JSR P1_ReadBits7
     PHP
     PHA
     LDY #0
@@ -96,30 +138,13 @@ IF _DEBUG_MMC
     PLA
     PHA
     JSR PrintHex
-    JSR OSNEWL       
+    JSR OSNEWL
     PLA
     PLP
     RTS
 ELSE
     JMP P1_ReadBits7
 ENDIF
-}
-
-\\ wait for response bit
-\\ ie for clear bit
-.P1_WaitResp
-{
-    LDX #one%
-    LDY #0
-.loop
-    DEY
-    BEQ timeout
-    STX data%
-    ROL status%
-    BCS loop
-    ROL A
-.timeout
-    RTS
 }
 
 \\ *** Wait for data token ***
@@ -187,7 +212,7 @@ ENDIF
     BNE loop
     RTS
 }
-        
+
 \\ **** Send Data Token to card ****
 .MMC_SendingData
 {
