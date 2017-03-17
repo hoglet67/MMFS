@@ -28,7 +28,14 @@ do
     tools/mmb_utils/title.pl ${ssd} "MMFS $device $VERSION"
     echo
 
-    for top in  top_*.asm
+    if [ $device == "E" ]
+    then
+        filelist=top_E*.asm
+    else
+        filelist=top_*.asm
+    fi
+
+    for top in $filelist
     do
         name=`echo ${top%.asm} | cut -c5-`
         echo "Building ${device}/$name..."
