@@ -200,15 +200,13 @@ ENDIF
 \\ **** Read 256 bytes to buffer ****
 .MMC_ReadBuffer
 {
-    LDX #&FF
-    STX CurrentCat
-    INX
-    LDY #0
+    LDY #&FF
+    STY CurrentCat
+    INY
 .loop
     JSR P1_ReadByte
     STA buf%, Y
     INY
-    DEX
     BNE loop
     RTS
 }
