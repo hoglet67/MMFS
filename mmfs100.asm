@@ -532,7 +532,9 @@ ENDIF
 
 	\ *INFO <afsp>
 .fscv10_starINFO
-	JSR SetTextPointerYX 
+	JSR SetTextPointerYX
+	LDA #info_cmd_index - cmdtable1-1  ; BF needs to point to the INFO command
+	STA &BF                            ; Param_SyntaxErrorIfNull to work
 .CMD_INFO
 	JSR parameter_afsp
 	JSR Param_SyntaxErrorIfNull
@@ -1262,6 +1264,7 @@ rn%=&B0
 	EQUB &80+&5F
 	EQUS "FREE"
 	EQUB &80+&04
+.info_cmd_index
 	EQUS "INFO"
 	EQUB &80+&02
 	EQUS "LIB"
