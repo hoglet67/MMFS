@@ -60,7 +60,7 @@ ENDIF
     STX iorb%           ;\3
     STA iorb%
         
-    \\ This is always entered with X and A with the correct values
+   \\ This is always entered with X and A with the correct values
 .UP_ReadBits4
     STX iorb%           ;\4
     STA iorb%
@@ -159,11 +159,11 @@ ENDIF
     \\ ie for clear bit (User Port only)
 .waitresp_up
 {
+    LDX #(1 + msbits)
     LDY #0
 .wrup
     DEY
     BEQ wrup_timeout
-    LDX #(1 + msbits)
     LDA #(3 + msbits)
     STX iorb%
     STA iorb%
@@ -171,7 +171,6 @@ ENDIF
     AND #1
     BNE wrup
 .wrup_timeout
-    LDX #(1 + msbits)
     LDA #(3 + msbits)
     RTS
 }
@@ -458,8 +457,7 @@ ENDIF
     \\ **** Send Data Token to card ****
 .MMC_SendingData
 {
-    LDY #2
-    JSR MMC_Clocks
+    JSR MMC_16Clocks
     LDA #&FE
     JMP UP_WriteByte
 }
@@ -467,9 +465,7 @@ ENDIF
     \\ **** Complete Write Operation *****
 .MMC_EndWrite
 {
-    LDY #2
-
-    JSR MMC_Clocks
+    JSR MMC_16Clocks
     JSR waitresp_up
     JSR UP_ReadBits4
     TAY
