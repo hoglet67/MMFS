@@ -34,18 +34,24 @@ fatclustsize%=&C3	; byte
 .ifx
 	RTS
 
+\\ Boot sector signature 0x55 0xAA found
 
-	\\ FAT found - assume FAT16
-	\\ with MBR (partitioned disk)
+\\ Test for presence of FAT Partition Boot Sector
+\\ 0x000 = 0xEB xx 0x90 is a good indicator
+\\ If this is not found, then assume sector 0 is an MBR
 
 .fat
-	\\ VBR=MBR?
-	LDA cat%+&1C6
-	ORA cat%+&1C7
-	ORA cat%+&1C8
-	ORA cat%+&1C9
-	BEQ nombr
-
+   LDA cat%
+   CMP #&EB
+   BNE mbr
+   LDA cat%+2
+   CMP #&90
+   BNE mbr
+   LDA cat%+&C
+   CMP #&02
+   BEQ nombr
+        
+.mbr
 	\\ sec = cat!&1C6 * 2
 	LDA cat%+&1C6
 	ASL A
