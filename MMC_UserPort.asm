@@ -28,7 +28,8 @@ ENDIF
 .MMC_DEVICE_RESET
     LDA #(3 + msbits)
     STA iorb%
-    LDA #ddrmask
+    LDA ddrb%
+    ORA #ddrmask
     STA ddrb%
     JSR ShiftRegMode0
     LDA #&1C
