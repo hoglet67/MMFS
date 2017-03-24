@@ -170,7 +170,6 @@ ENDIF
     AND #1
     BNE wrup
 .wrup_timeout
-    LDX #(1 + msbits)
     LDA #(3 + msbits)
     RTS
 }
@@ -226,21 +225,19 @@ ENDIF
 
     \\ **** Read 256 bytes to buffer ****
 .MMC_ReadBuffer
-    LDX #&FF
-    STX CurrentCat
-    INX
-
+{        
     JSR ShiftRegMode2
-
-    LDY #0
-.rdbuf2
+    LDY #&FF
+    STY CurrentCat
+    INY
+.loop
     JSR WaitForShiftDone
     STA buf%, Y
     INY
-    DEX
-    BNE rdbuf2
+    BNE loop
     RTS
-
+}
+        
 \\ Wait for the shift reg to complete shifing, and return the value in A.
 \\
 \\ If this is the last byte, return to mode 0 before reading the shift reg.
