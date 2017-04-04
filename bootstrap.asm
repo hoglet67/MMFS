@@ -83,9 +83,14 @@ osnewl  =       &ffe7
         stx     &f4
         stx     &fe30
         lda     &8006
-        inc     &8006
+        eor     #&FF
+        sta     &8006
         cmp     &8006
-        bne     gotram
+        php
+        eor     #&FF
+        sta     &8006
+        plp
+        beq     gotram
 .romnxt        
         dex
         bpl     romlp
@@ -93,7 +98,7 @@ osnewl  =       &ffe7
         stx     &f4
         stx     &fe30
         jmp     noram
-.gotram dec     &8006
+.gotram
         stx     dstrom
         lda     #&00            ; set copy destination as the start of
         sta     cpdst           ; the sideways RAM bank.
