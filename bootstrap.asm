@@ -10,6 +10,7 @@ osnewl  =       &ffe7
 .dstrom equb    &00
         
         org     &8000
+        guard   &CA00
 
 .start  equs    "MRB"
         jmp     serv
