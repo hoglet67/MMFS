@@ -5,7 +5,7 @@
 
 \** MAIN CODE **\
 
-\ Device: U=User Port, M=Memory Mapped
+\ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port
 INCLUDE "DEVICE.asm"
         
 \ MA/MP constants must be even numbers

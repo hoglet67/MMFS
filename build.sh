@@ -39,7 +39,10 @@ do
     do
         name=`echo ${top%.asm} | cut -c5-`
 
-        if [ "${device}/${name}" == "T/SWMMFS" ]
+        if [ \
+            "${device}/${name}" == "T/SWMMFS" -o \
+            "${device}/${name}" == "T/ZMMFS" \
+            ]
         then
             echo "Skipping ${device}/$name due to space constraints"
             continue;
