@@ -58,12 +58,12 @@ osnewl  =       &ffe7
         tya
         sbc     #&00
         sta     cpdst+1
-        ldy     cplen
-        dey
+        ldy     #0
 .loop1  lda     (cpsrc),Y       ; copy the copy routine into main ram.
         sta     (cpdst),Y
-        dey
-        bpl     loop1
+        iny
+        cpy     cplen
+        bne     loop1
         lda     #<romst         ; now set the embedded MMFS ROM as the
         sta     cpsrc           ; source of the copy.
         lda     #>romst
