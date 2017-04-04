@@ -129,7 +129,7 @@ osnewl  =       &ffe7
         jsr     osbyte
         stx     cpdst
         sty     cpdst+1
-        lda     romst+6         ; copy the MMFS ROM type into the table
+        lda     &8006           ; copy the MMFS ROM type into the table
         ldy     dstrom          ; entry for the RAM copy.
         sta     (cpdst),Y
         pla
