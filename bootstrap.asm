@@ -135,6 +135,7 @@ osnewl  =       &ffe7
         pla
         tay
         lda     #&01            ; and dont "claim" this call - others ROMS
+        ldx     ourrom          ; restore the current ROM number in X
         rts                     ; can claim workspace (we don't).
 .copyen
 
@@ -158,6 +159,7 @@ osnewl  =       &ffe7
         pla
         tay
         lda     #&01            ; and dont "claim" this call - others ROMS
+        ldx     ourrom          ; restore the current ROM number in X
         rts                     ; can claim workspace (we don't).
 .cmpfai lda     ourrom
         sta     &f4
@@ -212,6 +214,7 @@ osnewl  =       &ffe7
         pla
         tay
         lda     #&01            ; and dont "claim" this call - others ROMS
+        ldx     ourrom          ; restore the current ROM number in X
         rts                     ; can claim workspace (we don't).
 
 .normsg equs    "No sideways RAM found for MMFS"
