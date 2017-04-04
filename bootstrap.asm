@@ -76,12 +76,17 @@ osnewl  =       &ffe7
 
         macro   csetup
         ldx     #&0f            ; find the highest free sideways RAM slot.
-.romlp  stx     &f4
+.romlp
+        cpx     ourrom          ; don't write to ourrom in case it's FLASH
+        beq     romnxt
+        
+        stx     &f4
         stx     &fe30
         lda     &8006
         inc     &8006
         cmp     &8006
         bne     gotram
+.romnxt        
         dex
         bpl     romlp
         jmp     noram
