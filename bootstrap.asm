@@ -89,6 +89,9 @@ osnewl  =       &ffe7
 .romnxt        
         dex
         bpl     romlp
+        ldx     ourrom
+        stx     &f4
+        stx     &fe30
         jmp     noram
 .gotram dec     &8006
         stx     dstrom
