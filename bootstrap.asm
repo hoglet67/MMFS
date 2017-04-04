@@ -91,14 +91,30 @@ osnewl  =       &ffe7
         eor     #&FF
         sta     &8006
         plp
-        beq     gotram
+        beq     testdone
 .romnxt        
         dex
         bpl     romlp
-        ldx     ourrom
-        stx     &f4
-        stx     &fe30
+
+.testdone
+        lda     ourrom          ; page back in the source ROM
+        sta     &f4
+        sta     &fe30
+.wait
+        lda     &8000           ; some FLASH devices vanish for a while after being written to
+        cmp     #'M'            ; MRB is a signature for for the source ROM
+        bne     wait
+        lda     &8001
+        cmp     #'R'
+        bne     wait
+        lda     &8002
+        cmp     #'B'
+        bne     wait
+
+        cpx     #0              ; N = sign of X; X=FF if no RAM found
+        bpl     gotram
         jmp     noram
+        
 .gotram
         stx     dstrom
         lda     #&00            ; set copy destination as the start of
