@@ -5655,6 +5655,10 @@ par%=MA+&1089
 	\\ Include Low Level MMC Code here
 
 IF _DEVICE_='U'
+	_TURBOMMC=FALSE
+	INCLUDE "MMC_UserPort.asm"
+ELIF _DEVICE_='T'
+	_TURBOMMC=TRUE
 	INCLUDE "MMC_UserPort.asm"
 ELIF _DEVICE_='M'
 	INCLUDE "MMC_MemoryMapped.asm"

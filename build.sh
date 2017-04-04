@@ -15,7 +15,7 @@ fi
 # Device:
 # M is MemoryMapped IO based (typically &FE18, for BeebEm)
 # U is normal User Port VIA based
-for device in M U E
+for device in U T E M
 do
     build=build/${device}
     mkdir -p ${build}
@@ -38,7 +38,14 @@ do
     for top in $filelist
     do
         name=`echo ${top%.asm} | cut -c5-`
-        echo "Building ${device}/$name..."
+
+        if [ "${device}/${name}" == "T/SWMMFS" ]
+        then
+            echo "Skipping ${device}/$name due to space constraints"
+            continue;
+        else
+            echo "Building ${device}/$name..."
+        fi
 
         # Assember the ROM
         $BEEBASM -i ${top} -o ${build}/${name} -v >& ${build}/${name}.log
