@@ -39,16 +39,16 @@ do
     do
         name=`echo ${top%.asm} | cut -c5-`
 
-        if [ \
-            "${device}/${name}" == "T/SWMMFS" -o \
-            "${device}/${name}" == "T/ZMMFS" \
-            ]
-        then
-            echo "Skipping ${device}/$name due to space constraints"
-            continue;
-        else
+#        if [ \
+#            "${device}/${name}" == "T/SWMMFS" -o \
+#            "${device}/${name}" == "T/ZMMFS" \
+#            ]
+#        then
+#            echo "Skipping ${device}/$name due to space constraints"
+#            continue;
+#        else
             echo "Building ${device}/$name..."
-        fi
+#        fi
 
         # Assember the ROM
         $BEEBASM -i ${top} -o ${build}/${name} -v >& ${build}/${name}.log

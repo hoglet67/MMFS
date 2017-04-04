@@ -199,17 +199,17 @@ ENDIF
 	PLA
 	RTS
 
-.Utils_TextPointerAddY
-{
-	TYA 				; TextPointer += Y
-	CLC 				; (Where is this used?)
-	ADC TextPointer
-	STA TextPointer
-	BCC utils_tpexit
-	INC TextPointer
-.utils_tpexit
-	RTS
-}
+;;.Utils_TextPointerAddY
+;;{
+;;	TYA 				; TextPointer += Y
+;;	CLC 				; (Where is this used?)
+;;	ADC TextPointer
+;;	STA TextPointer
+;;	BCC utils_tpexit
+;;	INC TextPointer
+;;.utils_tpexit
+;;	RTS
+;;}
 
 .utils_skipspcloop
 	INY 				; Skip spaces

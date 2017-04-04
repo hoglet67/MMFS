@@ -20,6 +20,9 @@ ELSE
 ENDIF
 MP=HI(MA)
 
+;; To save space, don't include the undocumented ABOUT command
+_ABOUT_=FALSE
+
 INCLUDE "VERSION.asm"
 INCLUDE "SYSVARS.asm"			; OS constants
 
@@ -1346,8 +1349,10 @@ ENDIF
 	EQUB &80+&04
 	EQUS "RECAT"
 	EQUB &80
+IF _ABOUT_
 	EQUS "ABOUT"
 	EQUB &80
+ENDIF
 	BRK
 
 	\\ Address of sub-routines
@@ -1415,7 +1420,9 @@ ENDIF
 	EQUW CMD_DOP-&8001
 	EQUW CMD_DOUT-&8001
 	EQUW CMD_DRECAT-&8001
+IF _ABOUT_
 	EQUW CMD_DABOUT-1
+ENDIF
 	EQUW NotCmdTable4-1
 .cmdaddrX
 
@@ -3574,8 +3581,8 @@ ENDIF
 .osbyte8F_servreq
 	LDA #&8F
 	BNE goOSBYTE
-.osbyteFF_startupopts
-	LDA #&FF
+;;.osbyteFF_startupopts
+;;	LDA #&FF
 .osbyte_X0YFF
 	LDX #&00
 .osbyte_YFF
@@ -4138,10 +4145,11 @@ ENDIF
 	RTS
 }
 
-.conv_Xhndl_intch_exYintch
-	PHA 
-	TXA 
-	JMP conv_hndl_X_entry
+
+;; .conv_Xhndl_intch_exYintch
+;;	PHA 
+;;	TXA 
+;;	JMP conv_hndl_X_entry
 .conv_Yhndl_intch_exYintch
 	PHA 				; &10 to &17 are valid
 	TYA 
@@ -4600,7 +4608,11 @@ ENDIF
 .CMD_DUTILS
 	TYA
 	LDX #cmdtab4
+IF _ABOUT_
 	LDY #cmdtab4size-1
+ELSE
+	LDY #cmdtab4size
+ENDIF
 	BNE Prthelp_Xtable
 
 IF _UTILS_ OR _ROMS_
@@ -6677,6 +6689,7 @@ dmAmbig%=MA+&100E	; string terminated with *
 }
 
 
+IF _ABOUT_
 	\\ *DABOUT -  PRINT INFO STRING
 .CMD_DABOUT
 	JSR PrintString
@@ -6685,6 +6698,7 @@ dmAmbig%=MA+&100E	; string terminated with *
 	EQUS "(2011)",13
 	NOP
 	RTS
+ENDIF
 
 	\\ *DBOOT <dno>/<dsp>
 .CMD_DBOOT
