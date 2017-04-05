@@ -12,6 +12,24 @@ osnewl  =       &ffe7
         org     &8000
         guard   &CA00
 
+IF _ELECTRON_
+        macro  page_rom_x
+        pha
+        lda    #&0F
+        sta    &f4
+        sta    &fe05
+        pla
+        stx    &f4
+        stx    &fe05
+        endmacro
+ELSE
+        macro  page_rom_x
+        stx    &f4
+        stx    &fe30
+        endmacro        
+ENDIF
+
+        
 .start  equs    "MRB"
         jmp     serv
         equb    %10000010
@@ -81,8 +99,7 @@ osnewl  =       &ffe7
         cpx     ourrom          ; don't write to ourrom in case it's FLASH
         beq     romnxt
         
-        stx     &f4
-        stx     &fe30
+        page_rom_x
         lda     &8006
         eor     #&FF
         sta     &8006
@@ -97,9 +114,9 @@ osnewl  =       &ffe7
         bpl     romlp
 
 .testdone
-        lda     ourrom          ; page back in the source ROM
-        sta     &f4
-        sta     &fe30
+        stx     dstrom        
+        ldx     ourrom          ; page back in the source ROM
+        page_rom_x
 .wait
         lda     &8000           ; some FLASH devices vanish for a while after being written to
         cmp     #'M'            ; MRB is a signature for for the source ROM
@@ -111,12 +128,11 @@ osnewl  =       &ffe7
         cmp     #'B'
         bne     wait
 
-        cpx     #0              ; N = sign of X; X=FF if no RAM found
+        ldx     ourrom          ; X=FF if no RAM found
         bpl     gotram
         jmp     noram
         
 .gotram
-        stx     dstrom
         lda     #&00            ; set copy destination as the start of
         sta     cpdst           ; the sideways RAM bank.
         lda     #&80
@@ -126,12 +142,10 @@ osnewl  =       &ffe7
 
 .copyst csetup
 .copylp ldx     ourrom
-        stx     &f4
-        stx     &fe30
+        page_rom_x
         lda     (cpsrc),Y
         ldx     dstrom          ; this is the destination RAM bank.
-        stx     &f4
-        stx     &fe30
+        page_rom_x
         sta     (cpdst),Y
         iny
         bne     copylp
@@ -158,12 +172,10 @@ osnewl  =       &ffe7
 
 .cmpst  csetup
 .cmplp  ldx     ourrom
-        stx     &f4
-        stx     &fe30
+        page_rom_x
         lda     (cpsrc),Y
         ldx     dstrom          ; this is the destination RAM bank.
-        stx     &f4
-        stx     &fe30
+        page_rom_x
         cmp     (cpdst),Y
         bne     cmpfai
         iny
@@ -178,9 +190,8 @@ osnewl  =       &ffe7
         lda     #&01            ; and dont "claim" this call - others ROMS
         ldx     ourrom          ; restore the current ROM number in X
         rts                     ; can claim workspace (we don't).
-.cmpfai lda     ourrom
-        sta     &f4
-        sta     &fe30
+.cmpfai ldx     ourrom
+        page_rom_x
         jmp     romfai
 .cmpen
 
