@@ -13,10 +13,11 @@ IF _MASTER_
 	CPU 1				; 65C12
 	MA=&C000-&0E00			; Offset to Master hidden static workspace
 ELIF _BP12K_
-        ; Memory at &Axxx has the (to us) undesirable property it accesses the
-        ; shadow RAM. We therefore can't have any code which needs to access
-        ; user memory there. To use as much of it as possible up harmlessly,
-        ; we situate our workspace in that range.
+        ; Memory at &Axxx in the 12K private RAM has the (to us) undesirable
+        ; property that code running there accesses the display RAM, whether 
+        ; that's main or shadow RAM. We therefore can't have any code which 
+        ; needs to access user memory there. To use as much of it as possible up
+        ; harmlessly, we situate our workspace in that range.
         MA=&A200-&0E00
         UTILSBUF=(&BF-&B6)+HI(MA+&0E00)
         MAEND=(UTILSBUF+1)<<8
