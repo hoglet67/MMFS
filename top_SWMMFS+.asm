@@ -1,6 +1,6 @@
 _MASTER_=FALSE          ; Master version
 _ELECTRON_=FALSE        ; Electron version
-_SWRAM_=TRUE            ; Sideways RAM Version (NB: this and B+12K both TRUE)
+_SWRAM_=TRUE            ; Sideways RAM Version (NB: this and _BP12K_ both TRUE)
 _BP12K_=TRUE            ; B+ private RAM version
 _ROMS_=TRUE             ; Include *ROMS command (i.e. No DFS or 8271 DFS)
 _UTILS_=TRUE            ; Include utilites (*DUMP etc.) (i.e. No DFS)

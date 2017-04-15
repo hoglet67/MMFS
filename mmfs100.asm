@@ -7249,16 +7249,10 @@ IF _BP12K_
         PHA
         TYA
         PHA
-        \ SFTODO: We have no right to use &70 zero page here, but this will do
-        \ for a proof of concept. As a partial workaround for incompatibilities,
-        \ let's stash the old values on the stack - this is imperfect
-        \ (interrupts) but will help see if the POC basically works.
-        LDA &70:PHA
-        LDA &71:PHA
         LDA #0
-        STA &70
+        STA &B0
         LDA #&7F
-        STA &71
+        STA &B1
 
         LDA PagedRomSelector_RAMCopy
         ORA #&80
@@ -7266,10 +7260,10 @@ IF _BP12K_
         LDY #255
         BNE start_loop
 .loop
-        LDA (&70),Y
+        LDA (&B0),Y
         STX PagedRomSelector_RAMCopy
         STX &FE30
-        STA (&70),Y
+        STA (&B0),Y
 .start_loop
         TXA
         AND #&7F
@@ -7277,19 +7271,17 @@ IF _BP12K_
         STA &FE30
         INY
         BNE loop
-        INC &71
-        LDA &71
+        INC &B1
+        LDA &B1
         CMP #&B0
         BEQ done
         CMP #HI(MA+&0E00)
         BNE loop
         LDA #HI(MAEND)
-        STA &71
+        STA &B1
         BNE loop
 
 .done
-        PLA:STA &71
-        PLA:STA &70
         PLA
         TAY
         PLA
