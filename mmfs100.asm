@@ -2835,7 +2835,13 @@ ENDIF
 	DEX 
 
 IF _SWRAM_
+IF _BP12K_
+        JSR PageIn12K
+ENDIF
 	STX ForceReset
+IF _BP12K_
+        JSR PageOut12K
+ENDIF
 ELSE
 	TXA				; A= FF=soft,0=power up,1=hard
 	LDY #<ForceReset
