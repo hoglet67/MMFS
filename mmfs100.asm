@@ -12,6 +12,15 @@ INCLUDE "DEVICE.asm"
 IF _MASTER_
 	CPU 1				; 65C12
 	MA=&C000-&0E00			; Offset to Master hidden static workspace
+ELIF _BP12K_
+        ; Memory at &Axxx in the 12K private RAM has the (to us) undesirable
+        ; property that code running there accesses the display RAM, whether 
+        ; that's main or shadow RAM. We therefore can't have any code which 
+        ; needs to access user memory there. To use as much of it as possible up
+        ; harmlessly, we situate our workspace in that range.
+        MA=&A200-&0E00
+        UTILSBUF=(&BF-&B6)+HI(MA+&0E00)
+        MAEND=(UTILSBUF+1)<<8
 ELIF _SWRAM_
 	MA=&B600-&0E00
 	UTILSBUF=&BF			; Utilities buffer page
@@ -60,9 +69,18 @@ filesysno%=&04			; Filing System Number
 filehndl%=&50			; First File Handle - 1
 tubeid%=&0A			; See Tube Application Note No.004 Page 7
 
+MACRO BP12K_NEST
+    IF _BP12K_
+        JSR PageIn12K
+        JSR nested
+        JMP PageOut12K
+    .nested
+    ENDIF
+ENDMACRO
+
 
 ORG &8000
-IF _SWRAM_
+IF _SWRAM_ AND NOT(_BP12K_)
     guard_value=&B600
 ELSE
     guard_value=&C000
@@ -2002,7 +2020,13 @@ IF NOT(_MASTER_)			; Master DFS always has higher priority
 	\ Bit 6 of the PagedROM_PrivWorkspaces = disable *DISC, *DISK commands etc.
 	TYA				; *OPT 5,Y
 	PHP
+IF _BP12K_
+	LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        TAX
+ELSE
 	LDX PagedRomSelector_RAMCopy
+ENDIF
 	LDA PagedROM_PrivWorkspaces,X
 	AND #&BF			; Clear bit 6
 	PLP
@@ -2415,7 +2439,13 @@ gdopt%=&B7
 
 .CMD_DISC
 IF NOT(_MASTER_)
+IF _BP12K_
+        LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        TAX
+ELSE
 	LDX PagedRomSelector_RAMCopy	; Are *DISC,*DISK disabled?
+ENDIF
 	LDA PagedROM_PrivWorkspaces,X
 	AND #&40
 	BEQ CMD_CARD
@@ -2456,6 +2486,9 @@ ENDIF
 	STA (&B0),Y
 	INY 
 	LDA PagedRomSelector_RAMCopy
+IF _BP12K_
+        ORA #&80
+ENDIF
 	STA (&B0),Y
 	INY 
 	DEX 
@@ -2664,6 +2697,11 @@ IF _MASTER_
 .lbl3	\ Note: 00 = PWS in normal ram, 11 = PWS in hidden ram
 ELSE
 	PHA
+IF _BP12K_
+        LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        TAX
+ENDIF
 	LDA PagedROM_PrivWorkspaces,X
 	BMI romdisabled			; if bit 7 set
 .lbl1	PLA
@@ -2691,8 +2729,17 @@ ENDIF
 	PHA
  
 	\ Restore A & X values
+IF _BP12K_
+        TXA
+        PHA
+        LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        TAX
+        PLA
+ELSE
 	TXA
 	LDX PagedRomSelector_RAMCopy
+ENDIF
 	LSR A
 	CMP #&0B
 	BCC label3
@@ -2738,6 +2785,7 @@ ENDIF
 
 
 .SERVICE12_init_filesystem		; A=&12 Initialise filing system
+        BP12K_NEST
 	CPY #filesysno%			; Y=ID no. (4=dfs etc.)
 	BNE label3
 	JSR RememberAXY
@@ -2770,6 +2818,10 @@ ELSE
 	PHA				; Save Y=PWS Page
 ENDIF
 
+IF _BP12K_
+        JSR Init12K
+ENDIF
+
 IF NOT(_SWRAM_)
 	STA &B1				; Set (B0) as pointer to PWSP
 	LDY PagedROM_PrivWorkspaces,X
@@ -2794,7 +2846,13 @@ ENDIF
 	DEX 
 
 IF _SWRAM_
+IF _BP12K_
+        JSR PageIn12K
+ENDIF
 	STX ForceReset
+IF _BP12K_
+        JSR PageOut12K
+ENDIF
 ELSE
 	TXA				; A= FF=soft,0=power up,1=hard
 	LDY #<ForceReset
@@ -2817,7 +2875,13 @@ ELSE
 	STA (&B0),Y			; PWSP?&D4=0 = PWSP "full"
 ENDIF
 
+IF _BP12K_
+        LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        TAX
+ELSE
 	LDX PagedRomSelector_RAMCopy 	; restore X & A, Y=Y+2
+ENDIF
 	PLA
 	TAY
 	LDA #&02
@@ -2839,6 +2903,7 @@ ENDIF
 
 .SERVICE03_autoboot			; A=3 Autoboot
 {
+        BP12K_NEST
 	JSR RememberAXY
 	STY &B3				; if Y=0 then !BOOT
 	LDA #&7A			; Keyboard scan
@@ -2854,6 +2919,7 @@ ENDIF
 }
 
 .SERVICE04_unrec_command		; A=4 Unrec Command
+        BP12K_NEST
 	JSR RememberAXY
 	LDX #cmdtab22			; UTILS commands
 .jmpunreccmd
@@ -2872,6 +2938,7 @@ ENDIF
 
 .SERVICE08_unrec_OSWORD
 {
+        BP12K_NEST
 	JSR RememberAXY
 
 	LDY &EF				; Y = Osword call
@@ -5648,6 +5715,17 @@ errptr%=&B8
 	JMP &100
 }
 
+; SFTODO: Slightly wasteful of space here
+IF _BP12K_
+        SKIPTO MA+&0E00
+        ; The tube host code can live in this region; it doesn't access our
+        ; workspace and we won't page in the private 12K bank when calling this.
+IF _TUBEHOST_ AND (_BP12K_)
+	INCLUDE "TubeHost230.asm"
+ENDIF
+        SKIPTO MAEND
+ENDIF
+
 	\\ *********** MMC HARDWARE CODE **********
 
 datptr%=&BC
@@ -5663,32 +5741,9 @@ byteslastsec%=&C3
 cmdseq%=MA+&1087
 par%=MA+&1089
 
+	\ Include FAT routines here
 
-	\\ Include Low Level MMC Code here
-
-IF _DEVICE_='U'
-	_TURBOMMC=FALSE
-	INCLUDE "MMC_UserPort.asm"
-ELIF _DEVICE_='T'
-	_TURBOMMC=TRUE
-	INCLUDE "MMC_UserPort.asm"
-ELIF _DEVICE_='M'
-	INCLUDE "MMC_MemoryMapped.asm"
-ELIF _DEVICE_='E'
-	INCLUDE "MMC_ElkPlus1.asm"
-ENDIF
-
-.errWrite2
-	TYA
-	JSR ReportMMCErrS
-	EQUB &C5
-	EQUS "MMC Write response fault "
-	BRK
-
-	\\ Include high level MMC code here
-
-INCLUDE "MMC.asm"
-
+INCLUDE "FAT.asm"
 
 	\ **** Calculate Check Sum (CRC7) ****
 	\ Exit: A=CRC7, X=0, Y=FF
@@ -5738,9 +5793,6 @@ INCLUDE "MMC.asm"
 	STA CHECK_CRC7
 	RTS
 
-	\ Include FAT routines here
-
-INCLUDE "FAT.asm"
 
 	\\ *****  Reset MMC_SECTOR  *****
 	\\ (MMC_SECTION is the card address of 
@@ -6394,6 +6446,32 @@ ENDIF
 	SEC
 	RTS
 
+
+
+	\\ Include Low Level MMC Code here
+
+IF _DEVICE_='U'
+	_TURBOMMC=FALSE
+	INCLUDE "MMC_UserPort.asm"
+ELIF _DEVICE_='T'
+	_TURBOMMC=TRUE
+	INCLUDE "MMC_UserPort.asm"
+ELIF _DEVICE_='M'
+	INCLUDE "MMC_MemoryMapped.asm"
+ELIF _DEVICE_='E'
+	INCLUDE "MMC_ElkPlus1.asm"
+ENDIF
+
+.errWrite2
+	TYA
+	JSR ReportMMCErrS
+	EQUB &C5
+	EQUS "MMC Write response fault "
+	BRK
+
+	\\ Include high level MMC code here
+
+INCLUDE "MMC.asm"
 
 
 	\\ *DRECAT
@@ -7177,8 +7255,88 @@ ENDIF
 IF _UTILS_
 	INCLUDE "Utilities.asm"
 ENDIF
-IF _TUBEHOST_
+IF _TUBEHOST_ AND NOT(_BP12K_)
 	INCLUDE "TubeHost230.asm"
+ENDIF
+
+IF _BP12K_
+        \ This code must be outside the 12K private RAM bank, so it can run
+        \ successfully without us having copied our code into that bank.
+        IF P%<&B000
+            SKIPTO &B000
+        ENDIF
+
+.Init12K
+{
+        PHP
+        PHA
+        TXA
+        PHA
+        TYA
+        PHA
+        LDA #0
+        STA &B0
+        LDA #&7F
+        STA &B1
+
+        LDA PagedRomSelector_RAMCopy
+        ORA #&80
+        TAX
+        LDY #255
+        BNE start_loop
+.loop
+        LDA (&B0),Y
+        STX PagedRomSelector_RAMCopy
+        STX &FE30
+        STA (&B0),Y
+.start_loop
+        TXA
+        AND #&7F
+        STA PagedRomSelector_RAMCopy
+        STA &FE30
+        INY
+        BNE loop
+        INC &B1
+        LDA &B1
+        CMP #&B0
+        BEQ done
+        CMP #HI(MA+&0E00)
+        BNE loop
+        LDA #HI(MAEND)
+        STA &B1
+        BNE loop
+
+.done
+        PLA
+        TAY
+        PLA
+        TAX
+        PLA
+        PLP
+        RTS
+}
+
+.PageIn12K
+        PHP
+        PHA
+        LDA PagedRomSelector_RAMCopy
+        ORA #&80
+        STA PagedRomSelector_RAMCopy
+        STA &FE30
+        PLA
+        PLP
+        RTS
+
+.PageOut12K
+        PHP
+        PHA
+        LDA PagedRomSelector_RAMCopy
+        AND #&7F
+        STA PagedRomSelector_RAMCopy
+        STA &FE30
+        PLA
+        PLP
+        RTS
 ENDIF
 
 PRINT "    code ends at",~P%," (",(guard_value - P%), "bytes free )"
