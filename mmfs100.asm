@@ -30,7 +30,7 @@ ENDIF
 MP=HI(MA)
 
 ;; To save space, don't include the undocumented ABOUT command
-_ABOUT_=FALSE
+_ABOUT_=TRUE
 
 INCLUDE "VERSION.asm"
 INCLUDE "SYSVARS.asm"			; OS constants
