@@ -7,20 +7,20 @@
 
 \ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port
 INCLUDE "DEVICE.asm"
-        
+
 \ MA/MP constants must be even numbers
 IF _MASTER_
 	CPU 1				; 65C12
 	MA=&C000-&0E00			; Offset to Master hidden static workspace
 ELIF _BP12K_
-        ; Memory at &Axxx in the 12K private RAM has the (to us) undesirable
-        ; property that code running there accesses the display RAM, whether 
-        ; that's main or shadow RAM. We therefore can't have any code which 
-        ; needs to access user memory there. To use as much of it as possible up
-        ; harmlessly, we situate our workspace in that range.
-        MA=&A200-&0E00
-        UTILSBUF=(&BF-&B6)+HI(MA+&0E00)
-        MAEND=(UTILSBUF+1)<<8
+	; Memory at &Axxx in the 12K private RAM has the (to us) undesirable
+	; property that code running there accesses the display RAM, whether
+	; that's main or shadow RAM. We therefore can't have any code which
+	; needs to access user memory there. To use as much of it as possible up
+	; harmlessly, we situate our workspace in that range.
+	MA=&A200-&0E00
+	UTILSBUF=(&BF-&B6)+HI(MA+&0E00)
+	MAEND=(UTILSBUF+1)<<8
 ELIF _SWRAM_
 	MA=&B600-&0E00
 	UTILSBUF=&BF			; Utilities buffer page
@@ -70,12 +70,12 @@ filehndl%=&50			; First File Handle - 1
 tubeid%=&0A			; See Tube Application Note No.004 Page 7
 
 MACRO BP12K_NEST
-    IF _BP12K_
-        JSR PageIn12K
-        JSR nested
-        JMP PageOut12K
-    .nested
-    ENDIF
+	IF _BP12K_
+		JSR PageIn12K
+		JSR nested
+		JMP PageOut12K
+	.nested
+	ENDIF
 ENDMACRO
 
 
@@ -140,13 +140,13 @@ ENDIF
 
 .errDISK
 	JSR ReportErrorCB		; Disk Error
-	BRK 
+	BRK
 	EQUS "Disc "
 	BCC ErrCONTINUE
 
 .errBAD
 	JSR ReportErrorCB		; Bad Error
-	BRK 
+	BRK
 	EQUS "Bad "
 	BCC ErrCONTINUE
 
@@ -173,17 +173,17 @@ ENDIF
 .ReportError2
 	PLA 				; Word &AE = Calling address + 1
 	STA &AE
-	PLA 
+	PLA
 	STA &AF
 	\LDA &B3			; Restore A???
 	LDY #&00
 	JSR inc_word_AE
 	LDA (&AE),Y			; Get byte
 	STA &0101			; Error number
-	DEX 
+	DEX
 .errstr_loop
 	JSR inc_word_AE
-	INX 
+	INX
 	LDA (&AE),Y
 	STA &0100,X
 	BMI prtstr_return2		; Bit 7 set, return
@@ -193,11 +193,11 @@ ENDIF
 
 	\ Print New Line
 .PrintNewLine
-	PHA 
+	PHA
 	LDA #&0D
 	JSR PrintChrA
-	PLA 
-	RTS 
+	PLA
+	RTS
 
 	\ **** Print String ****
 	\ String terminated if bit 7 set
@@ -206,12 +206,12 @@ ENDIF
 	STA &B3				; Print String (bit 7 terminates)
 	PLA 				; A,X,Y preserved
 	STA &AE
-	PLA 
+	PLA
 	STA &AF
 	LDA &B3
 	PHA 				; Save A & Y
-	TYA 
-	PHA 
+	TYA
+	PHA
 	LDY #&00
 .prtstr_loop
 	JSR inc_word_AE
@@ -221,10 +221,10 @@ ENDIF
 	JMP prtstr_loop
 .prtstr_return1
 	PLA 				; Restore A & Y
-	TAY 
-	PLA 
+	TAY
+	PLA
 .prtstr_return2
-	CLC 
+	CLC
 	JMP (&00AE)			; Return to caller
 
 	\ As above sub, but can be spooled
@@ -233,12 +233,12 @@ ENDIF
 	STA &B3				; Save A
 	PLA 				; Pull calling address
 	STA &AE
-	PLA 
+	PLA
 	STA &AF
 	LDA &B3				; Save A & Y
-	PHA 
-	TYA 
-	PHA 
+	PHA
+	TYA
+	PHA
 	LDY #&00
 .pstr_loop
 	JSR inc_word_AE
@@ -247,10 +247,10 @@ ENDIF
 	JSR OSASCI
 	JMP pstr_loop
 .pstr_exloop
-	PLA 
-	TAY 
-	PLA 
-	CLC 
+	PLA
+	TAY
+	PLA
+	CLC
 	JMP (&00AE)			;Return
 }
 
@@ -260,16 +260,16 @@ ENDIF
 	LDA #&2E
 .PrintChrA
 	JSR RememberAXY			; Print character
-	PHA 
+	PHA
 	LDA #&EC
 	JSR osbyte_X0YFF
 	TXA 				; X = chr destination
-	PHA 
+	PHA
 	ORA #&10
 	JSR osbyte03_Aoutstream		; Disable spooled output
-	PLA 
-	TAX 
-	PLA 
+	PLA
+	TAX
+	PLA
 	JSR OSASCI			; Output chr
 	JMP osbyte03_Xoutstream		; Restore previous setting
 
@@ -277,10 +277,10 @@ ENDIF
 .PrintBCD
 	JSR BinaryToBCD
 .PrintHex
-	PHA 
+	PHA
 	JSR A_rorx4
 	JSR PrintNibble
-	PLA 
+	PLA
 .PrintNibble
 	JSR NibToASC
 	BNE PrintChrA			; always
@@ -289,10 +289,10 @@ ENDIF
 .PrintBCDSPL
 	JSR BinaryToBCD
 .PrintHexSPL
-	PHA 
+	PHA
 	JSR A_rorx4
 	JSR PrintNibbleSPL
-	PLA 
+	PLA
 .PrintNibbleSPL
 	JSR NibToASC
 	JMP OSASCI
@@ -324,15 +324,15 @@ ENDIF
 .CopyVarsB0BA
 {
 	JSR CopyWordB0BA
-	DEX 
+	DEX
 	DEX 				;restore X to entry value
 	JSR cpybyte1			;copy word (b0)+y to 1072+x
 .cpybyte1
 	LDA (&B0),Y
 	STA MA+&1072,X
-	INX 
-	INY 
-	RTS 
+	INX
+	INY
+	RTS
 }
 
 .CopyWordB0BA
@@ -341,8 +341,8 @@ ENDIF
 .cpybyte2
 	LDA (&B0),Y
 	STA &BA,X
-	INX 
-	INY 
+	INX
+	INY
 	RTS
 }
 
@@ -392,7 +392,7 @@ ENDIF
 	LDX #&01			; Read rest of filename
 .rdafsp_rdfnloop
 	STA MA+&1000,X
-	INX 
+	INX
 	JSR GSREAD_A
 	BCS rdafsp_padX			; IF end of string
 	CPX #&07
@@ -412,18 +412,18 @@ ENDIF
 	CMP #&7F			; Backspace?
 	BEQ errBadName
 .dogsrd_exit
-	PLP 
-	RTS 
+	PLP
+	RTS
 }
 
 .SetTextPointerYX
 	STX TextPointer
 	STY TextPointer+1
 	LDY #&00
-	RTS 
+	RTS
 
 .GSINIT_A
-	CLC 
+	CLC
 	JMP GSINIT
 
 .Rdafsp_padall
@@ -433,14 +433,14 @@ ENDIF
 	LDA #&20			; Pad with spaces
 .rdafsp_padloop
 	STA MA+&1000,X
-	INX 
+	INX
 	CPX #&40			; Why &40? : Wildcards buffer!
 	BNE rdafsp_padloop
 	LDX #&06			; Copy from &1000 to &C5
 .rdafsp_cpyfnloop
 	LDA MA+&1000,X			; 7 byte filename
 	STA &C5,X
-	DEX 
+	DEX
 	BPL rdafsp_cpyfnloop
 	RTS
 }
@@ -449,7 +449,7 @@ ENDIF
 {
 	JSR RememberAXY
 	LDA MA+&0E0F,Y
-	PHP 
+	PHP
 	AND #&7F			; directory
 	BNE prt_filename_prtchr
 	JSR Print2SpacesSPL		; if no dir. print "  "
@@ -463,12 +463,12 @@ ENDIF
 	LDA MA+&0E08,Y
 	AND #&7F
 	JSR PrintChrA
-	INY 
-	DEX 
+	INY
+	DEX
 	BPL prt_filename_loop
 	JSR Print2SpacesSPL		; print "  "
 	LDA #&20			; " "
-	PLP 
+	PLP
 	BPL prt_filename_notlocked
 	LDA #&4C			; "L"
 .prt_filename_notlocked
@@ -478,7 +478,7 @@ ENDIF
 
 .prt_Yspaces
 	JSR PrintSpaceSPL
-	DEY 
+	DEY
 	BNE prt_Yspaces
 	RTS
 
@@ -535,7 +535,7 @@ ENDIF
 
 \ *EX (<dir>)
 .fscv9_starEX
-	JSR SetTextPointerYX 
+	JSR SetTextPointerYX
 .CMD_EX
 {
 	JSR Set_CurDirDrv_ToDefaults
@@ -577,7 +577,7 @@ ENDIF
 .getcatloop1
 	LDA &C5,X
 	STA MA+&1058,X
-	DEX 
+	DEX
 	BPL getcatloop1
 	LDA #&20
 	STA MA+&105F
@@ -595,7 +595,7 @@ ENDIF
 	JSR CheckCurDrvCat		; catalogue entry matching
 	PLA 				; string at &1000+A
 .getcatentry2
-	TAX 
+	TAX
 	LDA #&00			; word &B6 = &E00 = PTR
 	STA &B6
 .getcatloop2
@@ -616,14 +616,14 @@ ENDIF
 	LDY &B6
 	SEC 				; Return, Y=offset-8, C=1
 .Y_sub8
-	DEY 
-	DEY 
-	DEY 
-	DEY 
-	DEY 
-	DEY 
-	DEY 
-	DEY 
+	DEY
+	DEY
+	DEY
+	DEY
+	DEY
+	DEY
+	DEY
+	DEY
 	RTS
 
 .MatchFilename
@@ -633,11 +633,11 @@ ENDIF
 	LDA MA+&1000,X			; with that at (&B6)
 	CMP MA+&10CE
 	BNE matfn_nomatch		; e.g. If="*"
-	INX 
+	INX
 .matfn_loop2
 	JSR MatchFilename
 	BCS matfn_exit			; If match then exit with C=1
-	INY 
+	INY
 	CPY #&07
 	BCC matfn_loop2			; If Y<7
 .matfn_loop3
@@ -650,8 +650,8 @@ ENDIF
 	BCS matfn_loop3			; If Y>=7
 	JSR MatchChr
 	BNE matfn_exitC0
-	INX 
-	INY 
+	INX
+	INY
 	BNE matfn_loop1			; next chr
 }
 .matfn_exitC0
@@ -677,13 +677,13 @@ ENDIF
 
 .UcaseA2
 {
-	PHP 
+	PHP
 	JSR IsAlphaChar
 	BCS ucasea
 	AND #&5F			; A=Ucase(A)
 .ucasea
 	AND #&7F			; Ignore bit 7
-	PLP 
+	PLP
 	RTS
 }
 
@@ -695,10 +695,10 @@ ENDIF
 	STA MA+&0E08,Y
 	LDA MA+&0F10,Y
 	STA MA+&0F08,Y
-	INY 
+	INY
 	CPY FilesX8
 	BCC delcatloop
-	TYA 
+	TYA
 	SBC #&08
 	STA FilesX8
 	CLC
@@ -708,16 +708,16 @@ ENDIF
 
 .IsAlphaChar
 {
-	PHA 
+	PHA
 	AND #&5F			; Uppercase
 	CMP #&41
 	BCC isalpha1			; If <"A"
 	CMP #&5B
 	BCC isalpha2			; If <="Z"
 .isalpha1
-	SEC 
+	SEC
 .isalpha2
-	PLA 
+	PLA
 	RTS
 }
 
@@ -728,7 +728,7 @@ ENDIF
 	JSR RememberAXY			; Print info
 	JSR prt_filename_Yoffset
 	TYA 				; Save offset
-	PHA 
+	PHA
 	LDA #&60			; word &B0=1060
 	STA &B0
 	LDA #MP+&10
@@ -739,8 +739,8 @@ ENDIF
 	JSR PrintHex3Byte		; Load address
 	JSR PrintHex3Byte		; Exec address
 	JSR PrintHex3Byte		; Length
-	PLA 
-	TAY 
+	PLA
+	TAY
 	LDA MA+&0F0E,Y			; First sector high bits
 	AND #&03
 	JSR PrintNibble
@@ -754,8 +754,8 @@ ENDIF
 .printhex3byte_loop
 	LDA MA+&1062,Y
 	JSR PrintHex
-	DEY 
-	DEX 
+	DEY
+	DEX
 	BNE printhex3byte_loop
 	JSR Y_add7
 	JMP PrintSpaceSPL
@@ -768,24 +768,24 @@ ENDIF
 .ReadFileAttribsToB0_Yoffset
 {
 	JSR RememberAXY			; Decode file attribs
-	TYA 
+	TYA
 	PHA 				; bytes 2-11
 	TAX 				; X=cat offset
 	LDY #&12			; Y=(B0) offset
 	LDA #&00			; Clear pwsp+2 to pwsp+&11
 .readfileattribs_clearloop
-	DEY 
+	DEY
 	STA (&B0),Y
 	CPY #&02
 	BNE readfileattribs_clearloop
 .readfileattribs_copyloop
 	JSR readfileattribs_copy2bytes	; copy low bytes of
 	INY 				; load/exec/length
-	INY 
+	INY
 	CPY #&0E
 	BNE readfileattribs_copyloop
-	PLA 
-	TAX 
+	PLA
+	TAX
 	LDA MA+&0E0F,X
 	BPL readfileattribs_notlocked	; If not locked
 	LDA #&08
@@ -797,33 +797,33 @@ ENDIF
 	LDY #&0C			; file length high bytes
 	LSR A
 	LSR A
-	PHA 
+	PHA
 	AND #&03
 	STA (&B0),Y
-	PLA 
+	PLA
 	LDY #&08			; exec address high bytes
 .readfileattribs_addrHiBytes
 	LSR A
 	LSR A				; /4
-	PHA 
+	PHA
 	AND #&03
 	CMP #&03			; done slightly diff. to 8271
 	BNE readfileattribs_nothost
 	LDA #&FF
 	STA (&B0),Y
-	INY 
+	INY
 .readfileattribs_nothost
 	STA (&B0),Y
 .readfileattribs_exits
-	PLA 
-	RTS 
+	PLA
+	RTS
 .readfileattribs_copy2bytes
 	JSR readfileattribs_copy1byte
 .readfileattribs_copy1byte
 	LDA MA+&0F08,X
 	STA (&B0),Y
-	INX 
-	INY 
+	INX
+	INY
 	RTS
 }
 
@@ -840,14 +840,14 @@ ENDIF
 	\\ calling subroutine exited
 .RememberAXY
 	PHA
-	TXA 
-	PHA 
-	TYA 
-	PHA 
+	TXA
+	PHA
+	TYA
+	PHA
 	LDA #HI(rAXY_restore-1)		; Return to rAXY_restore
-	PHA 
+	PHA
 	LDA #LO(rAXY_restore-1)
-	PHA 
+	PHA
 
 .rAXY_loop_init
 {
@@ -870,22 +870,22 @@ ENDIF
 }
 
 .rAXY_restore
-	PLA 
-	TAY 
-	PLA 
-	TAX 
-	PLA 
-	RTS 
+	PLA
+	TAY
+	PLA
+	TAX
+	PLA
+	RTS
 
 .RememberXYonly
-	PHA 
-	TXA 
-	PHA 
-	TYA 
-	PHA 
+	PHA
+	TXA
+	PHA
+	TYA
+	PHA
 	JSR rAXY_loop_init
 .axyret1
-	TSX 
+	TSX
 	STA &0103,X
 	JMP rAXY_restore
 
@@ -939,17 +939,17 @@ decno%=&B5
 	\ Convert binary in A to BCD
 .BinaryToBCD
 {
-	JSR RememberXYonly	
-	TAY 
+	JSR RememberXYonly
+	TAY
 	BEQ bbcd_exit			; If nothing to do!
-	CLC 
-	SED 
+	CLC
+	SED
 	LDA #&00
 .bbcd_loop
 	ADC #&01
-	DEY 
+	DEY
 	BNE bbcd_loop
-	CLD 
+	CLD
 .bbcd_exit
 	RTS 				; A=BCD
 }
@@ -1064,7 +1064,7 @@ rn%=&B0
 
 	LDY #&FF			; ** PRINT CAT
 	STY &A8				; Y=FF
-	INY 
+	INY
 	STY &AA				; Y=0
 .cat_titleloop
 	LDA MA+&0E00,Y			; print disk title
@@ -1073,7 +1073,7 @@ rn%=&B0
 	LDA MA+&0EF8,Y
 .cat_titlelo
 	JSR PrintChrA
-	INY 
+	INY
 	CPY #&0C
 	BNE cat_titleloop
 	JSR PrintString			; Print " (n) "; n=cycle no.
@@ -1096,20 +1096,20 @@ rn%=&B0
 	EQUS "Option "
 	LDA MA+&0F06
 	JSR A_rorx4
-	PHA 
+	PHA
 	JSR PrintNibble			; print option.no
 	JSR PrintString			; print " ("
 	EQUS " ("
 	LDY #&03			; print option.name
-	PLA 
+	PLA
 	ASL A
 	ASL A
-	TAX 
+	TAX
 .cat_printoptionnameloop
 	LDA diskoptions_table,X
 	JSR PrintChrA
-	INX 
-	DEY 
+	INX
+	DEY
 	BPL cat_printoptionnameloop
 	JSR PrintString			; print ") Dir. :"
 	EQUS ")",13,"Dir. :"
@@ -1164,21 +1164,21 @@ rn%=&B0
 	LDA MA+&0E08,Y			; Copy filename to 1060
 	JSR UcaseA2
 	STA MA+&1060,X
-	INY 
-	INX 
+	INY
+	INX
 	CPX #&08
 	BNE cat_copyfnloop		; Chk fn < all other unmarked files
 .cat_comparefnloop1
 	JSR cat_getnextunmarkedfileY	; Next unmarked file
 	BCS cat_printfn			; If last file, so print anyway
-	SEC 
+	SEC
 	LDX #&06
 .cat_comparefnloop2
 	LDA MA+&0E0E,Y			; compare filenames
 	JSR UcaseA2			; (catfn-memfn)
 	SBC MA+&1060,X
-	DEY 
-	DEX 
+	DEY
+	DEX
 	BPL cat_comparefnloop2
 	JSR Y_add7
 	LDA MA+&0E0F,Y			; compare dir
@@ -1209,7 +1209,7 @@ rn%=&B0
 	LDY #&05			; print column gap
 	JSR prt_Yspaces			; print 5 spaces => ?&A8=1
 .cat_skipspaces
-	INY 
+	INY
 	STY &A8
 	LDY &AB				; Y=cat offset
 	JSR Print2SpacesSPL		; print 2 spaces
@@ -1227,7 +1227,7 @@ rn%=&B0
 	LDA MA+&0F0E,Y
 	JSR A_rorx4and3
 	STA &C2				;len byte 3
-	CLC 
+	CLC
 	LDA #&FF			; -1
 	ADC MA+&0F0C,Y			; + len byte 1
 	LDA MA+&0F0F,Y			; + start sec byte 1
@@ -1238,14 +1238,14 @@ rn%=&B0
 	ADC &C2				; calc. next "free" sector
 	STA &C2				; wC2=start sec + len - 1
 .Getfirstblock_Yoffset
-	SEC 
+	SEC
 	LDA MA+&0F07,Y			; secs on disk
 	SBC &C3				; or start sec of prev.
 	PHA 				; file
 	LDA MA+&0F06,Y			; - end of prev. file (wC2)
 	AND #&03
 	SBC &C2
-	TAX 
+	TAX
 	LDA #&00
 	CMP &C0
 	PLA 				; ax=secs on disk-next blk
@@ -1484,7 +1484,7 @@ cmdtab4= cmdtable4-cmdtable1
 	INC &BE
 
 	PLA 				; contain addr/code of prev.
-	PHA 
+	PHA
 	TAY 				; restore Y
 	JSR GSINIT_A			; TextPointer+Y = cmd line
 
@@ -1497,7 +1497,7 @@ cmdtab4= cmdtable4-cmdtable1
 	STX &BF				; USED IF SYNTAX ERROR
 
 .unrecloop2
-	INX 
+	INX
 	INY 				; X=start of next string-1
 	LDA cmdtable1,X
 	BMI endofcmd_oncmdline
@@ -1543,7 +1543,7 @@ cmdtab4= cmdtable4-cmdtable1
 	PHA				; Push sub address and
 	LDA cmdaddr1,X			; return to it!
 	PHA
-	RTS 
+	RTS
 
 .dommcinit
 	JSR MMC_BEGIN2
@@ -1663,7 +1663,7 @@ cmdtab4= cmdtable4-cmdtable1
 
 	\ use load address in control block
 	INY
-	INY 
+	INY
 	LDX #&02
 	BNE load_copyfileinfo_loop	; always
 
@@ -1676,8 +1676,8 @@ cmdtab4= cmdtable4-cmdtable1
 .load_copyfileinfo_loop
 	LDA MA+&0F08,Y
 	STA &BC,X
-	INY 
-	INX 
+	INY
+	INX
 	CPX #&08
 	BNE load_copyfileinfo_loop
 
@@ -1731,7 +1731,7 @@ cmdtab4= cmdtable4-cmdtable1
 .runfile_exec_loop
 	LDA MA+&1000,X			; Move filename
 	STA MA+&1007,X
-	DEX 
+	DEX
 	BPL runfile_exec_loop
 	LDA #&0D
 	STA MA+&100E
@@ -1755,7 +1755,7 @@ cmdtab4= cmdtable4-cmdtable1
 
 .runfile_run
 	JSR LoadFile_Ycatoffset	; Load file (host|sp)
-	CLC 
+	CLC
 	LDA MA+&10D9			; Word &10D9 += text ptr
 	TAY 				; i.e. -> parameters
 	ADC TextPointer
@@ -1804,8 +1804,8 @@ cmdtab4= cmdtable4-cmdtable1
 	LDA DirectoryParam
 	STA DEFAULT_DIR,X
 	RTS
-	
-	\\ Copy valuable data from static workspace (sws) to 
+
+	\\ Copy valuable data from static workspace (sws) to
 	\\ private workspace (pws)
 	\\ (sws data 10C0-10EF, and 1100-11BF)
 IF NOT(_SWRAM_)
@@ -1820,7 +1820,7 @@ ENDIF
 	LDA &B0
 	PHA
 	LDA &B1
-	PHA 
+	PHA
 
 	JSR SetPrivateWorkspacePointerB0
 	LDY #&00
@@ -1898,7 +1898,7 @@ titlestr%=MA+&1000
 	LDA #&00
 .cmdtit_loop1
 	JSR SetDiskTitleChr_Xpos
-	DEX 
+	DEX
 	BPL cmdtit_loop1
 
 .cmdtit_loop2
@@ -1918,7 +1918,7 @@ titlestr%=MA+&1000
 	CPX #&08
 	BCC setdisttit_page
 	STA MA+&0EF8,X
-	RTS 
+	RTS
 .setdisttit_page
 	STA MA+&0E00,X
 	RTS
@@ -1980,7 +1980,7 @@ titlestr%=MA+&1000
 
 .fscv0_starOPT
 	JSR RememberAXY
-	TXA 
+	TXA
 	CMP #&04
 	BEQ SetBootOption_Yoption
 	CMP #&05
@@ -1994,7 +1994,7 @@ titlestr%=MA+&1000
 
 .opts0_1
 	LDX #&FF			; *OPT 0,Y or *OPT 1,Y
-	TYA 
+	TYA
 	BEQ opts0_1_Y0
 	LDX #&00
 .opts0_1_Y0
@@ -2003,10 +2003,10 @@ titlestr%=MA+&1000
 
 .SetBootOption_Yoption
 	TYA 				; *OPT 4,Y
-	PHA 
+	PHA
 	JSR Set_CurDirDrv_ToDefaults
 	JSR LoadCurDrvCat		; load cat
-	PLA 
+	PLA
 	JSR A_rolx4
 	EOR MA+&0F06
 	AND #&30
@@ -2022,8 +2022,8 @@ IF NOT(_MASTER_)			; Master DFS always has higher priority
 	PHP
 IF _BP12K_
 	LDA PagedRomSelector_RAMCopy
-        AND #&7F
-        TAX
+	AND #&7F
+	TAX
 ELSE
 	LDX PagedRomSelector_RAMCopy
 ENDIF
@@ -2032,7 +2032,7 @@ ENDIF
 	PLP
 	BEQ skip
 	ORA #&40			; Set bit 6 if Y<>0
-.skip	STA PagedROM_PrivWorkspaces,X 
+.skip	STA PagedROM_PrivWorkspaces,X
 ENDIF
 	RTS
 }
@@ -2051,10 +2051,10 @@ ENDIF
 
 .createfile_nodel
 	LDA &C0				; save wC0
-	PHA 
+	PHA
 	LDA &C1
-	PHA 
-	SEC 
+	PHA
+	SEC
 	LDA &C2				; A=1078/C1/C0=start address
 	SBC &C0				; B=107A/C3/C2=end address
 	STA &C0				; C=C4/C1/C0=file length
@@ -2069,9 +2069,9 @@ ENDIF
 	STA MA+&1075			; (4 bytes)
 	LDA MA+&1078
 	STA MA+&1074
-	PLA 
+	PLA
 	STA &BD
-	PLA 
+	PLA
 	STA &BC
 	RTS
 }
@@ -2093,7 +2093,7 @@ ENDIF
 	JSR Y_sub8
 	JSR Getnextblock_Yoffset
 .cfile_cont2
-	TYA 
+	TYA
 	BCC cfile_loop			; If not big enough
 	STY &B0				; Else block found
 	LDY FilesX8			; Insert space into catalogue
@@ -2104,7 +2104,7 @@ ENDIF
 	STA MA+&0E0F,Y
 	LDA MA+&0F07,Y
 	STA MA+&0F0F,Y
-	DEY 
+	DEY
 	BCS cfile_insertfileloop
 .cfile_atcatentry
 	LDX #&00
@@ -2112,26 +2112,26 @@ ENDIF
 .cfile_copyfnloop
 	LDA &C5,X			; Copy filename from &C5
 	STA MA+&0E08,Y
-	INY 
-	INX 
+	INY
+	INX
 	CPX #&08
 	BNE cfile_copyfnloop
 .cfile_copyattribsloop
 	LDA &BB,X			; Copy attributes
-	DEY 
+	DEY
 	STA MA+&0F08,Y
-	DEX 
+	DEX
 	BNE cfile_copyattribsloop
 	JSR prt_InfoMsg_Yoffset
-	TYA 
-	PHA 
+	TYA
+	PHA
 	LDY FilesX8
 	JSR Y_add8
 	STY FilesX8			; FilesX+=8
 	JSR SaveCatToDisk		; save cat
-	PLA 
-	TAY 
-	RTS 
+	PLA
+	TAY
+	RTS
 }
 
 .errCATALOGUEFULL
@@ -2158,7 +2158,7 @@ ENDIF
 	AND #&FC
 	EOR &C2
 	STA &C2				; C2=mixed byte
-	RTS 
+	RTS
 
 .CMD_ENABLE
 	LDA #&01
@@ -2218,7 +2218,7 @@ ENDIF
 	BCS errBADDRIVE
 	CMP #':' 			; ASC(":")
 	BEQ Param_DriveNo_BadDrive
-	SEC 
+	SEC
 	SBC #&30
 	BCC errBADDRIVE
 	CMP #&04
@@ -2334,18 +2334,18 @@ gdopt%=&B7
 	JSR parameter_fsp
 	JSR Param_SyntaxErrorIfNull
 	JSR read_fspTextPointer
-	TYA 
-	PHA 
+	TYA
+	PHA
 	JSR getcatentry
 	JSR CheckFileNotLockedOrOpenY
 	STY &C4
-	PLA 
-	TAY 
+	PLA
+	TAY
 	JSR Param_SyntaxErrorIfNull
 	LDA CurrentDrv
-	PHA 
+	PHA
 	JSR read_fspTextPointer
-	PLA 
+	PLA
 	CMP CurrentDrv
 	BNE jmpBADDRIVE
 	JSR get_cat_firstentry80
@@ -2365,8 +2365,8 @@ gdopt%=&B7
 .rname_loop
 	LDA &C5,X
 	STA MA+&0E07,Y
-	DEY 
-	DEX 
+	DEY
+	DEX
 	BPL rname_loop			; else Save catalogue
 	JMP SaveCatToDisk
 }
@@ -2376,32 +2376,32 @@ gdopt%=&B7
 	LDX #&00			; X=FF if Tube present
 	LDY #&FF
 	JSR OSBYTE
-	TXA 
+	TXA
 	EOR #&FF
 	STA TubePresentIf0
-	RTS 
+	RTS
 
 .TUBE_CLAIM
 {
-	PHA 
+	PHA
 .tclaim_loop
 	LDA #&C0+tubeid%
 	JSR TubeCode
 	BCC tclaim_loop
-	PLA 
-	RTS 
+	PLA
+	RTS
 }
 
 .TUBE_RELEASE
 	JSR TUBE_CheckIfPresent
 	BMI trelease_exit
 .TUBE_RELEASE_NoCheck
-	PHA 
+	PHA
 	LDA #&80+tubeid%
 	JSR TubeCode
-	PLA 
+	PLA
 .trelease_exit
-	RTS 
+	RTS
 
 .CheckESCAPE
 	BIT &FF				; Check if ESCAPE presed
@@ -2417,7 +2417,7 @@ gdopt%=&B7
 	PHA 				; Print hex to &100+Y
 	JSR A_rorx4
 	JSR phex100
-	PLA 
+	PLA
 .phex100
 	JSR NibToASC
 	STA &0100,Y
@@ -2440,9 +2440,9 @@ gdopt%=&B7
 .CMD_DISC
 IF NOT(_MASTER_)
 IF _BP12K_
-        LDA PagedRomSelector_RAMCopy
-        AND #&7F
-        TAX
+	LDA PagedRomSelector_RAMCopy
+	AND #&7F
+	TAX
 ELSE
 	LDX PagedRomSelector_RAMCopy	; Are *DISC,*DISK disabled?
 ENDIF
@@ -2457,7 +2457,7 @@ ENDIF
 .initMMFS
 {
 	JSR ReturnWithA0		; On entry: if A=0 then boot file
-	PHA 
+	PHA
 IF _DEBUG
 	JSR PrintString
 	EQUB "Starting MMFS", 13
@@ -2470,7 +2470,7 @@ ENDIF
 .vectloop
 	LDA vectors_table,X
 	STA &0212,X
-	DEX 
+	DEX
 	BPL vectloop
 	LDA #&A8			; copy extended vectors
 	JSR osbyte_X0YFF
@@ -2481,17 +2481,17 @@ ENDIF
 .extendedvec_loop
 	LDA extendedvectors_table-&1B,Y
 	STA (&B0),Y
-	INY 
+	INY
 	LDA extendedvectors_table-&1B,Y
 	STA (&B0),Y
-	INY 
+	INY
 	LDA PagedRomSelector_RAMCopy
 IF _BP12K_
-        ORA #&80
+	ORA #&80
 ENDIF
 	STA (&B0),Y
-	INY 
-	DEX 
+	INY
+	DEX
 	BNE extendedvec_loop
 
 	STY CurrentCat			; curdrvcat<>0
@@ -2517,8 +2517,8 @@ ELSE
 	LDA (&B0),Y			; A=PWSP+&D3 (-ve=soft break)
 	BPL initdfs_reset		; Branch if power up or hard break
 
-	\PLA 
-	\PHA 
+	\PLA
+	\PHA
 	\BEQ initdfs_reset		; Branch if boot file
 
 	LDY #&D4
@@ -2541,7 +2541,7 @@ ENDIF
 .copyfromPWS1
 	STA MA+&1100,Y
 .copyfromPWS2
-	DEY 
+	DEY
 	BNE copyfromPWStoSWS_loop
 
 	\\ Check VID CRC and if wrong reset filing system
@@ -2551,11 +2551,11 @@ ENDIF
 
 	LDA #&A0			; Refresh channel block info
 .setchansloop
-	TAY 
-	PHA 
+	TAY
+	PHA
 	LDA #&3F
 	JSR ChannelFlags_ClearBits	; Clear bits 7 & 6, C=0
-	PLA 
+	PLA
 	STA MA+&111D,Y			; Buffer sector hi?
 	SBC #&1F			; A=A-&1F-(1-C)=A-&20
 	BNE setchansloop
@@ -2582,13 +2582,13 @@ ENDIF
 	\PLA
 	\PHA
 	\BEQ initdfs_noreset
-	
+
 	JSR VIDRESET
 
 .initdfs_noreset
 	JSR TUBE_CheckIfPresent		; Tube present?
 
-	PLA 
+	PLA
 	BNE initdfs_exit		; branch if not boot file
 
 	JSR LoadCurDrvCat
@@ -2683,7 +2683,7 @@ IF _DEBUG
 	NOP
 	JSR PrintAXY
 	PLA
-ENDIF  
+ENDIF
 IF _TUBEHOST_
 	JSR SERVICE09_TUBEHelp		; Tube service calls
 ENDIF
@@ -2698,9 +2698,9 @@ IF _MASTER_
 ELSE
 	PHA
 IF _BP12K_
-        LDA PagedRomSelector_RAMCopy
-        AND #&7F
-        TAX
+	LDA PagedRomSelector_RAMCopy
+	AND #&7F
+	TAX
 ENDIF
 	LDA PagedROM_PrivWorkspaces,X
 	BMI romdisabled			; if bit 7 set
@@ -2724,18 +2724,18 @@ ENDIF
 	ASL A
 	TAX
 	LDA data+1,X
-	PHA 
+	PHA
 	LDA data,X
 	PHA
- 
+
 	\ Restore A & X values
 IF _BP12K_
-        TXA
-        PHA
-        LDA PagedRomSelector_RAMCopy
-        AND #&7F
-        TAX
-        PLA
+	TXA
+	PHA
+	LDA PagedRomSelector_RAMCopy
+	AND #&7F
+	TAX
+	PLA
 ELSE
 	TXA
 	LDX PagedRomSelector_RAMCopy
@@ -2785,7 +2785,7 @@ ENDIF
 
 
 .SERVICE12_init_filesystem		; A=&12 Initialise filing system
-        BP12K_NEST
+	BP12K_NEST
 	CPY #filesysno%			; Y=ID no. (4=dfs etc.)
 	BNE label3
 	JSR RememberAXY
@@ -2809,7 +2809,7 @@ IF _MASTER_
 	LDA PagedROM_PrivWorkspaces,X	; If A>=&DC Hidden ram is full so claim PWS in normal ram
 	CMP #&DC
 	BCC cont
-	TYA 
+	TYA
 	STA PagedROM_PrivWorkspaces,X
 .cont
 	PHY				; A=PWS page
@@ -2819,7 +2819,7 @@ ELSE
 ENDIF
 
 IF _BP12K_
-        JSR Init12K
+	JSR Init12K
 ENDIF
 
 IF NOT(_SWRAM_)
@@ -2843,15 +2843,15 @@ ENDIF
 
 	LDA #&FD			; Read hard/soft BREAK
 	JSR osbyte_X0YFF		; X=0=soft,1=power up,2=hard
-	DEX 
+	DEX
 
 IF _SWRAM_
 IF _BP12K_
-        JSR PageIn12K
+	JSR PageIn12K
 ENDIF
 	STX ForceReset
 IF _BP12K_
-        JSR PageOut12K
+	JSR PageOut12K
 ENDIF
 ELSE
 	TXA				; A= FF=soft,0=power up,1=hard
@@ -2876,9 +2876,9 @@ ELSE
 ENDIF
 
 IF _BP12K_
-        LDA PagedRomSelector_RAMCopy
-        AND #&7F
-        TAX
+	LDA PagedRomSelector_RAMCopy
+	AND #&7F
+	TAX
 ELSE
 	LDX PagedRomSelector_RAMCopy 	; restore X & A, Y=Y+2
 ENDIF
@@ -2887,7 +2887,7 @@ ENDIF
 	LDA #&02
 
 IF _MASTER_
-	BIT PagedROM_PrivWorkspaces,X	
+	BIT PagedROM_PrivWorkspaces,X
 	BMI srv3_exit			; PWS in hidden ram
 ENDIF
 
@@ -2903,12 +2903,12 @@ ENDIF
 
 .SERVICE03_autoboot			; A=3 Autoboot
 {
-        BP12K_NEST
+	BP12K_NEST
 	JSR RememberAXY
 	STY &B3				; if Y=0 then !BOOT
 	LDA #&7A			; Keyboard scan
 	JSR OSBYTE			; X=int.key.no
-	TXA 
+	TXA
 	BMI jmpAUTOBOOT
 	CMP #&65			; "M" KEY
 	BNE srv3_exit
@@ -2919,7 +2919,7 @@ ENDIF
 }
 
 .SERVICE04_unrec_command		; A=4 Unrec Command
-        BP12K_NEST
+	BP12K_NEST
 	JSR RememberAXY
 	LDX #cmdtab22			; UTILS commands
 .jmpunreccmd
@@ -2938,7 +2938,7 @@ ENDIF
 
 .SERVICE08_unrec_OSWORD
 {
-        BP12K_NEST
+	BP12K_NEST
 	JSR RememberAXY
 
 	LDY &EF				; Y = Osword call
@@ -2949,7 +2949,7 @@ ENDIF
 	JSR ReturnWithA0
 
 	JSR FSisMMFS			; MMFS current fs?
-	BNE exit	
+	BNE exit
 
 	LDX &F0				; Osword X reg
 	STX &B0
@@ -2973,16 +2973,16 @@ ENDIF
 
 .OSWORD7E
 	LDA #&00			; OSWORD &7E
-	TAY 
+	TAY
 	STA (&B0),Y
-	INY 
+	INY
 	LDA MA+&0F07			; sector count LB
 	STA (&B0),Y
-	INY 
+	INY
 	LDA MA+&0F06			; sector count HB
 	AND #&03
 	STA (&B0),Y
-	INY 
+	INY
 	LDA #&00			; result
 	STA (&B0),Y
 	RTS
@@ -2996,7 +2996,7 @@ ENDIF
 	LDX #cmdtab3
 	CMP #&0D
 	BNE jmpunreccmd
-	TYA 
+	TYA
 	LDY #cmdtab3size
 	JMP Prthelp_Xtable
 }
@@ -3049,7 +3049,7 @@ IF _MASTER_
 
 .SERVICE24_RequiredPWS
 	DEY
-	RTS 
+	RTS
 
 .SERVICE25_fs_info
 {
@@ -3093,8 +3093,8 @@ IF _MASTER_
 	PLA
 	TAX
 	PLA
-	RTS 
-}		
+	RTS
+}
 ENDIF	; End of MASTER ONLY service calls
 
 	\ Test if MMFS by checking first file handle
@@ -3140,7 +3140,7 @@ ENDIF	; End of MASTER ONLY service calls
 }
 .filev_unknownop
 	LDA #&00
-	RTS 
+	RTS
 
 .FSCV_ENTRY
 	CMP #&0C
@@ -3152,12 +3152,12 @@ IF _DEBUG
 	NOP
 	JSR PrintAXY
 ENDIF
-	TAX 
+	TAX
 	LDA fscv_table2,X
-	PHA 
+	PHA
 	LDA fscv_table1,X
-	PHA 
-	TXA 
+	PHA
+	TXA
 	LDX &B5				; Restore X
 .gbpbv_unrecop
 	RTS
@@ -3198,16 +3198,16 @@ ENDIF
 .gbpb_ctlblk_loop
 	LDA (&B4),Y			; Copy param blk to 1060
 	STA MA+&1060,Y
-	DEY 
+	DEY
 	BPL gbpb_ctlblk_loop
 	LDA MA+&1063			; Data ptr bytes 3 & 4
 	AND MA+&1064
 	ORA TubePresentIf0
-	CLC 
+	CLC
 	ADC #&01
 	BEQ gbpb_nottube1		; If not tube
 	JSR TUBE_CLAIM
-	CLC 
+	CLC
 	LDA #&FF
 .gbpb_nottube1
 	STA MA+&1081			; GBPB to TUBE IF >=&80
@@ -3230,7 +3230,7 @@ ENDIF
 .gbpb_seqptr_loop1
 	LDA MA+&1069,X			; !B6=ctl blk seq ptr
 	STA &B6,X
-	DEX 
+	DEX
 	BPL gbpb_seqptr_loop1		; on exit A=file handle=?&1060
 	LDX #&B6
 	LDY MA+&1060
@@ -3244,7 +3244,7 @@ ENDIF
 .gbpb_seqptr_loop2
 	LDA &B6,X			; ctl blk seq prt = !B6
 	STA MA+&1069,X
-	DEX 
+	DEX
 	BPL gbpb_seqptr_loop2
 }
 
@@ -3262,9 +3262,9 @@ ENDIF
 	LDX #&05
 	JSR gbpb_incdblword1060X	; inc. bytes to txf
 	BNE gbpb_data_loop
-	CLC 
+	CLC
 .gbpb_data_loopout
-	PHP 
+	PHP
 	JSR gbpb_bytesxferinvert	; bytes to txf XOR &FFFFFFFF
 	LDX #&05
 	JSR gbpb_incdblword1060X	; inc. bytes to txf
@@ -3273,7 +3273,7 @@ ENDIF
 .gbpb_restorectlblk_loop
 	LDA MA+&1060,Y
 	STA (&B4),Y
-	DEY 
+	DEY
 	BPL gbpb_restorectlblk_loop
 	PLP 				; C=1=txf not completed
 	RTS 				; **** END GBPB 1-4
@@ -3312,7 +3312,7 @@ ENDIF
 .gbpb8_copyfn_loop
 	LDA MA+&0E08,Y			; Copy fn
 	JSR gbpb_gb_SAVEBYTE
-	INY 
+	INY
 	DEC &B0
 	BNE gbpb8_copyfn_loop
 	CLC 				; C=0=more to follow
@@ -3341,7 +3341,7 @@ ENDIF
 	LDA MA+&0EF8,Y
 .gbpb5_titlelo
 	JSR gbpb_gb_SAVEBYTE
-	INY 
+	INY
 	CPY #&0C
 	BNE gbpb5_titleloop
 	LDA MA+&0F06			; Boot up option
@@ -3378,8 +3378,8 @@ ENDIF
 	LDA MA+&1062
 	STA &B9
 	LDX #&00
-	PLA 
-	RTS 
+	PLA
+	RTS
 
 .gbpb_incDataPtr
 	JSR RememberAXY			; Increment data ptr
@@ -3390,8 +3390,8 @@ ENDIF
 .gbpb_incdblword_loop
 	INC MA+&1060,X
 	BNE gbpb_incdblworkd_exit
-	INX 
-	DEY 
+	INX
+	DEY
 	BNE gbpb_incdblword_loop
 .gbpb_incdblworkd_exit
 	RTS
@@ -3404,7 +3404,7 @@ ENDIF
 	LDA #&FF
 	EOR MA+&1065,X
 	STA MA+&1065,X
-	DEX 
+	DEX
 	BPL gbpb_bytesxferinvert_loop
 	RTS
 }
@@ -3415,7 +3415,7 @@ ENDIF
 	LDA MA+&107E
 	STA &B5
 .gpbp_exit
-	RTS 
+	RTS
 
 .gbpb_SAVE_01
 	LDA #&01
@@ -3435,7 +3435,7 @@ ENDIF
 .gbpb_putbytes
 	JSR gpbp_pb_LOADBYTE
 	JSR BPUTV_ENTRY
-	CLC 
+	CLC
 	RTS 				; always ok!
 .gpbp_pb_LOADBYTE
 	BIT MA+&1081
@@ -3457,7 +3457,7 @@ ENDIF
 	STA MA+&10CE
 .param_out
 	STA MA+&10CD
-	RTS 
+	RTS
 .parameter_afsp
 	LDA #&2A	; "*"
 	STA MA+&10CE
@@ -3468,7 +3468,7 @@ ENDIF
 	JSR CheckFileExists		; READ CAT INFO
 	JSR ReadFileAttribsToB0_Yoffset
 	LDA #&01			; File type: 1=file found
-	RTS 
+	RTS
 .osfile6_delfile
 	JSR CheckFileNotLocked		; DELETE FILE
 	JSR ReadFileAttribsToB0_Yoffset
@@ -3495,16 +3495,16 @@ ENDIF
 .osfile_savecat_retA_1
 	JSR jmp_savecattodisk
 	LDA #&01
-	RTS 
+	RTS
 .osfile_update_loadaddr_Xoffset
 	JSR RememberAXY			; Update load address
 	LDY #&02
 	LDA (&B0),Y
 	STA MA+&0F08,X
-	INY 
+	INY
 	LDA (&B0),Y
 	STA MA+&0F09,X
-	INY 
+	INY
 	LDA (&B0),Y
 	ASL A
 	ASL A
@@ -3516,10 +3516,10 @@ ENDIF
 	LDY #&06
 	LDA (&B0),Y
 	STA MA+&0F0A,X
-	INY 
+	INY
 	LDA (&B0),Y
 	STA MA+&0F0B,X
-	INY 
+	INY
 	LDA (&B0),Y
 	ROR A
 	ROR A
@@ -3529,8 +3529,8 @@ ENDIF
 .osfile_savemixedbyte
 	EOR MA+&0F0E,X			; save mixed byte
 	STA MA+&0F0E,X
-	CLV 
-	RTS 
+	CLV
+	RTS
 .osfile_updatelock
 	JSR RememberAXY			; Update file locked flag
 	LDY #&0E
@@ -3543,7 +3543,7 @@ ENDIF
 	AND #&80
 	EOR MA+&0E0F,X
 	STA MA+&0E0F,X
-	RTS 
+	RTS
 
 .CheckFileNotLocked
 	JSR read_fspBA_findcatentry	; exit:X=Y=offset
@@ -3568,16 +3568,16 @@ ENDIF
 	BCS checkexit			; If file found
 .ExitCallingSubroutine
 	PLA 				; Ret. To caller's caller
-	PLA 
+	PLA
 	LDA #&00
 .chklock_exit
-	RTS 
+	RTS
 
 .read_fspBA_findcatentry
 	JSR read_fspBA_reset
 	JSR get_cat_firstentry80
 	BCC checkexit
-	TYA 
+	TYA
 	TAX 				; X=Y=offset
 .SetParamBlockPointerB0
 	LDA MA+&10DB			; Ptr to OSFILE param block
@@ -3585,7 +3585,7 @@ ENDIF
 	LDA MA+&10DC
 	STA &B1
 .checkexit
-	RTS 
+	RTS
 
 	\ *** Calc amount of ram available ***
 .CalcRAM
@@ -3594,11 +3594,11 @@ ENDIF
 	STY PAGE
 	LDA #&84
 	JSR OSBYTE			; YX=HIMEM
-	TYA 
-	SEC 
+	TYA
+	SEC
 	SBC PAGE
 	STA RAMBufferSize		; HIMEM page-OSHWM page
-	RTS 
+	RTS
 
 IF NOT(_SWRAM_)
 .ClaimStaticWorkspace
@@ -3609,7 +3609,7 @@ IF NOT(_SWRAM_)
 	LDA #&FF
 	STA (&B0),Y			; Data valid in SWS
 	STA ForceReset
-	INY 
+	INY
 	STA (&B0),Y			; Set pws is "empty"
 	RTS
 
@@ -3623,8 +3623,8 @@ IF NOT(_MASTER_)
 	AND #&3F			; bits 7 & 6 are used as flags
 ENDIF
 	STA &B1
-	PLA 
-	RTS 
+	PLA
+	RTS
 ENDIF
 
 
@@ -3636,7 +3636,7 @@ ENDIF
 	LDY #&00
 	BEQ goOSBYTE			; always
 .osbyte03_Aoutstream
-	TAX 
+	TAX
 .osbyte03_Xoutstream
 	LDA #&03
 	BNE goOSBYTE			; always
@@ -3775,7 +3775,7 @@ ENDIF
 	LDX #filehndl%+1 ;11		; lowest hndl issued
 	LDY #filehndl%+5 ;15		; highest hndl poss.
 .closeallfiles_exit
-	RTS 
+	RTS
 
 .fscv6_shutdownfilesys
 	JSR RememberAXY
@@ -3786,7 +3786,7 @@ ENDIF
 IF _MASTER_
 	NOP
    JSR CloseSPOOLEXECfiles
-	JMP SERVICE0A_claim_statworkspace ; save static to private workspace 
+	JMP SERVICE0A_claim_statworkspace ; save static to private workspace
 ELSE
 	;; fall through into CloseSPOOLEXECfiles
 ENDIF
@@ -3805,10 +3805,10 @@ ENDIF
 {
 	LDA #&00			; intch=intch+&20
 .closeallfiles_loop
-	CLC 
+	CLC
 	ADC #&20
 	BEQ closeallfiles_exit
-	TAY 
+	TAY
 	JSR CloseFile_Yintch
 	BNE closeallfiles_loop		; always
 }
@@ -3816,7 +3816,7 @@ ENDIF
 .CloseFiles_Yhandle
 	LDA #&20			; Update catalogue if write only
 	STA MA+&1086
-	TYA 
+	TYA
 	BEQ CloseAllFiles_Osbyte77	; If y=0 Close all files
 	JSR CheckChannel_Yhndl_exYintch
 
@@ -3865,9 +3865,9 @@ ENDIF
 .chnl_getcatloop
 	LDA MA+&110C,Y			; channel info to &C5
 	STA &C5,X
-	DEY 
-	DEY 
-	DEX 
+	DEY
+	DEY
+	DEX
 	BPL chnl_getcatloop
 	JSR get_cat_firstentry80fname
 	BCC errDISKCHANGED		; If file not found
@@ -3875,7 +3875,7 @@ ENDIF
 	LDY MA+&10C2			; Y=intch
 }
 .chkdskchangexit
-	RTS 
+	RTS
 
 .Channel_SetDirDrive_Yintch
 	LDA MA+&110E,Y			; Directory
@@ -3910,12 +3910,12 @@ ENDIF
 	STY &BB
 	STA &B4				; A=Operation
 	BIT &B4
-	PHP 
+	PHP
 	JSR read_fspBA_reset
 	JSR parameter_fsp
 	JSR get_cat_firstentry80
 	BCS findv_filefound		; If file found
-	PLP 
+	PLP
 	BVC findv_createfile		; If not read only = write only
 	LDA #&00			; A=0=file not found
 	RTS 				; EXIT
@@ -3927,7 +3927,7 @@ ENDIF
 .findv_loop1
 	STA &BC,X
 	STA MA+&1074,X
-	DEX 
+	DEX
 	BPL findv_loop1
 	DEC &BE
 	DEC &BF
@@ -3938,7 +3938,7 @@ ENDIF
 	JSR CreateFile_FSP		; Creates 40 sec buffer
 .findv_filefound
 	PLP 				; in case another file created
-	PHP 
+	PHP
 	BVS findv_readorupdate		; If opened for read or update
 	JSR CheckFileNotLockedY		; If locked report error
 .findv_readorupdate
@@ -3975,11 +3975,11 @@ ENDIF
 .chnlblock_loop1
 	LDA MA+&0E08,X			; Copy file name & attributes
 	STA MA+&1100,Y			; to channel info block
-	INY 
+	INY
 	LDA MA+&0F08,X
 	STA MA+&1100,Y
-	INY 
-	INX 
+	INY
+	INX
 	DEC MA+&10C4
 	BNE chnlblock_loop1
 
@@ -3987,12 +3987,12 @@ ENDIF
 	LDA #&00			; Clear rest of block
 .chnlblock_loop2
 	STA MA+&1100,Y
-	INY 
-	DEX 
+	INY
+	DEX
 	BNE chnlblock_loop2
 
 	LDA MA+&10C2			; A=intch
-	TAY 
+	TAY
 	JSR A_rorx5
 	ADC #MP+&11
 	STA MA+&1113,Y			; Buffer page
@@ -4010,7 +4010,7 @@ ENDIF
 	ADC #&00			; Add carry flag
 	JSR A_rorx4and3			; Length2
 	STA MA+&111A,Y
-	PLP 
+	PLP
 	BVC chnlblock_setBit5		; If not read = write
 	BMI chnlblock_setEXT		; If updating
 	LDA #&80			; Set Bit7 = Read Only
@@ -4050,13 +4050,13 @@ ENDIF
 	STA MA+&10C2
 	LDA #&08
 	STA &B5				; Channel flag bit
-	TYA 
+	TYA
 	TAX 				; X=cat offset
 	LDY #&A0			; Y=intch
 .fop_main_loop
 	STY &B3
 	TXA 				; save X
-	PHA 
+	PHA
 	LDA #&08
 	STA &B2				; cmpfn_loop counter
 	LDA &B5
@@ -4071,26 +4071,26 @@ ENDIF
 	EOR MA+&1100,Y
 	AND #&7F
 	BNE fop_nothisfile
-	INX 
-	INY 
-	INY 
+	INX
+	INY
+	INY
 	DEC &B2
 	BNE fop_cmpfn_loop
-	SEC 
+	SEC
 	BCS fop_matchifCset		; always
 .fop_channelnotopen
 	STY MA+&10C2			; Y=intch = allocated to new channel
 	STA MA+&10C1			; A=Channel Flag Bit
 .fop_nothisfile
-	SEC 
+	SEC
 	LDA &B3
 	SBC #&20
 	STA &B3				; intch=intch-&20
 	ASL &B5				; flag bit << 1
-	CLC 
+	CLC
 .fop_matchifCset
 	PLA 				; restore X
-	TAX 
+	TAX
 	LDY &B3				; Y=intch
 	LDA &B5				; A=flag bit
 	BCS fop_exit
@@ -4124,12 +4124,12 @@ ENDIF
 	TXA 				; restored by RememberAXY
 	PHA 				; after returning from calling
 	LDA #&00			; sub routine to 0
-	TSX 
+	TSX
 	STA &0109,X
-	PLA 
-	TAX 
-	PLA 
-	RTS 
+	PLA
+	TAX
+	PLA
+	RTS
 
 .ARGSV_ENTRY
 {
@@ -4158,13 +4158,13 @@ ENDIF
 	LDA MA+&10DA
 	STA &01,X
 .argsv_exit
-	RTS 
+	RTS
 
 .argsv_filesysnumber
 	LDA #filesysno%			; on exit: A = filing system
-	TSX 
+	TSX
 	STA &0105,X
-	RTS 
+	RTS
 }
 
 .argsv_rdseqptr_or_filelen
@@ -4172,7 +4172,7 @@ ENDIF
 	STY MA+&10C2
 	ASL A				; A becomes 0 or 4
 	ADC MA+&10C2
-	TAY 
+	TAY
 	LDA MA+&1110,Y
 	STA &00,X
 	LDA MA+&1111,Y
@@ -4214,12 +4214,12 @@ ENDIF
 
 
 ;; .conv_Xhndl_intch_exYintch
-;;	PHA 
-;;	TXA 
+;;	PHA
+;;	TXA
 ;;	JMP conv_hndl_X_entry
 .conv_Yhndl_intch_exYintch
 	PHA 				; &10 to &17 are valid
-	TYA 
+	TYA
 .conv_hndl_X_entry
 {
 	CMP #filehndl% 			; 10
@@ -4239,7 +4239,7 @@ ENDIF
 {
 	LDA #&C6
 	JSR osbyte_X0YFF		; X = *EXEC file handle
-	TXA 
+	TXA
 	BEQ ClearSpoolhandle		; branch if no handle allocated
 	JSR ConvertXhndl_exYintch
 	BNE ClearSpoolhandle		; If Y<>?10C2
@@ -4258,8 +4258,8 @@ ENDIF
 	JMP OSBYTE
 
 .ConvertXhndl_exYintch
-	TXA 
-	TAY 
+	TXA
+	TAY
 	JSR conv_Yhndl_intch_exYintch
 	CPY MA+&10C2			; Owner?
 .clrsplhndl_exit
@@ -4268,13 +4268,13 @@ ENDIF
 
 .fscv1_EOF_Yhndl
 {
-	PHA 
-	TYA 
-	PHA 
-	TXA 
-	TAY 
+	PHA
+	TYA
+	PHA
+	TXA
+	TAY
 	JSR CheckChannel_Yhndl_exYintch
-	TYA 
+	TYA
 	JSR CmpPTR			; X=Y
 	BNE eof_NOTEND
 	LDX #&FF			; exit with X=FF
@@ -4282,12 +4282,12 @@ ENDIF
 .eof_NOTEND
 	LDX #&00			; exit with X=00
 .eof_exit
-	PLA 
-	TAY 
-	PLA 
+	PLA
+	TAY
+	PLA
 }
 .checkchannel_okexit
-	RTS 
+	RTS
 
 .CheckChannel_Yhndl_exYintch
 	JSR conv_Yhndl_intch_exYintch
@@ -4319,7 +4319,7 @@ ENDIF
 	JSR ChannelFlags_SetBits	; Set bit 4
 	LDX MA+&10C5
 	LDA #&FE
-	SEC 
+	SEC
 	RTS 				; C=1=EOF
 .bg_notEOF
 	LDA MA+&1117,Y
@@ -4357,7 +4357,7 @@ ENDIF
 }
 
 .CalcBufferSectorForPTR
-	CLC 
+	CLC
 	LDA MA+&110F,Y			; Start Sector + Seq Ptr
 	ADC MA+&1111,Y
 	STA &C3
@@ -4379,8 +4379,8 @@ ENDIF
 	AND MA+&1117,Y
 .chnflg_save
 	STA MA+&1117,Y
-	CLC 
-	RTS 
+	CLC
+	RTS
 
 .ChannelBufferToDisk_Yintch
 	LDA MA+&1117,Y
@@ -4403,7 +4403,7 @@ ENDIF
 	STA &C0				; Sector
 	LDA #&01
 	STA &C1
-	PLP 
+	PLP
 	BCS chnbuf_read			; IF c=1 load buffer else save
 	LDA MA+&111C,Y			; Buffer sector
 	STA &C3				; Start sec. b0-b7
@@ -4422,7 +4422,7 @@ ENDIF
 	LDY MA+&10C2			; Y=intch
 }
 .chnbuf_exit2
-	RTS 
+	RTS
 
 .errFILELOCKED2
 	JMP errFILELOCKED
@@ -4440,14 +4440,14 @@ ENDIF
 	JSR CheckChannel_Yhndl_exYintch
 .bp_entry
 {
-	PHA 
+	PHA
 	LDA MA+&110C,Y
 	BMI errFILEREADONLY
 	LDA MA+&110E,Y
 	BMI errFILELOCKED2
 	JSR Channel_SetDirDrive_Yintch
-	TYA 
-	CLC 
+	TYA
+	CLC
 	ADC #&04
 	JSR CmpPTR
 	BNE bp_noextend			; If PTR<>Sector Count, i.e Ptr<sc
@@ -4462,7 +4462,7 @@ ENDIF
 	AND #&03			; hi byte
 	CMP MA+&111A,Y			; File size in sectors
 	BNE bp_extendby100		; If must be <gap size
-	PLA 
+	PLA
 	CMP MA+&1119,Y
 	BNE bp_extendtogap		; If must be <gap size
 	STY &B4				; Error, save intch handle
@@ -4486,7 +4486,7 @@ ENDIF
 	AND #&30
 	EOR MA+&0F0E,X
 	STA MA+&0F0E,X			; File len 2
-	PLA 
+	PLA
 	LDA #&00
 .bp_extendtogap
 	STA MA+&0F0D,X			; File len 1
@@ -4501,7 +4501,7 @@ ENDIF
 	JSR ChannelBufferToDisk_Yintch	; Save buffer
 	LDA MA+&1114,Y			; EXT byte 0
 	BNE bp_loadbuf			; IF <>0 load buffer
-	TYA 
+	TYA
 	JSR CmpPTR			; A=Y
 	BNE bp_loadbuf			; If PTR<>EXT, i.e. PTR<EXT
 	JSR CalcBufferSectorForPTR	; new sector!
@@ -4514,7 +4514,7 @@ ENDIF
 	STA &BA
 	LDA MA+&1113,Y			; Buffer page
 	STA &BB
-	PLA 
+	PLA
 	LDY #&00
 	STA (&BA),Y			; Byte to buffer
 	LDY MA+&10C2
@@ -4532,7 +4532,7 @@ ENDIF
 	ADC #&00
 	STA MA+&1112,Y
 .bp_samesecnextbyte
-	TYA 
+	TYA
 	JSR CmpPTR
 	BCC bp_exit			; If PTR<EXT
 	LDA #&20			; Update cat file len when closed
@@ -4541,8 +4541,8 @@ ENDIF
 .bp_setextloop
 	LDA MA+&1110,Y
 	STA MA+&1114,Y
-	INY 
-	DEX 
+	INY
+	DEX
 	BPL bp_setextloop
 }
 .bp_exit
@@ -4567,16 +4567,16 @@ ENDIF
 	LDA &B6
 	PHA 				; Save &B6,&B7,&B8
 	LDA &B7
-	PHA 
+	PHA
 	LDA &B8
-	PHA 
+	PHA
 	LDA #&00
 	JSR bput_Yintchan		; Pad
 	PLA 				; Restore &B6,&B7,&B8
 	STA &B8
-	PLA 
+	PLA
 	STA &B7
-	PLA 
+	PLA
 	STA &B6
 	JMP wsploop			; Loop
 }
@@ -4606,7 +4606,7 @@ ENDIF
 	JMP ChannelFlags_SetBit7	; Seq.Ptr in buffered sector
 
 .CmpPTR
-	TAX 
+	TAX
 	LDA MA+&1112,Y
 	CMP MA+&1116,X
 	BNE cmpPE_exit
@@ -4616,7 +4616,7 @@ ENDIF
 	LDA MA+&1110,Y
 	CMP MA+&1114,X
 .cmpPE_exit
-	RTS 
+	RTS
 
 .CmpNewPTRwithEXT
 	LDA MA+&1114,Y			; Compare ctl blk ptr
@@ -4635,7 +4635,7 @@ ENDIF
 
 .Prthelp_Xtable
 {
-	PHA 
+	PHA
 	JSR PrintString
 	EQUS 13,"MMFS "
 
@@ -4757,12 +4757,12 @@ ENDIF
 	INX 				; (Each param starts with bit 7 set)
 	LDA parametertable,X
 	BPL prtcmdparam_findloop
-	DEY 
+	DEY
 	BNE prtcmdparam_findloop	; next parameter
 	AND #&7F			; Clear bit 7 of first chr
 .prtcmdparam_loop
 	JSR prtcmd_prtchr		;Print parameter
-	INX 
+	INX
 	LDA parametertable,X
 	BPL prtcmdparam_loop
 }
@@ -4775,7 +4775,7 @@ ENDIF
 	BEQ prtcmdparam_prtchr		; If printing help
 	INC &B9
 	STA &0100,X
-	RTS 
+	RTS
 
 .prtcmdparam_prtchr
 	DEC &B8				; If help print chr
@@ -4843,16 +4843,16 @@ ENDIF
 	LDA MA+&0F07			; Calc & print no. free sectors
 	SEC 				; (disk sectors - word C8)
 	SBC &C8
-	PHA 
+	PHA
 	LDA MA+&0F06
 	AND #&03
 	SBC &C9
 	JSR PrintNibble
-	PLA 
+	PLA
 	JSR PrintHex
 	JSR PrintString			; " free sectors"
 	EQUS " free sectors",13
-	NOP 
+	NOP
 	RTS 				; Finished compacting
 
 .compact_checkfile
@@ -4867,9 +4867,9 @@ ENDIF
 	ADC MA+&0F0D,Y			; A=Len1
 	STA &C4
 	LDA MA+&0F0E,Y
-	PHP 
+	PHP
 	JSR A_rorx4and3			; A=Len2
-	PLP 
+	PLP
 	ADC #&00
 	STA &C5				; word C4=size in sectors
 	LDA MA+&0F0F,Y			; A=sec0
@@ -4882,7 +4882,7 @@ ENDIF
 	LDA &C6
 	CMP &C8
 	BNE compact_movefile		; If no
-	CLC 
+	CLC
 	ADC &C4
 	STA &C8
 	LDA &C9
@@ -4916,7 +4916,7 @@ ENDIF
 	JSR GoYN
 	BEQ isgo
 	PLA 				; don't return to sub
-	PLA 
+	PLA
 .isgo
 	JMP PrintNewLine
 }
@@ -4931,8 +4931,8 @@ ENDIF
 	CMP MA+&10D1
 	BEQ baddrv			; Drives must be different!
 
-	TYA 
-	PHA 
+	TYA
+	PHA
 	JSR CalcRAM			; Calc ram available
 	JSR PrintString			; Copying from:
 	EQUS "Copying from :"
@@ -5021,7 +5021,7 @@ ENDIF
 
 	JSR CopyDATABLOCK
 	JSR LoadCurDrvCat
-	
+
 	\ Update title in disk table
 
 	LDX #&0A
@@ -5029,7 +5029,7 @@ ENDIF
 	CPX #&08
 	BCC tskip1
 	LDA MA+&0EF8,X
-	BCS tskip2 
+	BCS tskip2
 .tskip1
 	LDA MA+&0E00,X
 .tskip2
@@ -5053,7 +5053,7 @@ ENDIF
 	JSR getcatentry
 .copy_loop1
 	LDA DirectoryParam
-	PHA 
+	PHA
 	LDA &B6
 	STA &AB
 	JSR prt_InfoLine_Yoffset
@@ -5065,15 +5065,15 @@ ENDIF
 	LDA MA+&0F08,Y
 	STA &BB,X
 	STA MA+&1047,X
-	INX 
-	INY 
+	INX
+	INY
 	CPX #&08
 	BNE copy_loop2
 	LDA &C1
 	JSR A_rorx4and3
 	STA &C3
 	LDA &BF
-	CLC 
+	CLC
 	ADC #&FF
 	LDA &C0
 	ADC #&00
@@ -5096,7 +5096,7 @@ ENDIF
 	JSR LoadCurDrvCat2
 	LDA &AB
 	STA &B6
-	PLA 
+	PLA
 	STA DirectoryParam
 	JSR get_cat_nextentry
 	BCS copy_loop1
@@ -5111,13 +5111,13 @@ ENDIF
 	LDA MA+&10D2
 	STA CurrentDrv
 	LDA DirectoryParam
-	PHA 
+	PHA
 	JSR LoadCurDrvCat2		; Load cat
 	JSR get_cat_firstentry80fname
 	BCC cd_writedest_cat_nodel	; If file not found
 	JSR DeleteCatEntry_YFileOffset
 .cd_writedest_cat_nodel
-	PLA 
+	PLA
 	STA DirectoryParam
 	JSR LoadAddrHi2
 	JSR ExecAddrHi2
@@ -5127,15 +5127,15 @@ ENDIF
 	JSR CreateFile_2		; Saves cat
 	LDA &C2				; Remember sector
 	AND #&03
-	PHA 
+	PHA
 	LDA &C3
-	PHA 
+	PHA
 	JSR cd_swapvars			; Back to source
 	PLA 				; Next free sec on dest
 	STA &C8
-	PLA 
+	PLA
 	STA &C9
-	RTS 
+	RTS
 
 .cd_swapvars
 	LDX #&11			; Swap BA-CB & 1045-1056
@@ -5143,9 +5143,9 @@ ENDIF
 	LDA MA+&1045,X			; I.e. src/dest
 	LDY &BA,X
 	STA &BA,X
-	TYA 
+	TYA
 	STA MA+&1045,X
-	DEX 
+	DEX
 	BPL cd_swapvars_loop
 	RTS
 }
@@ -5158,7 +5158,7 @@ ENDIF
 	BEQ cd_loopentry		; always
 .cd_loop
 	LDA &C4
-	TAY 
+	TAY
 	CMP RAMBufferSize		; Size of buffer
 	LDA &C5
 	SBC #&00
@@ -5227,7 +5227,7 @@ ENDIF
 	LDA #&FF			; Set load address high bytes
 	STA MA+&1074			; to FFFF (i.e. host)
 	STA MA+&1075
-	RTS 
+	RTS
 
 
 .CMD_VERIFY
@@ -5269,7 +5269,7 @@ ENDIF
 .vform4_form
 	JSR PrintString
 	EQUS "Format"			; Format
-	NOP 
+	NOP
 
 .vform4_askdrive
 	JSR PrintString
@@ -5280,7 +5280,7 @@ ENDIF
 	CMP #&20
 	BCC jmp_errBadDrive
 	JSR PrintChrA
-	SEC 
+	SEC
 	SBC #&30
 	BCC jmp_errBadDrive
 	CMP #&04
@@ -5340,7 +5340,7 @@ ENDIF
 
 	\ If verifying calc. no. of tracks
 	JSR TracksOnDisk
-	TXA 
+	TXA
 	BEQ vf6_exit
 	STA &B5				; number of tracks
 
@@ -5405,26 +5405,26 @@ ENDIF
 	JSR LoadCurDrvCat		; Load catalogue
 	LDA MA+&0F06			; Size of disk
 	AND #&03
-	TAX 
+	TAX
 	LDA MA+&0F07
 	LDY #&0A			; 10 sectors/track
 	STY &B0
 	LDY #&FF			; Calc number of tracks
 .trkloop1
-	SEC 
+	SEC
 .trkloop2
-	INY 
+	INY
 	SBC &B0
 	BCS trkloop2
-	DEX 
+	DEX
 	BPL trkloop1
 	ADC &B0
-	PHA 
-	TYA 
-	TAX 
-	PLA 
+	PHA
+	TYA
+	TAX
+	PLA
 	BEQ trkex
-	INX 
+	INX
 .trkex
 	RTS
 }
@@ -5451,7 +5451,7 @@ ENDIF
 	STA &C2
 	LDA MA+&0F07
 	STA &C4				; wC4=sector count
-	SEC 
+	SEC
 	SBC #&02			; wC1=sector count - 2 (map length)
 	STA &C1
 	BCS Label_A82F
@@ -5465,27 +5465,27 @@ ENDIF
 	STA &C0
 	LDA FilesX8
 	AND #&F8
-	TAY 
+	TAY
 	BEQ Label_A86B_nofiles		; If no files
 	BNE Label_A856_fileloop_entry	; always
 .Label_A845_fileloop
 	JSR Sub_A8E2_nextblock
 	JSR Y_sub8			; Y -> next file
 	LDA &C4
-	SEC 
+	SEC
 	SBC &BB
 	LDA &C5
 	SBC &BC
 	BCC Label_A86B_nofiles
 .Label_A856_fileloop_entry
 	LDA MA+&0F07,Y			; wC1 = File Start Sec - Map addr
-	SEC 
+	SEC
 	SBC &BB
 	STA &C1
-	PHP 
+	PHP
 	LDA MA+&0F06,Y
 	AND #&03
-	PLP 
+	PLP
 	SBC &BC
 	STA &C2
 	BCC Label_A845_fileloop
@@ -5499,7 +5499,7 @@ ENDIF
 	JSR Map_AddressLength
 .Label_A87A_free
 	LDA &C1
-	CLC 
+	CLC
 	ADC &BF
 	STA &BF
 	LDA &C2
@@ -5509,26 +5509,26 @@ ENDIF
 	BNE Label_A845_fileloop
 	BIT &C6
 	BPL Label_A8BD_rst		; If *MAP
-	TAY 
+	TAY
 	LDX &BF
 	LDA #&F8
-	SEC 
+	SEC
 	SBC FilesX8
 	JSR Sub_A90D_freeinfo
 	JSR PrintStringSPL
 	EQUS "Free",13			; "Free"
 	LDA &C4
-	SEC 
+	SEC
 	SBC &BF
-	TAX 
+	TAX
 	LDA &C5
 	SBC &C0
-	TAY 
+	TAY
 	LDA FilesX8
 	JSR Sub_A90D_freeinfo
 	JSR PrintStringSPL
 	EQUS "Used",13			; "Used"
-	NOP 
+	NOP
 .Label_A8BD_rst
 	RTS
 }
@@ -5548,7 +5548,7 @@ ENDIF
 	LDA #&0D
 	JSR OSASCI
 }
-				
+
 .Sub_A8E2_nextblock
 {
 	LDA MA+&0F06,Y			; wBB = start sec + len
@@ -5586,9 +5586,9 @@ ENDIF
 	EQUS " Files "
 	STX &BC				; YX = Number of sectors
 	STY &BD
-	TYA 
+	TYA
 	JSR PrintNibbleSPL
-	TXA 
+	TXA
 	JSR PrintHexSPL
 	JSR PrintStringSPL
 	EQUS " Sectors "
@@ -5600,7 +5600,7 @@ ENDIF
 	LDX #&09
 .Label_A941_loop1
 	STA MA+&1000,X			; ?1000 - ?1009 = 0
-	DEX 
+	DEX
 	BPL Label_A941_loop1
 .Label_A947_loop2
 	ASL &BB				; !BB = !BB * 2
@@ -5617,8 +5617,8 @@ ENDIF
 	SBC #&0A
 .Label_A95D
 	STA MA+&1000,X
-	INX 
-	DEY 
+	INX
+	DEY
 	BPL Label_A953_loop3
 	DEC &C1
 	BPL Label_A947_loop2
@@ -5636,20 +5636,20 @@ ENDIF
 	BNE Label_A982			; always
 .Label_A97D
 	LDY #&2C
-	CLC 
+	CLC
 	ADC #&30
 .Label_A982
 	JSR OSASCI
 	CPX #&03
 	BNE Label_A98D
-	TYA 
+	TYA
 	JSR OSASCI			; Print " " or ","
 .Label_A98D
-	DEX 
+	DEX
 	BPL Label_A96C_loop4
 	JSR PrintStringSPL
 	EQUS " Bytes "
-	NOP 
+	NOP
 	RTS
 }
 
@@ -5717,13 +5717,13 @@ errptr%=&B8
 
 ; SFTODO: Slightly wasteful of space here
 IF _BP12K_
-        SKIPTO MA+&0E00
-        ; The tube host code can live in this region; it doesn't access our
-        ; workspace and we won't page in the private 12K bank when calling this.
+	SKIPTO MA+&0E00
+	; The tube host code can live in this region; it doesn't access our
+	; workspace and we won't page in the private 12K bank when calling this.
 IF _TUBEHOST_ AND (_BP12K_)
 	INCLUDE "TubeHost230.asm"
 ENDIF
-        SKIPTO MAEND
+	SKIPTO MAEND
 ENDIF
 
 	\\ *********** MMC HARDWARE CODE **********
@@ -5795,11 +5795,11 @@ INCLUDE "FAT.asm"
 
 
 	\\ *****  Reset MMC_SECTOR  *****
-	\\ (MMC_SECTION is the card address of 
+	\\ (MMC_SECTION is the card address of
 	\\ Sector 0 of the image file.)
 
 	\\ Default image: BEEB.MMB
-.MMC_Sector_Reset	
+.MMC_Sector_Reset
 	LDX #&A
 	JSR CopyDOSFilename
 
@@ -6132,7 +6132,7 @@ ENDIF
 	LDA CurrentCat
 	CMP CurrentDrv
 	BNE LoadCurDrvCat
-	RTS 
+	RTS
 
 	\\ **** Load catalogue of current drive ****
 .LoadCurDrvCat
@@ -6147,11 +6147,11 @@ ENDIF
 	\\ **** Save catalogue of current drive ****
 .SaveCatToDisk
 	LDA MA+&0F04			; Increment Cycle Number
-	CLC 
-	SED 
+	CLC
+	SED
 	ADC #&01
 	STA MA+&0F04
-	CLD 
+	CLD
 
 	JSR MMC_BEGIN1
 	JSR DiskStart
@@ -7260,83 +7260,83 @@ IF _TUBEHOST_ AND NOT(_BP12K_)
 ENDIF
 
 IF _BP12K_
-        \ This code must be outside the 12K private RAM bank, so it can run
-        \ successfully without us having copied our code into that bank.
-        IF P%<&B000
-            SKIPTO &B000
-        ENDIF
+	\ This code must be outside the 12K private RAM bank, so it can run
+	\ successfully without us having copied our code into that bank.
+	IF P%<&B000
+	    SKIPTO &B000
+	ENDIF
 
 .Init12K
 {
-        PHP
-        PHA
-        TXA
-        PHA
-        TYA
-        PHA
-        LDA #0
-        STA &B0
-        LDA #&7F
-        STA &B1
+	PHP
+	PHA
+	TXA
+	PHA
+	TYA
+	PHA
+	LDA #0
+	STA &B0
+	LDA #&7F
+	STA &B1
 
-        LDA PagedRomSelector_RAMCopy
-        ORA #&80
-        TAX
-        LDY #255
-        BNE start_loop
+	LDA PagedRomSelector_RAMCopy
+	ORA #&80
+	TAX
+	LDY #255
+	BNE start_loop
 .loop
-        LDA (&B0),Y
-        STX PagedRomSelector_RAMCopy
-        STX &FE30
-        STA (&B0),Y
+	LDA (&B0),Y
+	STX PagedRomSelector_RAMCopy
+	STX &FE30
+	STA (&B0),Y
 .start_loop
-        TXA
-        AND #&7F
-        STA PagedRomSelector_RAMCopy
-        STA &FE30
-        INY
-        BNE loop
-        INC &B1
-        LDA &B1
-        CMP #&B0
-        BEQ done
-        CMP #HI(MA+&0E00)
-        BNE loop
-        LDA #HI(MAEND)
-        STA &B1
-        BNE loop
+	TXA
+	AND #&7F
+	STA PagedRomSelector_RAMCopy
+	STA &FE30
+	INY
+	BNE loop
+	INC &B1
+	LDA &B1
+	CMP #&B0
+	BEQ done
+	CMP #HI(MA+&0E00)
+	BNE loop
+	LDA #HI(MAEND)
+	STA &B1
+	BNE loop
 
 .done
-        PLA
-        TAY
-        PLA
-        TAX
-        PLA
-        PLP
-        RTS
+	PLA
+	TAY
+	PLA
+	TAX
+	PLA
+	PLP
+	RTS
 }
 
 .PageIn12K
-        PHP
-        PHA
-        LDA PagedRomSelector_RAMCopy
-        ORA #&80
-        STA PagedRomSelector_RAMCopy
-        STA &FE30
-        PLA
-        PLP
-        RTS
+	PHP
+	PHA
+	LDA PagedRomSelector_RAMCopy
+	ORA #&80
+	STA PagedRomSelector_RAMCopy
+	STA &FE30
+	PLA
+	PLP
+	RTS
 
 .PageOut12K
-        PHP
-        PHA
-        LDA PagedRomSelector_RAMCopy
-        AND #&7F
-        STA PagedRomSelector_RAMCopy
-        STA &FE30
-        PLA
-        PLP
-        RTS
+	PHP
+	PHA
+	LDA PagedRomSelector_RAMCopy
+	AND #&7F
+	STA PagedRomSelector_RAMCopy
+	STA &FE30
+	PLA
+	PLP
+	RTS
 ENDIF
 
 PRINT "    code ends at",~P%," (",(guard_value - P%), "bytes free )"
