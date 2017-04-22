@@ -2847,11 +2847,15 @@ ENDIF
 
 IF _SWRAM_
 IF _BP12K_
+        \\ Don't allow soft resets to update ForceReset; this can cause resets
+        \\ pending from previous power up/hard resets to be lost.
+        BMI skipOnSoftReset
 	JSR PageIn12K
 ENDIF
 	STX ForceReset
 IF _BP12K_
 	JSR PageOut12K
+.skipOnSoftReset
 ENDIF
 ELSE
 	TXA				; A= FF=soft,0=power up,1=hard
