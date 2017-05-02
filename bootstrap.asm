@@ -75,17 +75,23 @@ ENDIF
         jmp     serv
         equb    %10000010
         equb    copyr-&8000
-        equb    &01
-        equs    "MMFS Bootstrap"
+        equb    &02
+.title  equs    "MMFS Bootstrap"
         equb    &00
-        equs    "1.1"
+        equs    "1.2"
 .copyr  equb    &00
         equs    "(C) Martin Mathers, David Banks, Steven Fosdick"
         equb    &00
 
 .serv   cmp     #&01
         beq     absws
-        rts
+        cmp     #&04
+        bne     notcmd
+        jmp     oscmd
+.notcmd cmp     #&09
+        bne     nothlp
+        jmp     help
+.nothlp rts
 
 .absws  tya
         pha
@@ -306,6 +312,9 @@ ENDIF
         jmp     romfai
 .cmpen
 
+.bootend        
+        include "sram.asm"
+        
 ; Page align the included MMFS ROM which will follow
 ; This avoids any penalties with page crossing during the copy
         align   &100
