@@ -168,11 +168,17 @@ osasci  =       &ffe3
         equb    &00
 
 .hlptxt equb    &0d
+        equs    "  INSERT <rom>"
+        equb    &0d
         equs    "  ROMS"
         equb    &0d
         equs    "  SRLOAD <filename> <rom>"
         equb    &0d
         equs    "  SRSAVE <filename> <rom>"
+        equb    &0d
+        equs    "  SRWIPE <rom>"
+        equb    &0d
+        equs    "  UNPLUG <rom>"
         equb    &0d
         equb    &00
         }
@@ -189,12 +195,18 @@ osasci  =       &ffe3
 
 ;;; Command table.
 
-.cmdtab equs    "ROMS"
+.cmdtab equs    "INSert"
+        cmdadr  insert
+        equs    "ROMS"
         cmdadr  roms
         equs    "SRLoad"
         cmdadr  srload
         equs    "SRSave"
         cmdadr  srsave
+        equs    "SRWipe"
+        cmdadr  srwipe
+        equs    "UNPlug"
+        cmdadr  unplug
 .cmdend
 
 ;;; Abort with an error message.  The error number and text immediately
@@ -245,16 +257,73 @@ osasci  =       &ffe3
         rts
 }
 
-;;; The ROMS command.
+;;; Get the address of the OS ROM table.
 
-.roms
+.getrtb
 {
-        lda     #&aa            ; find the OS ROM table.
+        lda     #&aa
         ldx     #&00
         ldy     #&ff
         jsr     osbyte
         stx     romtab
         sty     romtab+1
+        rts
+}
+
+;;; use OSRDRM to fetch the copyright pointer.
+
+.rdcpyr
+{
+        lda     #&07            ;
+        sta     &f6
+        lda     #&80
+        sta     &f7
+        ldy     romid
+        jsr     osrdrm
+        sta     copywr
+        rts
+}
+
+;;; Get the next byte from the ROM being worked on.
+
+.gtrbyt ldy     romid
+        jsr     osrdrm
+        inc     &f6
+        rts
+
+;;; Check if a ROM bank contains a valid ROM image.
+
+.chkrom
+{
+        jsr     rdcpyr          ; find copyright pointer.
+        sta     &f6
+        jsr     gtrbyt          ; check bytes...
+        cmp     #&00
+        bne     empty
+        jsr     gtrbyt
+        cmp     #'('
+        bne     empty
+        jsr     gtrbyt
+        cmp     #'C'
+        bne     empty
+        jsr     gtrbyt
+        cmp     #')'
+        bne     empty
+        lda     #&06            ; get the ROM type byte.
+        sta     &f6
+        ldy     romid
+        jsr     osrdrm
+        clc                     ; indicate sucess.
+        rts
+.empty  sec                     ; indicate failure.
+        rts
+}
+
+;;; The ROMS command.
+
+.roms
+{
+        jsr     getrtb          ; find the OS ROM table.
         ldy     #&0f            ; loop through 15->0
 .rmloop sty     romid
         jsr     ramtst
@@ -273,31 +342,8 @@ osasci  =       &ffe3
         jsr     prtitl
         ldy     romid
         jmp     next
-.gotram jsr     rdcpyr          ; Found RAM in this slot.  Check if the
-        sta     &f6             ; contents look like a ROM image by checking
-        ldy     romid           ; if the copyright pointer points to a
-        jsr     osrdrm          ; copyright string.
-        cmp     #&00
-        bne     empty
-        inc     &f6
-        ldy     romid
-        jsr     osrdrm
-        cmp     #'('
-        bne     empty
-        inc     &f6
-        ldy     romid
-        jsr     osrdrm
-        cmp     #'C'
-        bne     empty
-        inc     &f6
-        ldy     romid
-        jsr     osrdrm
-        cmp     #')'
-        bne     empty
-        lda     #&06
-        sta     &f6
-        ldy     romid
-        jsr     osrdrm
+.gotram jsr     chkrom          ; Found RAM.  Valid ROM image?
+        bcs     empty
         tax                     ; As this RAM contains what looks like a ROM
         jsr     prinfo          ; image, print info based on the ROM type
         jsr     rparen          ; byte read from the RAM bank itself.
@@ -310,15 +356,6 @@ osasci  =       &ffe3
         jsr     osnewl
         ldy     romid
         jmp     next
-
-.rdcpyr lda     #&07            ; use OSRDRM to fetch the copyright pointer.
-        sta     &f6
-        lda     #&80
-        sta     &f7
-        ldy     romid
-        jsr     osrdrm
-        sta     copywr
-        rts
 
 .prinfo lda     #'R'            ; print info for one ROM slot up to the
         jsr     oswrch          ; end of the service/lang flags.
@@ -631,4 +668,74 @@ base    =       &0102           ; where the main RAM copier will be.
         ldx     #<osf_fn        ; pass on to OSFILE.
         ldy     #>osf_fn
         jmp     osfile
+}
+
+;;; SRWIPE command
+
+.srwipe
+{
+base    =       &0102           ; where the main RAM copier will be.
+        jsr     parse_rid       ; parse ROM ID into ZP romid
+        jsr     ramchk
+        jsr     getrtb          ; get OS ROM table.
+        ldy     romid           ; clear the ROM type byte to prevent
+        lda     #&00            ; service calls.
+        sta     (romtab),y
+        ldx     #wipen-wipst    ; copy the copy routine into place.
+.cplp   lda     wipst,X
+        sta     base,x
+        dex
+        bpl     cplp
+        lda     &f4             ; patch it with ROM
+        sta     base+p_rom+1-wipst
+        lda     #&40            ; set the number of pages to copy.
+        sta     pages
+        ldy     #&00
+        jmp     base            ; and go to the clear routine in main RAM.
+
+;;; The following is copied into main RAM so as to have access to the
+;;; source/destination ROM/RAM bank rather than the host ROM.  It is
+;;; self-modifying code that is also patched by the setup above.
+
+.wipst  ldx     romid
+        page_rom_x
+        lda     #&00
+.p_dst  sta     &8000,y         ; self-modifying, initial value patched in.
+        iny
+        bne     p_dst
+        inc     base+p_dst+2-wipst
+        dec     pages
+        bne     p_dst
+.p_rom  ldx     #&00            ; value patched in.
+        page_rom_x
+        rts
+.wipen
+}
+
+;;; INSERT command.
+
+.insert
+{
+        jsr     parse_rid       ; parse ROM ID into ZP romid
+        jsr     chkrom          ; check if valid ROM image.
+        bcs     badrom
+        pha
+        jsr     getrtb          ; get OS ROM table.
+        pla
+        ldy     romid
+        sta     (romtab),y
+        rts
+.badrom jsr     errmsg
+        equs    "Not a valid ROM image"
+        equb    &00
+}
+
+.unplug
+{
+        jsr     parse_rid       ; parse ROM ID into ZP romid
+        jsr     getrtb          ; get OS ROM table.
+        lda     #&00
+        ldy     romid
+        sta     (romtab),y
+        rts
 }
