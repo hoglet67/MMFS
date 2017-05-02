@@ -180,6 +180,12 @@ osasci  =       &ffe3
         equb    &0d
         equs    "  UNPLUG <rom>"
         equb    &0d
+IF _SRAM_WP_
+        equs    "  WPSET <rom>"
+        equb    &0d
+        equs    "  WPCLR <rom>"
+        equb    &0d
+ENDIF
         equb    &00
         }
 
@@ -207,6 +213,12 @@ osasci  =       &ffe3
         cmdadr  srwipe
         equs    "UNPlug"
         cmdadr  unplug
+IF _SRAM_WP_
+        equs    "WPSet"
+        cmdadr  wpset
+        equs    "WPClr"
+        cmdadr  wpclr
+ENDIF
 .cmdend
 
 ;;; Abort with an error message.  The error number and text immediately
@@ -739,3 +751,27 @@ base    =       &0102           ; where the main RAM copier will be.
         sta     (romtab),y
         rts
 }
+
+IF _SRAM_WP_
+base    =       &0102           ; where the main RAM copier will be.
+.wpset  jsr     parse_rid       ; parse ROM ID into ZP romid
+        lda     #&20
+        bne     wpcom
+.wpclr  jsr     parse_rid       ; parse ROM ID into ZP romid
+        lda     #&30
+.wpcom  ora     romid
+        tay
+        ldx     #wpcen-wpcst    ; copy the copy routine into place.
+.wpclp  lda     wpcst,X
+        sta     base,x
+        dex
+        bpl     wpclp
+        ldx     &f4
+        jmp     base
+.wpcst  sty     &f4
+        sty     &fe30
+        stx     &f4
+        stx     &fe30
+        rts
+.wpcen
+ENDIF

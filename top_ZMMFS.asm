@@ -2,6 +2,7 @@
 INCLUDE "DEVICE.asm"
 
 _ELECTRON_=FALSE
+_SRAM_WP_=TRUE
         
 INCLUDE "bootstrap.asm"
 
