@@ -2963,7 +2963,11 @@ ENDIF
 	LDY &EF
 	INY
 	BPL notOSWORD7F
-	JMP Osword7F_8271_Emulation	; OSWORD &7F 8271 emulation
+	PHP
+	CLI
+	JSR Osword7F_8271_Emulation	; OSWORD &7F 8271 emulation
+	PLP
+	RTS
 
 .notOSWORD7F
 	JSR Set_CurDirDrv_ToDefaults
