@@ -279,7 +279,7 @@ ENDIF
 .exit
         ENDMACRO
 
-        align   &100
+align   &100
 
 .copyst csetup  0
         lda     #&aa            ; Find the ROM info table.
@@ -291,6 +291,9 @@ ENDIF
         lda     &8006           ; copy the MMFS ROM type into the table
         ldy     dstrom          ; entry for the RAM copy.
         sta     (cpdst),Y
+        tya                     ; record the number of the ROM bank containing
+        ldy     ourrom          ; the RAM copy in the byte normally used for
+        sta     &0df0,y         ; recording the start page of private worksapce.
         pla
         tay
         lda     #&01            ; and dont "claim" this call - others ROMS
@@ -302,6 +305,9 @@ ENDIF
 
 .cmpst  csetup  1
         bne     cmpfai
+        lda     dstrom          ; record the number of the ROM bank containing
+        ldy     ourrom          ; the RAM copy in the byte normally used for
+        sta     &0df0,y         ; recording the start page of private worksapce.
         pla
         tay
         lda     #&01            ; and dont "claim" this call - others ROMS

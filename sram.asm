@@ -540,7 +540,7 @@ ENDIF
         cmp     #&0d
         beq     misid
         jsr     xd2bin          ; convert ROM id to binary.
-        bcs     badid
+        bcs     notdig
         sta     romid
         lda     (&f2),y         ; second digit?
         jsr     xd2bin
@@ -565,6 +565,25 @@ ENDIF
         cmp     #&0d
         bne     badid
         rts
+.notdig and     #&df
+        cmp     #'M'
+        bcc     badid
+        eor     #&ff
+        adc     #'Z'
+        bmi     badid
+        tax
+        inx
+        stx     pages
+        ldy     &f4
+        lda     &0df0,y
+        sta     romid
+.loop3  dec     romid
+        bmi     notfnd
+        jsr     ramtst
+        bne     loop3
+        dec     pages
+        bne     loop3
+        rts
 .misid  jsr     errmsg
         equb    &80
         equs    "Missing ROM ID"
@@ -572,6 +591,10 @@ ENDIF
 .badid  jsr     errmsg
         equb    &80
         equs    "Invalid ROM ID"
+        equb    &00
+.notfnd jsr     errmsg
+        equb    &80
+        equs    "RAM bank not found"
         equb    &00
 }
 
