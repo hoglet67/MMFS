@@ -656,6 +656,7 @@ ENDIF
         lda     #&ff
         jsr     fileop
         jsr     clrrtyp         ; stop serive calls to old image (if any).
+        sta     &0df0,y         ; and forget previous workspace.
         ldx     oshwm+1         ; copy from OSHWM to &8000
         ldy     #&80            ; fall through into the copy routine.
 }
@@ -758,6 +759,7 @@ base    =       &0102           ; where the main RAM copier will be.
         jsr     parse_rid       ; parse ROM ID into ZP romid
         jsr     ramchk
         jsr     clrrtyp         ; stop serive calls to old image (if any).
+        sta     &0df0,y         ; and forget previous workspace.
         ldx     #wipen-wipst    ; copy the copy routine into place.
 .cplp   lda     wipst,X
         sta     base,x
