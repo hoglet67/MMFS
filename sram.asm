@@ -5,9 +5,9 @@ osasci  =       &ffe3
 ;;; Zero-page workspace
 
         org     &a8
-.oshwm
+.oshwm  equw    &0000
+.himem 
 .romtab equw    &0000
-.himem  equw    &0000
 .romid  equb    &00
 .srcpag equb    &00
 .dstpag equb    &00
