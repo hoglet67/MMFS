@@ -494,10 +494,38 @@ ENDIF
         beq     fnend
         cmp     #' '
         bne     loop1
+.loop2  iny
+        lda     (&f2),y         ; skip spaces
+        cmp     #' '
+        beq     loop2
+        cmp     #'8'            ; beginning of 8000?
+        bne     fnend
+        iny
+        lda     (&f2),y
+        cmp     #' '
+        beq     decend
+        cmp     #&0d
+        beq     decend
+        cmp     #'0'
+        bne     n8000
+        lda     #'0'
+.loop3  iny        
+        cmp     (&f2),y
+        bne     n8000
+        iny
+        cmp     (&f2),y
+        bne     n8000
+        iny
 .fnend  rts
+.decend dey
+        rts
 .badfil jsr     errmsg
         equb    &80
         equs    "Missing filename"
+        equb    &00
+.n8000  jsr     errmsg
+        equb    &80
+        equs    "Only supported at 8000"
         equb    &00
 }
 
