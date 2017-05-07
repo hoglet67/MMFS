@@ -509,7 +509,7 @@ ENDIF
         cmp     #'0'
         bne     n8000
         lda     #'0'
-.loop3  iny        
+.loop3  iny
         cmp     (&f2),y
         bne     n8000
         iny
@@ -639,6 +639,7 @@ ENDIF
         sta     osf_ex+1        ; not its own load address.
         lda     #&ff
         jsr     fileop
+        jsr     clrrtyp         ; stop serive calls to old image (if any).
         ldx     oshwm+1         ; copy from OSHWM to &8000
         ldy     #&80            ; fall through into the copy routine.
 }
@@ -740,10 +741,7 @@ base    =       &0102           ; where the main RAM copier will be.
 base    =       &0102           ; where the main RAM copier will be.
         jsr     parse_rid       ; parse ROM ID into ZP romid
         jsr     ramchk
-        jsr     getrtb          ; get OS ROM table.
-        ldy     romid           ; clear the ROM type byte to prevent
-        lda     #&00            ; service calls.
-        sta     (romtab),y
+        jsr     clrrtyp         ; stop serive calls to old image (if any).
         ldx     #wipen-wipst    ; copy the copy routine into place.
 .cplp   lda     wipst,X
         sta     base,x
@@ -796,9 +794,17 @@ base    =       &0102           ; where the main RAM copier will be.
 .unplug
 {
         jsr     parse_rid       ; parse ROM ID into ZP romid
+        ;; fall through to clear the ROM type byte.
+}
+
+;;; Clear the ROM type bye from the ROM table.
+;;; Rom ID of ROM to clear byte from iz in ZP at romid.
+
+.clrrtyp
+{
         jsr     getrtb          ; get OS ROM table.
-        lda     #&00
-        ldy     romid
+        ldy     romid           ; clear the ROM type byte to prevent
+        lda     #&00            ; service calls.
         sta     (romtab),y
         rts
 }
