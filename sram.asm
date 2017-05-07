@@ -558,13 +558,7 @@ ENDIF
         sta     romid           ; is now in range.
         cmp     #&10
         bcs     badid
-.less16 lda     (&f2),y         ; that should be the end of the command but
-        iny                     ; don't complain about trailing spaces.
-        cmp     #' '
-        beq     less16
-        cmp     #&0d
-        bne     badid
-        rts
+.less16 rts
 .notdig and     #&df
         cmp     #'M'
         bcc     badid
