@@ -6,7 +6,7 @@ osasci  =       &ffe3
 
         org     &a8
 .oshwm  equw    &0000
-.himem 
+.himem
 .romtab equw    &0000
 .romid  equb    &00
 .srcpag equb    &00
@@ -531,7 +531,7 @@ ENDIF
 
 ;;; Parse a ROM ID.
 
-.parse_rid
+.parse_rid_opt
 {
 .loop2  lda     (&f2),y         ; skip spaces between filename and ROM id.
         iny
@@ -577,18 +577,29 @@ ENDIF
         bne     loop3
         dec     pages
         bne     loop3
+        clc
         rts
-.misid  jsr     errmsg
-        equb    &80
-        equs    "Missing ROM ID"
-        equb    &00
+.misid  sec
+        rts
 .badid  jsr     errmsg
         equb    &80
         equs    "Invalid ROM ID"
         equb    &00
+}
+
 .notfnd jsr     errmsg
         equb    &80
         equs    "RAM bank not found"
+        equb    &00
+
+.parse_rid
+{
+        jsr     parse_rid_opt
+        bcs     misid
+        rts
+.misid  jsr     errmsg
+        equb    &80
+        equs    "Missing ROM ID"
         equb    &00
 }
 
@@ -621,9 +632,20 @@ ENDIF
 .srload
 {
         jsr     parse_fn        ; parse filename to OSFILE block.
-        jsr     parse_rid       ; parse ROM ID into ZP romid
+        jsr     parse_rid_opt   ; parse ROM ID into ZP romid
+        bcs     search
         jsr     ramchk          ; check there is RAM in the specified slot.
-        jsr     bufchk          ; check there is memory for buffer.
+        jmp     both
+.search ldy     &f4             ; no ROM ID specified on command line so
+        lda     &0df0,y         ; search for the first slot which is...
+        sta     romid
+.loop   dec     romid
+        bmi     notfnd
+        jsr     ramtst          ; RAM
+        bne     loop
+        jsr     chkrom          ; and doesn't have a valid ROM image.
+        bcc     loop
+.both   jsr     bufchk          ; check there is memory for buffer.
         lda     oshwm           ; load ROM image at OSHWM.
         sta     osf_ld
         lda     oshwm+1
