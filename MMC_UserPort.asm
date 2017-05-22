@@ -216,13 +216,18 @@ ENDIF
     RTS
 
 .MMC_ReadToTube
+{        
     JSR WaitForShiftDone
     STA TUBE_R3_DATA
+    NOP
+    NOP
+    NOP
     INY
     DEX
     BNE MMC_ReadToTube
+.tube_delay
     RTS
-
+}
 
     \\ **** Read 256 bytes to buffer ****
 .MMC_ReadBuffer
