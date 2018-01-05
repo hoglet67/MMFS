@@ -8,8 +8,12 @@ echo "Building MMFS $VERSION"
 
 # Set the BEEBASM executable for the platform
 BEEBASM=tools/beebasm/beebasm.exe
-if [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
+if [ "$(uname -s)" == "Darwin" ]; then
+    BEEBASM=tools/beebasm/beebasm-darwin
+    MD5SUM=md5
+elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     BEEBASM=tools/beebasm/beebasm
+    MD5SUM=md5sum
 fi
 
 # Device:
@@ -71,7 +75,7 @@ do
         grep "code ends at" ${build}/${name}.log
 
         # Report build checksum
-        echo "    mdsum is "`md5sum <${build}/${name}`
+        echo "    mdsum is "`$MD5SUM <${build}/${name}`
 
         # Add a .rom suffix
         mv ${build}/${name} ${build}/${name}.rom
