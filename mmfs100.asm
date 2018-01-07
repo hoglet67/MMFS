@@ -66,7 +66,7 @@ MMC_CIDCRC=VID+&C			; 2 bytes
 CHECK_CRC7=VID+&E			; 1 byte
 
 filesysno%=&04			; Filing System Number
-filehndl%=&50			; First File Handle - 1
+filehndl%=&10			; First File Handle - 1
 tubeid%=&0A			; See Tube Application Note No.004 Page 7
 
 MACRO BP12K_NEST
