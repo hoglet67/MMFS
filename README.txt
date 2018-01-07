@@ -22,8 +22,8 @@ MMFS has the following features:
 
 - I'm motivated to fix any bugs that people find!
 
-Building MMFS is currently only supported on Linux. All dependent
-tools (BeebASM 1.04 and mmb_utils) are included in the tools/
+Building MMFS is supported on Linux and MacOS. All dependent
+tools (BeebASM and mmb_utils) are included in the tools/
 directory.
 
 To build, run the build.sh script. The results will be in the build/
@@ -41,8 +41,8 @@ The following versions are created:
 - Master                             (MAMMFS)
 - Master for the TurboMMC hardware   (MAMMFST)
 
-Original Interface Harware
-==========================
+Original Interface Hardware
+===========================
 
 This is the original interface design, as conceived by Martin Mather
 in 2006.
