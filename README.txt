@@ -7,6 +7,15 @@ SuperMMC, Steve Picton's TurboMMC and Duikkie's SmartSPI). MMFS was
 written by Martin Mather in 2012, but seems to have been forgotten
 about until it was rediscovered in 2015.
 
+For more details on the release structures, see:
+    https://github.com/hoglet67/MMFS/wiki/Release-structure
+
+For binrary releases, see:
+    https://github.com/hoglet67/MMFS/releases
+
+For further documention see:
+    https://github.com/hoglet67/MMFS/wiki
+
 MMFS has the following features:
 
 - it's built from simple text source files (BeebASM), rather than
@@ -32,14 +41,6 @@ directory.
 To do a release build, run the release.sh script. The results will be
 in the releases/ directory.
 
-The following versions are created:
-- Beeb ROM                             (MMFS)
-- Beeb ROM for the TurboMMC hardware   (MMFST)
-- Beeb Sideways RAM                  (SWMMFS)
-- Electron ROM                        (EMMFS)
-- Electron Sideways RAM             (ESWMMFS)
-- Master                             (MAMMFS)
-- Master for the TurboMMC hardware   (MAMMFST)
 
 Original Interface Hardware
 ===========================
