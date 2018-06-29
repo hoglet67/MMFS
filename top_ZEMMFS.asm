@@ -2,7 +2,8 @@
 INCLUDE "DEVICE.asm"
         
 _ELECTRON_=TRUE
-
+_SRAM_WP_=FALSE
+        
 INCLUDE "bootstrap.asm"
 
 .romst

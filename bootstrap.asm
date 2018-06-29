@@ -75,17 +75,23 @@ ENDIF
         jmp     serv
         equb    %10000010
         equb    copyr-&8000
-        equb    &01
-        equs    "MMFS Bootstrap"
+        equb    &02
+.title  equs    "MMFS Bootstrap"
         equb    &00
-        equs    "1.1"
+        equs    "1.2"
 .copyr  equb    &00
         equs    "(C) Martin Mathers, David Banks, Steven Fosdick"
         equb    &00
 
 .serv   cmp     #&01
         beq     absws
-        rts
+        cmp     #&04
+        bne     notcmd
+        jmp     oscmd
+.notcmd cmp     #&09
+        bne     nothlp
+        jmp     help
+.nothlp rts
 
 .absws  tya
         pha
@@ -273,7 +279,7 @@ ENDIF
 .exit
         ENDMACRO
 
-        align   &100
+align   &100
 
 .copyst csetup  0
         lda     #&aa            ; Find the ROM info table.
@@ -285,6 +291,9 @@ ENDIF
         lda     &8006           ; copy the MMFS ROM type into the table
         ldy     dstrom          ; entry for the RAM copy.
         sta     (cpdst),Y
+        tya                     ; record the number of the ROM bank containing
+        ldy     ourrom          ; the RAM copy in the byte normally used for
+        sta     &0df0,y         ; recording the start page of private worksapce.
         pla
         tay
         lda     #&01            ; and dont "claim" this call - others ROMS
@@ -296,6 +305,9 @@ ENDIF
 
 .cmpst  csetup  1
         bne     cmpfai
+        lda     dstrom          ; record the number of the ROM bank containing
+        ldy     ourrom          ; the RAM copy in the byte normally used for
+        sta     &0df0,y         ; recording the start page of private worksapce.
         pla
         tay
         lda     #&01            ; and dont "claim" this call - others ROMS
@@ -306,6 +318,9 @@ ENDIF
         jmp     romfai
 .cmpen
 
+.bootend        
+        include "sram.asm"
+        
 ; Page align the included MMFS ROM which will follow
 ; This avoids any penalties with page crossing during the copy
         align   &100
