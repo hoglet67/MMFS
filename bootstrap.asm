@@ -1,6 +1,4 @@
-osbyte  =       &fff4
-oswrch  =       &ffee
-osnewl  =       &ffe7
+include "SYSVARS.asm"
 
         org     &a0
 .cpsrc  equw    &0000
@@ -92,7 +90,7 @@ ENDIF
         lda     #&fd            ; get the last BREAK type.
         ldx     #&00
         ldy     #&ff
-        jsr     osbyte
+        jsr     OSBYTE
         cpx     #&00
         beq     docmp
 .docopy lda     #<copyst
@@ -122,7 +120,7 @@ ENDIF
 .romfai
         ldx     #&00
         lda     faimsg
-.failp  jsr     oswrch
+.failp  jsr     OSWRCH
         inx
         lda     faimsg,x
         bne     failp
@@ -130,8 +128,8 @@ ENDIF
         jsr     hexbyt
         lda     cpdst
         jsr     hexbyt
-        jsr     osnewl
-        jsr     osnewl
+        jsr     OSNEWL
+        jsr     OSNEWL
         jmp     docopy
 
 .hexbyt pha
@@ -146,14 +144,14 @@ ENDIF
         bcc     lten
         adc     #&06
 .lten   adc     #'0'
-        jmp     oswrch
+        jmp     OSWRCH
 
 .faimsg equs    "MMFS RAM/ROM comparison failed at "
         equb    &00
 
 .noram  ldx     #&00
         lda     normsg
-.norlp  jsr     oswrch
+.norlp  jsr     OSWRCH
         inx
         lda     normsg,x
         bne     norlp
@@ -178,6 +176,32 @@ ENDIF
         beq     romnxt
 
         page_rom_x
+;; Step 1: Test if candidate slot already contains a rom image
+;; so we don't clobber any pre-existing ROM images
+        ldy     &8007
+        lda     &8000, Y
+        bne     testram
+        lda     &8001, Y
+        cmp     #'('
+        bne     testram
+        lda     &8002, Y
+        cmp     #'C'
+        bne     testram
+        lda     &8003, Y
+        cmp     #')'
+        bne     testram
+
+;; Step 2: Test if that pre-existing rom image is SWMMFS
+;; so we re-use the same slot again and again
+        lda     &b5fe
+        cmp     #MAGIC0
+        bne     romnxt
+        lda     &b5ff
+        cmp     #MAGIC1
+        bne     romnxt
+
+;; Step 3: Check if slot is RAM
+.testram
         lda     &8006
         eor     #&FF
         sta     &8006
@@ -213,61 +237,41 @@ ENDIF
 .gotram
         lda     #>romst         ; set the embedded MMFS ROM as thes ource of the copy
         sta     code_buffer + patch1 + 2 - base
-        sta     code_buffer + patch2 + 2 - base
         lda     #&80            ; set copy destination as the start the sideways RAM bank
-        sta     code_buffer + patch3 + 2 - base
-        sta     code_buffer + patch4 + 2 - base
+        sta     code_buffer + patch2 + 2 - base
 .cploop
         ldx     ourrom
         page_rom_x_fast
-        ldy     #&7f
+        ldy     #&00
 .cploop1
 .patch1
         lda     romst, y            ; 4
         sta     copy_buffer, y      ; 5
-.patch2
-        lda     romst + &80, y      ; 4
-        sta     copy_buffer + &80,y ; 5
-        dey                         ; 2
-        bpl     cploop1             ; 3
+        iny                         ; 2
+        bne     cploop1             ; 3
         ldx     dstrom
         page_rom_x_fast
-        ldy     #&7f
 .cploop2
         lda     copy_buffer, y      ; 4
-.patch3
+.patch2
 IF mode=1
         cmp     &8000, y            ; 4
-        bne     fail1               ; 2
+        bne     fail                ; 2
 ELSE
         sta     &8000, y            ; 5
 ENDIF
-        lda     copy_buffer + &80,y ; 4
-.patch4
-IF mode=1
-        cmp     &8080, y            ; 4
-        bne     fail2               ; 2
-ELSE
-        sta     &8080, y            ; 5
-ENDIF
-        dey                         ; 2
-        bpl     cploop2             ; 3
+        iny                         ; 2
+        bne     cploop2             ; 3
         inc     code_buffer + patch1 + 2 - base
         inc     code_buffer + patch2 + 2 - base
-        inc     code_buffer + patch3 + 2 - base
-        inc     code_buffer + patch4 + 2 - base
-        lda     code_buffer + patch4 + 2 - base
+        lda     code_buffer + patch2 + 2 - base
         cmp     #&b6
         bne     cploop
 IF mode=1
         beq     exit            ; success: exit with Z=0
-.fail2
-        tya
-        ora     #&80
-        tay
-.fail1
+.fail
         sty     cpdst
-        lda     code_buffer + patch4 + 2 - base
+        lda     code_buffer + patch2 + 2 - base
         sta     cpdst + 1       ; fail: exit with Z=1
 ENDIF
 .exit
@@ -279,7 +283,7 @@ ENDIF
         lda     #&aa            ; Find the ROM info table.
         ldx     #&00
         ldy     #&ff
-        jsr     osbyte
+        jsr     OSBYTE
         stx     cpdst
         sty     cpdst+1
         lda     &8006           ; copy the MMFS ROM type into the table

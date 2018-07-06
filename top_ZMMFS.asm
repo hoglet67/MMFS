@@ -2,7 +2,8 @@
 INCLUDE "DEVICE.asm"
 
 _ELECTRON_=FALSE
-        
+_TUBE_BASE=&FFE0
+
 INCLUDE "bootstrap.asm"
 
 .romst

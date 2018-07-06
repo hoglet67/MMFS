@@ -2,6 +2,7 @@
 INCLUDE "DEVICE.asm"
         
 _ELECTRON_=TRUE
+_TUBE_BASE=&FCE0
 
 INCLUDE "bootstrap.asm"
 

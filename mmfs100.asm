@@ -79,12 +79,17 @@ MACRO BP12K_NEST
 ENDMACRO
 
 
-ORG &8000
 IF _SWRAM_ AND NOT(_BP12K_)
-    guard_value=&B600
+   guard_value=&B5FE
+;; Add a special marker that ZMMFS uses to identify an already installed SWMMFS
+   org &B5FE
+   EQUB MAGIC0
+   EQUB MAGIC1
 ELSE
-    guard_value=&C000
+   guard_value=&C000
 ENDIF
+
+   ORG &8000
 	GUARD guard_value
 
 	\\ ROM Header
