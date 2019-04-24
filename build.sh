@@ -65,11 +65,15 @@ do
             exit
         fi
 
-        # Create the .inf file
-        echo -e "\$."${name}"\t8000\t8000" > ${build}/${name}.inf
+        # To save space, exclude the Z builds from the .ssd image
+        if [[ $name != Z* ]]
+        then
+            # Create the .inf file
+            echo -e "\$."${name}"\t8000\t8000" > ${build}/${name}.inf
 
-        # Add into the SSD
-        tools/mmb_utils/putfile.pl ${ssd} ${build}/${name}
+            # Add into the SSD
+            tools/mmb_utils/putfile.pl ${ssd} ${build}/${name}
+        fi
 
         # Report end of code
         grep "code ends at" ${build}/${name}.log
