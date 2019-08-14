@@ -12,7 +12,11 @@ if [ "$(uname -s)" == "Darwin" ]; then
     BEEBASM=tools/beebasm/beebasm-darwin
     MD5SUM=md5
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
-    BEEBASM=tools/beebasm/beebasm
+    if [ "$(uname -m)" == "x86_64" ]; then
+        BEEBASM=tools/beebasm/beebasm64
+    else
+        BEEBASM=tools/beebasm/beebasm32
+    fi
     MD5SUM=md5sum
 fi
 
