@@ -21,8 +21,10 @@ elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
 fi
 
 # Device:
-# M is MemoryMapped IO based (typically &FE18, for BeebEm)
 # U is normal User Port VIA based
+# T is User Port connected "TurboMMC" interface
+# E is Electron Plus One Printer Port connected interface (experimental)
+# M is MemoryMapped IO based (typically &FE18, for BeebEm)
 for device in U T E M
 do
     build=build/${device}
@@ -58,7 +60,7 @@ do
             echo "Building ${device}/$name..."
 #        fi
 
-        # Assember the ROM
+        # Assemble the ROM
         $BEEBASM -i ${top} -o ${build}/${name} -v >& ${build}/${name}.log
 
         # Check if ROM has been build, otherwise fail early

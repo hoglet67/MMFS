@@ -10,7 +10,7 @@ about until it was rediscovered in 2015.
 For more details on the release structures, see:
     https://github.com/hoglet67/MMFS/wiki/Release-structure
 
-For binrary releases, see:
+For binary releases, see:
     https://github.com/hoglet67/MMFS/releases
 
 For further documention see:
