@@ -42,7 +42,7 @@ my $DiskInvalid = 0xFF;
 # Almost a constant.  What we're gonna do here is nasty, but it means
 # that any program that uses this module will automatically gain an
 # optional "-f filename"
-my $DEFAULT_BBC_FILE="BEEB.MMB";
+my $DEFAULT_BBC_FILE=defined $ENV{'BBC_FILE'} ? $ENV{'BBC_FILE'} : "BEEB.MMB";
 
 our $BBC_FILE="";
 
