@@ -65,9 +65,16 @@ MMC_SECTOR_VALID=VID+&B			; 1 bytes
 MMC_CIDCRC=VID+&C			; 2 bytes
 CHECK_CRC7=VID+&E			; 1 byte
 
-filesysno%=&04			; Filing System Number
-filehndl%=&10			; First File Handle - 1
+IF _DFS_EMUL
+	filesysno%=&04			; Filing System Number
+	filehndl%=&10			; First File Handle - 1
+ELSE
+	filesysno%=&74			; Filing System Number
+	filehndl%=&70			; First File Handle - 1
+ENDIF
+
 tubeid%=&0A			; See Tube Application Note No.004 Page 7
+				; &0A is unallocated so shouldn't clash
 
 MACRO BP12K_NEST
 	IF _BP12K_
