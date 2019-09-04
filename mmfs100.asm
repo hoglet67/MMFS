@@ -5,7 +5,7 @@
 
 \** MAIN CODE **\
 
-\ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port
+\ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port, P=Beeb Printer Port
 INCLUDE "DEVICE.asm"
 
 \ MA/MP constants must be even numbers
@@ -6485,6 +6485,8 @@ ELIF _DEVICE_='M'
 	INCLUDE "MMC_MemoryMapped.asm"
 ELIF _DEVICE_='E'
 	INCLUDE "MMC_ElkPlus1.asm"
+ELIF _DEVICE_='P'
+	INCLUDE "MMC_BeebPrinter.asm"
 ENDIF
 
 .errWrite2

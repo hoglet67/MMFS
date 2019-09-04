@@ -25,7 +25,8 @@ fi
 # T is User Port connected "TurboMMC" interface
 # E is Electron Plus One Printer Port connected interface (experimental)
 # M is MemoryMapped IO based (typically &FE18, for BeebEm)
-for device in U T E M
+# P is Beeb Printer Port connected Interface (experimental)
+for device in U T E M P
 do
     build=build/${device}
     mkdir -p ${build}
@@ -41,6 +42,9 @@ do
     if [ $device == "E" ]
     then
         filelist=top_E*.asm
+    elif [ $device == "P" ]
+    then
+        filelist=top_MMFS*.asm
     else
         filelist=top_*.asm
     fi
