@@ -6316,7 +6316,11 @@ ENDIF
 	\\ **** Load current drive with disk ****
 	\\ Word &B8 = Disc number
 .LoadDrive
+	LDX CurrentDrv
+.LoadDriveX
 {
+	TXA
+	PHA
 	LDA #&C0
 	STA &B7
 	JSR GetDiskStatus
@@ -6334,7 +6338,8 @@ ENDIF
 	JSR CheckCRC7
 	\ Make sure disk is not in another drive
 	JSR UnloadDisk
-	LDX CurrentDrv
+	PLA
+	TAX
 	LDA &B8
 	STA DRIVE_INDEX0,X
 	LDA &B9
