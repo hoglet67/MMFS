@@ -3,6 +3,8 @@ IF _DEVICE_='T'
     EQUS " Turbo"
 ELIF _DEVICE_='E'
     EQUS " EPP"
+ELIF _DEVICE_='P'
+    EQUS " BPP"
 ELIF _DEVICE_='M'
     EQUS " MM"
 ENDIF
