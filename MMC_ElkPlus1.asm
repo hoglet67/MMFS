@@ -18,38 +18,38 @@ sr%=&F8
 
 \\ Start of Plus One specific code
 
+MACRO READ_BIT
+    STX data%
+    STA data%
+    ROL status%
+    ROL sr%
+ENDMACRO
+    
 \\ Read byte (User Port)
 \\ Write FF
 .MMC_GetByte
 .P1_ReadByte
     LDA #one_clockhigh%
     LDX #one_clocklow%
-FOR n, 0, 7
-    STX data%
-    STA data%
-    ROL status%
-    ROL sr%
-NEXT
-    LDA sr%
-    RTS
+    \\ Read first bit
+    READ_BIT
+    \\ Fall through to...
 
 \\ This is always entered with A and X with the correct values
 .P1_ReadBits7
-FOR n, 0, 2
-    STX data%
-    STA data%
-    ROL status%
-    ROL sr%
-NEXT
+    READ_BIT
+    READ_BIT
+    READ_BIT
+    \\ Fall through to...
 
  \\ This is always entered with A and X with the correct values
 .P1_ReadBits4
-FOR n, 0, 3
-    STX data%
-    STA data%
-    ROL status%
-    ROL sr%
-NEXT
+    READ_BIT
+    READ_BIT
+    READ_BIT
+    READ_BIT
+    \\ Fall through to...
+    
     LDA sr%
     RTS
 

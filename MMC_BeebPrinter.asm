@@ -12,6 +12,12 @@ clockbit%=&02
         
 one_clocklow%=&FF-clockbit%
 
+MACRO READ_BIT
+    STX iora%    \\ Take clock (D1) low
+    ROL iora%    \\ Sample D7 (MISO) into C, and take clock (D1) high
+    ROL A        \\ C=1 after this, because A starts off as FF
+ENDMACRO
+
 \\ Start of Beeb Printer Port Specific Code
 
 \\ Read byte (User Port)
@@ -20,29 +26,25 @@ one_clocklow%=&FF-clockbit%
 .P1_ReadByte
     LDA #&FF    
     LDX #one_clocklow%
-    SEC          \\ Set carry so D0 (MOSI) remains high after ROL
-FOR n, 0, 7
-    STX iora%    \\ Take clock (D1) low
-    ROL iora%    \\ Sample D7 (MISO) into C, and take clock (D1) high
-    ROL A        \\ C=1 after this, because A starts off as FF
-NEXT
-    RTS
+    \\ Set carry so D0 (MOSI) remains high after ROL
+    SEC
+    \\ Read first bit
+    READ_BIT
+    \\ Fall through to...
 
 \\ This is always entered with A and X with the correct values
 .P1_ReadBits7
-FOR n, 0, 2
-    STX iora%
-    ROL iora%
-    ROL A
-NEXT
+    READ_BIT
+    READ_BIT
+    READ_BIT
+    \\ Fall through to...
 
  \\ This is always entered with A and X with the correct values
 .P1_ReadBits4
-FOR n, 0, 3
-    STX iora%
-    ROL iora%
-    ROL A
-NEXT
+    READ_BIT
+    READ_BIT
+    READ_BIT
+    READ_BIT
     RTS
 
 \\ wait for response bit
