@@ -10,6 +10,7 @@ ddra%=_VIA_BASE + &03
 
 clockbit%=&02
         
+one_clockhigh%=&FF
 one_clocklow%=&FF-clockbit%
 
 MACRO READ_BIT
@@ -24,7 +25,7 @@ ENDMACRO
 \\ Write FF
 .MMC_GetByte
 .P1_ReadByte
-    LDA #&FF    
+    LDA #one_clockhigh%
     LDX #one_clocklow%
     \\ Set carry so D0 (MOSI) remains high after ROL
     SEC
@@ -37,10 +38,6 @@ ENDMACRO
     READ_BIT
     READ_BIT
     READ_BIT
-    \\ Fall through to...
-
- \\ This is always entered with A and X with the correct values
-.P1_ReadBits4
     READ_BIT
     READ_BIT
     READ_BIT

@@ -52,10 +52,6 @@ ENDMACRO
     READ_BIT
     READ_BIT
     READ_BIT
-    \\ Fall through to...
-
- \\ This is always entered with A and X with the correct values
-.P1_ReadBits4
     READ_BIT
     READ_BIT
     READ_BIT

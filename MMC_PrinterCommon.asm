@@ -118,8 +118,7 @@ ENDIF
 \\ **** Send Data Token to card ****
 .MMC_SendingData
 {
-    LDY #2
-    JSR MMC_Clocks
+    JSR MMC_16Clocks
     LDA #&FE
     JMP P1_WriteByte
 }
@@ -127,20 +126,19 @@ ENDIF
 \\ **** Complete Write Operation *****
 .MMC_EndWrite
 {
-    LDY #2
-
-    JSR MMC_Clocks
-    JSR P1_WaitResp
-    JSR P1_ReadBits4
+    JSR MMC_16Clocks
+.ewu1
+    JSR P1_ReadByte
     TAY
     AND #&1F
+    CMP #&1F
+    BEQ ewu1
     CMP #5
     BNE errWrite2
-
-.loop
+.ewu2
     JSR P1_ReadByte
     CMP #&FF
-    BNE loop
+    BNE ewu2
     RTS
 }
 
