@@ -44,7 +44,7 @@ do
         filelist=top_E*.asm
     elif [ $device == "P" ]
     then
-        filelist=top_[MS]*.asm
+        filelist="top_[MS]*.asm top_ZMMFS.asm"
     else
         filelist=top_*.asm
     fi
