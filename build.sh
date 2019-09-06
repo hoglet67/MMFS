@@ -83,6 +83,9 @@ do
 
             # Add into the SSD
             tools/mmb_utils/putfile.pl ${ssd} ${build}/${name}
+
+            # Delete the .inf file
+            rm -f ${build}/${name}.inf
         fi
 
         # Report end of code
