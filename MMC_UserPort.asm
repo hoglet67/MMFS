@@ -41,6 +41,8 @@ ENDIF
 .MMC_GetByte
 .UP_ReadByteX
 {
+    LDA #(3 + msbits)   \\ Ensure CLK and MOSI both high
+    STA iorb%
     JSR ShiftRegMode2
     LDA #4
 .wait
@@ -59,9 +61,6 @@ ENDIF
     STA iorb%
     STX iorb%           ;\3
     STA iorb%
-        
-   \\ This is always entered with X and A with the correct values
-.UP_ReadBits4
     STX iorb%           ;\4
     STA iorb%
     STX iorb%           ;\5
@@ -107,7 +106,6 @@ ENDIF
 .MMC_Clocks
 
 {
-    LDX #(1 + msbits)
 .clku1
     JSR UP_ReadByteX        ; Writes &FF
     DEY
@@ -180,7 +178,6 @@ ENDIF
 .MMC_WaitForData
 {
 
-    LDX #(1 + msbits)
 .wlu1
     JSR UP_ReadByteX
     CMP #&FE
@@ -471,14 +468,15 @@ ENDIF
 .MMC_EndWrite
 {
     JSR MMC_16Clocks
-    JSR waitresp_up
-    JSR UP_ReadBits4
+.ewu1
+    JSR UP_ReadByteX
     TAY
     AND #&1F
+    CMP #&1F
+    BEQ ewu1
     CMP #5
     BNE errWrite2
 
-    LDX #(1 + msbits)
 .ewu2
     JSR UP_ReadByteX
     CMP #&FF
