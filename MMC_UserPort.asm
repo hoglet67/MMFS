@@ -23,19 +23,6 @@ ELSE
    msmask  = &FD \\ 1111 1101
 ENDIF
 
-
-    \\ Reset the User VIA
-.MMC_DEVICE_RESET
-    LDA #(3 + msbits)
-    STA iorb%
-    LDA ddrb%
-    ORA #ddrmask
-    STA ddrb%
-    JSR ShiftRegMode0
-    LDA #&1C
-    STA ier%
-    RTS
-
     \\ Read byte (User Port)
     \\ Write FF
 .MMC_GetByte
@@ -53,25 +40,14 @@ ENDIF
     RTS
 }
         
-    \\ This is always entered with X and A with the correct values
-.UP_ReadBits7
-    STX iorb%           ;\1
-    STA iorb%
-    STX iorb%           ;\2
-    STA iorb%
-    STX iorb%           ;\3
-    STA iorb%
-    STX iorb%           ;\4
-    STA iorb%
-    STX iorb%           ;\5
-    STA iorb%
-    STX iorb%           ;\6
-    STA iorb%
-    STX iorb%           ;\7
-    STA iorb%
-    LDA sr%
-    RTS
-
+    \\ **** Send Data Token to card ****
+.MMC_SendingData
+{
+    JSR MMC_16Clocks
+    LDA #&FE
+    \\ Fall through to UP_WriteByte
+}
+    
     \\ Write byte (User Port)
     \\ Ignore byte in
 .UP_WriteByte
@@ -149,10 +125,29 @@ IF _DEBUG_MMC
     PLP
     RTS
 ELSE
-    JMP UP_ReadBits7
+    \\ Fall through to UP_ReadBits7
 ENDIF
 }
 
+    \\ This is always entered with X and A with the correct values
+.UP_ReadBits7
+    STX iorb%           ;\1
+    STA iorb%
+    STX iorb%           ;\2
+    STA iorb%
+    STX iorb%           ;\3
+    STA iorb%
+    STX iorb%           ;\4
+    STA iorb%
+    STX iorb%           ;\5
+    STA iorb%
+    STX iorb%           ;\6
+    STA iorb%
+    STX iorb%           ;\7
+    STA iorb%
+    LDA sr%
+    RTS
+    
     \\ wait for response bit
     \\ ie for clear bit (User Port only)
 .waitresp_up
@@ -404,6 +399,17 @@ ENDIF
     RTS
 }
 
+    \\ Reset the User VIA
+.MMC_DEVICE_RESET
+    LDA #(3 + msbits)
+    STA iorb%
+    LDA ddrb%
+    ORA #ddrmask
+    STA ddrb%
+    LDA #&1C
+    STA ier%
+    \\ Fall through to ShiftRegMode0
+    
 .ShiftRegMode0
     LDA acr%   \\ Set SR Mode to mode 0
     AND #&E3   \\ 11100011 = SR Mode 0
@@ -455,14 +461,6 @@ IF _TURBOMMC
     STA iorb%         \\ Flip the direction of the data bus
     RTS
 ENDIF
-
-    \\ **** Send Data Token to card ****
-.MMC_SendingData
-{
-    JSR MMC_16Clocks
-    LDA #&FE
-    JMP UP_WriteByte
-}
 
     \\ **** Complete Write Operation *****
 .MMC_EndWrite
