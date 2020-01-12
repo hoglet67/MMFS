@@ -2004,6 +2004,7 @@ IF _INCLUDE_CMD_TITLE_
 }
 ENDIF
 
+IF _INCLUDE_CMD_TITLE_ OR _INCLUDE_CMD_BACKUP_
 	\ Update title in disk table for disk in current drive
 	\ Title at titlestr%
 .UpdateDiskTableTitle
@@ -2017,6 +2018,7 @@ ENDIF
 	BPL loop
 	JMP SaveDiskTable
 }
+ENDIF
 
 IF _INCLUDE_CMD_ACCESS_
 .CMD_ACCESS
