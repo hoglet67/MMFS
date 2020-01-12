@@ -27,6 +27,7 @@ _INCLUDE_CMD_WIPE_=_COMMANDS_
 _INCLUDE_CMD_DCAT_=_COMMANDS_
 _INCLUDE_CMD_DDRIVE_=_COMMANDS_
 _INCLUDE_CMD_DFREE_=_COMMANDS_
+_INCLUDE_CMD_DOP_=_COMMANDS_
 
 \ MA/MP constants must be even numbers
 IF _MASTER_
@@ -1427,8 +1428,10 @@ IF _INCLUDE_CMD_DFREE_
 ENDIF
 	EQUS "IN"
 	EQUB &80+&74
+IF _INCLUDE_CMD_DOP_
 	EQUS "OP"
 	EQUB &80+&49
+ENDIF
 	EQUS "OUT"
 	EQUB &80+&04
 	EQUS "RECAT"
@@ -1534,7 +1537,9 @@ IF _INCLUDE_CMD_DFREE_
 	EQUW CMD_DFREE-&8001
 ENDIF
 	EQUW CMD_DIN-&8001
+IF _INCLUDE_CMD_DOP_
 	EQUW CMD_DOP-&8001
+ENDIF
 	EQUW CMD_DOUT-&8001
 	EQUW CMD_DRECAT-&8001
 IF _ABOUT_
@@ -7247,6 +7252,7 @@ IF _INCLUDE_CMD_FORM_VERIFY_
 }
 ENDIF
 
+IF _INCLUDE_CMD_DOP_
 	\\ Mark disk as read only
 .dop_Protect
 	LDA #&00
@@ -7270,9 +7276,15 @@ ENDIF
 
 .jmpErrNotFormatted
 	JMP errNotFormatted
+
+ENDIF
+
+IF _INCLUDE_CMD_DOP_ OR _INCLUDE_CMD_FORM_VERIFY_
 .jmpErrFormatted
 	JMP errFormatted
+ENDIF
 
+IF _INCLUDE_CMD_DOP_
 	\\ Mark disk as unformatted
 .dop_Kill
 {
@@ -7391,6 +7403,7 @@ ENDIF
 	EQUW dop_Unprotect-1
 	EQUW dop_Protect-1
 }
+ENDIF
 
 
 	\ Include OSWORD emulation routines here
