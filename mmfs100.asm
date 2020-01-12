@@ -8,6 +8,8 @@
 \ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port, P=Beeb Printer Port
 INCLUDE "DEVICE.asm"
 
+_INCLUDE_CMD_ACCESS_=TRUE
+
 \ MA/MP constants must be even numbers
 IF _MASTER_
 	CPU 1				; 65C12
@@ -1271,8 +1273,10 @@ rn%=&B0
 	\ COMMAND TABLE 1		; MMFS commands
 .cmdtable1
 	EQUB &FF			; Last command number (-1)
+IF _INCLUDE_CMD_ACCESS_
 	EQUS "ACCESS"			; Command string
 	EQUB &80+&32			; Parameters (Bit 7 is string terminator)
+ENDIF
 	EQUS "BACKUP"
 	EQUB &80+&0C
 	EQUS "CLOSE"
@@ -1390,7 +1394,9 @@ ENDIF
 	\\ Address of sub-routines
 	\\ If bit 15 clear, call MMC_BEGIN2
 .cmdaddr1
+IF _INCLUDE_CMD_ACCESS_
 	EQUW CMD_ACCESS-1
+ENDIF
 	EQUW CMD_BACKUP-1
 	EQUW CMD_CLOSE-1
 	EQUW CMD_COMPACT-1
@@ -1954,7 +1960,9 @@ titlestr%=MA+&1000
 }
 
 	\ ** ACCESS
+IF _INCLUDE_CMD_ACCESS_
 .CMD_ACCESS
+{
 	JSR parameter_afsp
 	JSR Param_SyntaxErrorIfNull
 	JSR read_fspTextPointer
@@ -1991,6 +1999,8 @@ titlestr%=MA+&1000
 	JSR errBAD			; Bad attribute
 	EQUB &CF
 	EQUS "attribute",0
+}
+ENDIF
 
 
 .fscv0_starOPT
@@ -3516,7 +3526,7 @@ ENDIF
 .osfile_updatelocksavecat
 	JSR osfile_updatelock
 .osfile_savecat_retA_1
-	JSR jmp_savecattodisk
+	JSR SaveCatToDisk
 	LDA #&01
 	RTS
 .osfile_update_loadaddr_Xoffset
