@@ -5204,6 +5204,7 @@ ENDIF
 	RTS
 }
 
+IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 .CopyDATABLOCK
 {
 	LDA #&00			; *** Move or copy sectors
@@ -5276,6 +5277,7 @@ ENDIF
 	BNE cd_loop			; If Word C4 <> 0
 	RTS
 }
+ENDIF
 
 .SetLoadAddrToHost
 	LDA #&FF			; Set load address high bytes
