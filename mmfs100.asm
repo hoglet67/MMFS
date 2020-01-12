@@ -7229,6 +7229,7 @@ ENDIF
 	\\ Mark disk in current drive as formatted
 	\\ and clear its disk catalogue entry
 	\\ Used by *FORM
+IF _INCLUDE_CMD_FORM_VERIFY_
 .MarkDriveAsFormatted
 {
 	SEC				; disk must be unformatted
@@ -7244,6 +7245,7 @@ ENDIF
 	TYA				; A=&0F Unlocked disk
 	BNE masf_status
 }
+ENDIF
 
 	\\ Mark disk as read only
 .dop_Protect
