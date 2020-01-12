@@ -14,6 +14,7 @@ _INCLUDE_CMD_COMPACT_=TRUE
 _INCLUDE_CMD_COPY_=TRUE
 _INCLUDE_CMD_DELETE_=TRUE
 _INCLUDE_CMD_DESTROY_=TRUE
+_INCLUDE_CMD_FORM_VERIFY_=TRUE
 
 \ MA/MP constants must be even numbers
 IF _MASTER_
@@ -1312,8 +1313,10 @@ ENDIF
 	EQUB &80
 	EQUS "EX"
 	EQUB &80+&06
+IF _INCLUDE_CMD_FORM_VERIFY_
 	EQUS "FORM"
 	EQUB &80+&5F
+ENDIF
 	EQUS "FREE"
 	EQUB &80+&04
 .info_cmd_index
@@ -1327,8 +1330,10 @@ ENDIF
 	EQUB &80+&0D
 	EQUS "TITLE"
 	EQUB &80+&0A
+IF _INCLUDE_CMD_FORM_VERIFY_
 	EQUS "VERIFY"
 	EQUB &80+&05
+ENDIF
 	EQUS "WIPE"
 	EQUB &80+&02
 	BRK				; End of table
@@ -1432,14 +1437,18 @@ ENDIF
 	EQUW CMD_DRIVE-1
 	EQUW CMD_ENABLE-1
 	EQUW CMD_EX-1
+IF _INCLUDE_CMD_FORM_VERIFY_
 	EQUW CMD_FORM-&8001
+ENDIF
 	EQUW CMD_FREE-1
 	EQUW CMD_INFO-1
 	EQUW CMD_LIB-1
 	EQUW CMD_MAP-1
 	EQUW CMD_RENAME-1
 	EQUW CMD_TITLE-1
+IF _INCLUDE_CMD_FORM_VERIFY_
 	EQUW CMD_VERIFY-&8001
+ENDIF
 	EQUW CMD_WIPE-1
 	EQUW NotCmdTable1-1
 
@@ -1990,7 +1999,6 @@ titlestr%=MA+&1000
 	JMP SaveDiskTable
 }
 
-	\ ** ACCESS
 IF _INCLUDE_CMD_ACCESS_
 .CMD_ACCESS
 {
@@ -5301,7 +5309,7 @@ ENDIF
 	STA MA+&1075
 	RTS
 
-
+IF _INCLUDE_CMD_FORM_VERIFY_
 .CMD_VERIFY
 	LDA #&00			; \\\\\ *VERIFY
 	BEQ vform1
@@ -5375,7 +5383,6 @@ ENDIF
 	JSR GSINIT_A
 	BNE vform5_driveloop		; More drives?
 	RTS
-}
 
 .jmp_reportEscape
 	JMP ReportESCAPE
@@ -5384,7 +5391,6 @@ ENDIF
 
 	\\ Verify / Format current drive
 .VFCurDrv
-{
 	BIT &C9
 	BMI vf1				; If formatting
 	JSR CheckCurDrvFormatted
@@ -5454,7 +5460,9 @@ ENDIF
 	JSR SaveCatToDisk
 .vf6_exit
 	JMP PrintNewLine
+
 }
+ENDIF
 
 	\\ Reset catalogue pages
 .ClearCatalogue
