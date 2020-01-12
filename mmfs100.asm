@@ -6490,7 +6490,9 @@ ELIF _DEVICE_='E'
 	INCLUDE "MMC_ElkPlus1.asm"
 ELIF _DEVICE_='P'
 	INCLUDE "MMC_BeebPrinter.asm"
-ENDIF
+ELIF _DEVICE_='G'
+       INCLUDE "MMC_MGCII_BitBang.asm"
+ ENDIF
 
 .errWrite2
 	TYA
