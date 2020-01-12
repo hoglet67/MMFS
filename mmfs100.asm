@@ -1718,12 +1718,14 @@ ENDIF
 	INY
 	RTS
 
+IF _INCLUDE_CMD_DESTROY_ OR _INCLUDE_CMD_WIPE_
 .DeleteCatEntry_AdjustPtr
 	JSR DeleteCatEntry_YFileOffset	; Delete cat entry
 	LDY &B6
 	JSR Y_sub8			; Take account of deletion
 	STY &B6				; so ptr is at next file
 	RTS
+ENDIF
 
 	\\ *DRIVE <drive>
 .CMD_DRIVE
