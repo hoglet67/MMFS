@@ -48,12 +48,12 @@ do
         filelist="top_E*.asm top_ZEMMFS.asm"
     elif [ $device == "G" ]
     then
-        filelist="top_E*.asm top_ZEMMFS.asm"
+        filelist="top_MGC*.asm"
     elif [ $device == "P" ]
     then
-        filelist="top_[MS]*.asm top_ZMMFS.asm"
+        filelist="top_MMFS*.asm top_MAMMFS*.asm top_SWMMFS*.asm top_ZMMFS.asm"
     else
-        filelist=top_*.asm
+        filelist="top_*MMFS*.asm"
     fi
 
     for top in $filelist
