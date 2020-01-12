@@ -25,7 +25,7 @@ _INCLUDE_CMD_WIPE_=_COMMANDS_
 
 ;; DUTILS Commands
 _INCLUDE_CMD_DCAT_=_COMMANDS_
-
+_INCLUDE_CMD_DDRIVE_=_COMMANDS_
 
 \ MA/MP constants must be even numbers
 IF _MASTER_
@@ -1416,8 +1416,10 @@ IF _INCLUDE_CMD_DCAT_
 	EQUS "CAT"
 	EQUB &80+&0E
 ENDIF
+IF _INCLUDE_CMD_DDRIVE_
 	EQUS "DRIVE"
 	EQUB &80+&04
+ENDIF
 	EQUS "FREE"
 	EQUB &80
 	EQUS "IN"
@@ -1522,7 +1524,9 @@ ENDIF
 IF _INCLUDE_CMD_DCAT_
 	EQUW CMD_DCAT-&8001
 ENDIF
+IF _INCLUDE_CMD_DDRIVE_
 	EQUW CMD_DDRIVE-&8001
+ENDIF
 	EQUW CMD_DFREE-&8001
 	EQUW CMD_DIN-&8001
 	EQUW CMD_DOP-&8001
@@ -7163,6 +7167,7 @@ dfPtr%=&B0
 
 	\\ *DDRIVE (<drive>)
 	\\ List disks in drives
+IF _INCLUDE_CMD_DDRIVE_
 .CMD_DDRIVE
 {
 	STY &B3
@@ -7212,6 +7217,7 @@ dfPtr%=&B0
 .ddskexit
 	RTS
 }
+ENDIF
 
 	\\ Mark disk in current drive as formatted
 	\\ and clear its disk catalogue entry
