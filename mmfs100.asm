@@ -6618,8 +6618,12 @@ ELIF _DEVICE_='E'
 ELIF _DEVICE_='P'
 	INCLUDE "MMC_BeebPrinter.asm"
 ELIF _DEVICE_='G'
-       INCLUDE "MMC_MGCII_BitBang.asm"
- ENDIF
+    IF _USE_MGC_SHIFTREG
+        INCLUDE "MMC_MGCII_ShiftReg.asm"
+    ELSE
+        INCLUDE "MMC_MGCII_BitBang.asm"
+    ENDIF
+ENDIF
 
 .errWrite2
 	TYA
