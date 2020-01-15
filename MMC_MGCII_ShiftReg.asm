@@ -8,6 +8,18 @@ shifter%=&FCD4  \\ input/output: MOSI/SCK shift register
 chipsel%=&FCD9  \\ output: bit 0 = SD_CS1, bit 1 = SD_CS2
 
 
+SLOW_SHIFTREG=TRUE
+
+MACRO DELAY_IF_SLOW_SHIFTREG
+IF SLOW_SHIFTREG
+        JSR donothing
+ENDIF
+ENDMACRO
+
+MACRO DELAY_ALWAYS
+        JSR donothing
+ENDMACRO
+
         \\ RESET DEVICE
 .MMC_DEVICE_RESET
         LDA #&FE
@@ -19,7 +31,7 @@ chipsel%=&FCD9  \\ output: bit 0 = SD_CS1, bit 1 = SD_CS2
 .MMC_GetByte
         LDA #&FF
         STA shifter%
-        JSR donothing
+        DELAY_IF_SLOW_SHIFTREG
         LDA shifter%
         RTS
 
@@ -33,7 +45,7 @@ chipsel%=&FCD9  \\ output: bit 0 = SD_CS1, bit 1 = SD_CS2
         LDA #&FF
 .clk1
         STA shifter%
-        JSR donothing
+        DELAY_ALWAYS
         DEY
         BNE clk1
 }
@@ -58,7 +70,7 @@ chipsel%=&FCD9  \\ output: bit 0 = SD_CS1, bit 1 = SD_CS2
         BNE dcmd1                       ;\ 2
         \ Wait for response, Y=0
 .wR1mm
-        JSR donothing
+        DELAY_IF_SLOW_SHIFTREG
         LDA shifter%
         BPL dcmdex
         LDA #&FF
@@ -98,7 +110,7 @@ ENDIF
         LDX #&FF
 .wl1
         STX shifter%
-        JSR donothing                   ;\ 12
+        DELAY_IF_SLOW_SHIFTREG          ;\ 12
         LDA shifter%
         CMP #&FE                        ;\ data token
         BNE wl1
@@ -161,32 +173,32 @@ ENDIF
         \\ 24us delay=48 cycles
         \ \ (7)
 .rdlT1
-        LDY byteslastsec%               ;\ (9)
+        LDY byteslastsec%
 .rdlT2
 {
-        DEY                             ;(11)
-        BEQ rdlT4                       ;(14)
+        DEY
+        BEQ rdlT4
 .rdlT3
-        NOP                             ;\ 2=37
-        LDA shifter%                    ;\ 4=41
-        STX shifter%                    ;\ 4=45
-        STA TUBE_R3_DATA                ;\ 4=49
-        JSR donothing                   ;\ 12
-        JSR donothing                   ;\ 12=24
-        NOP                             ;\ 2=26
-        NOP                             ;\ 2=28
-        NOP                             ;\ 2=30
-        DEY                             ;\ 2=32
-        BNE rdlT3                       ;\ 3=35
+        NOP                             ;\ 2
+        LDA shifter%                    ;\ 4
+        STX shifter%                    ;\ 4
+        STA TUBE_R3_DATA                ;\ 4
+        DELAY_ALWAYS                    ;\ 12
+        DELAY_ALWAYS                    ;\ 12
+        NOP                             ;\ 2
+        NOP                             ;\ 2
+        NOP                             ;\ 2
+        DEY                             ;\ 2
+        BNE rdlT3                       ;\ 3
 
-        NOP                             ;\ 2=36
-        NOP                             ;\ 2=38
-        NOP                             ;\ 2=40
-        NOP                             ;\ 2=42
+        NOP                             ;\ 2
+        NOP                             ;\ 2
+        NOP                             ;\ 2
+        NOP                             ;\ 2
 
 .rdlT4
-        LDA shifter%                    ;\ (17) 4=46
-        STA TUBE_R3_DATA                ;\ 4=50
+        LDA shifter%                    ;\ 4
+        STA TUBE_R3_DATA                ;\ 4
         RTS
 }
 
@@ -200,11 +212,11 @@ ENDIF
         LDY #0
         LDX #&FF
         STX shifter%
-        JSR donothing                   ;\ 12
+        DELAY_IF_SLOW_SHIFTREG          ;\ 12
 .rdl4
         LDA shifter%                    ;\ 2 - read
         STX shifter%                    ;\ 2 - write
-        STA buf%,Y                      ;\ \ 5
+        STA buf%,Y                      ;\ 5
         INY                             ;\ 2
         CPY #&FF                        ;\ 2
         BNE rdl4                        ;\ 2
@@ -218,9 +230,9 @@ ENDIF
 {
         LDX #&FF
         STX shifter%
-        JSR donothing
+        DELAY_IF_SLOW_SHIFTREG
         STX shifter%
-        JSR donothing
+        DELAY_IF_SLOW_SHIFTREG
         DEX
         STX shifter%
         RTS
@@ -232,7 +244,7 @@ ENDIF
         JSR MMC_16Clocks
         LDX #&FF
         STX shifter%
-        JSR donothing                   ;\ 12
+        DELAY_IF_SLOW_SHIFTREG
         LDA shifter%
         TAY
         AND #&1F
@@ -242,7 +254,7 @@ ENDIF
         LDA #&FF
 .ew1
         STX shifter%
-        JSR donothing
+        DELAY_IF_SLOW_SHIFTREG
         CMP shifter%
         BNE ew1
         RTS
@@ -256,7 +268,7 @@ ENDIF
 .wr1
         LDA (datptr%),Y                 ;\ 6
         STA shifter%                    ;\ 4
-        JSR donothing                   ;\ 12
+        DELAY_IF_SLOW_SHIFTREG          ;\ (12)
         INY                             ;\ 2
         BNE wr1                         ;\ 3
         RTS
@@ -267,7 +279,9 @@ ENDIF
 .wrT2
         LDA TUBE_R3_DATA                ;\ 4
         STA shifter%                    ;\ 4
-        JSR donothing                   ;\ 12
+        DELAY_ALWAYS                    ;\ 12
+        DELAY_ALWAYS                    ;\ 12
+        DELAY_ALWAYS                    ;\ 12
         INY                             ;\ 2
         BNE wrT2                        ;\ 3
         RTS
@@ -280,7 +294,7 @@ ENDIF
 .wbm1
         LDA buf%,Y                      ;\ 4
         STA shifter%                    ;\ 4
-        JSR donothing                   ;\ 12
+        DELAY_IF_SLOW_SHIFTREG          ;\ (12)
         INY                             ;\ 2
         BNE wbm1                        ;\ 3
         RTS
