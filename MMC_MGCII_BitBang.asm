@@ -1,6 +1,11 @@
 \\ EXPERIMENTAL DRIVER FOR MGCII in BIT-BANG MODE
 
-iora%=&FCD8
+data%=&FCD8     \\ output: MOSI = bit 0, SCK = bit 1
+                \\ input:  MISO = bit 7
+
+shifter%=&FCD4  \\ input/output: MOSI/SCK shift register
+
+chipsel%=&FCD9  \\ output: bit 0 = SD_CS1, bit 1 = SD_CS2
 
 \\ MOSI is connected to D0
 \\ SCK  is connected to D1
@@ -12,8 +17,8 @@ one_clockhigh%=&FF
 one_clocklow%=&FF-clockbit%
 
 MACRO READ_BIT
-    STX iora%    \\ Take clock (D1) low
-    ROL iora%    \\ Sample D7 (MISO) into C, and take clock (D1) high
+    STX data%    \\ Take clock (D1) low
+    ROL data%    \\ Sample D7 (MISO) into C, and take clock (D1) high
     ROL A        \\ C=1 after this, because A starts off as FF
 ENDMACRO
 
@@ -52,8 +57,8 @@ ENDMACRO
 .loop
     DEY
     BEQ timeout
-    STX iora%
-    ROL iora%
+    STX data%
+    ROL data%
     BCS loop
 .timeout
     ROL A
@@ -68,15 +73,17 @@ ENDMACRO
 FOR N, 0, 7
     ROL A
     AND #&FD
-    STA iora%
+    STA data%
     ORA #clockbit%
-    STA iora%
+    STA data%
 NEXT
     RTS
 }
 
 \\ RESET DEVICE
 .MMC_DEVICE_RESET
+    LDA #&FE
+    STA chipsel%
     RTS
 
 INCLUDE "MMC_PrinterCommon.asm"
