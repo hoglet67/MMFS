@@ -1,259 +1,265 @@
 \\ EXPERIMENTAL DRIVER FOR MGCII in SHIFT REGISTER MODE
 
-mmc%=&FCD4
+data%=&FCD8     \\ output: MOSI = bit 0, SCK = bit 1
+                \\ input:  MISO = bit 7
 
-	\\ RESET DEVICE
+shifter%=&FCD4  \\ input/output: MOSI/SCK shift register
+
+chipsel%=&FCD9  \\ output: bit 0 = SD_CS1, bit 1 = SD_CS2
+
+
+        \\ RESET DEVICE
 .MMC_DEVICE_RESET
-	RTS
+        RTS
 
 
-	\\ Read byte (User Port)
-	\\ Write FF
+        \\ Read byte (User Port)
+        \\ Write FF
 .MMC_GetByte
-	LDA #&FF
-	STA mmc%
-	JSR donothing
-	LDA mmc%
-	RTS
+        LDA #&FF
+        STA shifter%
+        JSR donothing
+        LDA shifter%
+        RTS
 
 
-	\\ *** Send &FF to MMC Y times ***
-	\\ Y=0=256
+        \\ *** Send &FF to MMC Y times ***
+        \\ Y=0=256
 .MMC_16Clocks
-	LDY #2
+        LDY #2
 .MMC_Clocks
 {
-	LDA #&FF
+        LDA #&FF
 .clk1
-	STA mmc%
-	JSR donothing
-	DEY
-	BNE clk1
+        STA shifter%
+        JSR donothing
+        DEY
+        BNE clk1
 }
 .donothing
-	\\ JSR+RTS = 12 cycles
-	RTS				; A=&FF, Y=0
+        \\ JSR+RTS = 12 cycles
+        RTS                             ; A=&FF, Y=0
 
 
-	\\ *** Send command to MMC ***
-	\\ On exit A=result, Z=result=0
+        \\ *** Send command to MMC ***
+        \\ On exit A=result, Z=result=0
 .MMC_DoCommand
 {
-	LDX #0
-	LDY #8
+        LDX #0
+        LDY #8
 .dcmd1
-	LDA cmdseq%,X
-	STA mmc%			;\ 2 - write
-	NOP				;\ 2
-	NOP				;\ 2
-	INX				;\ 2
-	DEY				;\ 2
-	BNE dcmd1			;\ 2
-	STA mmc%			; assume A=&FF
-	\ Wait for response, Y=0
+        LDA cmdseq%,X
+        STA shifter%                    ;\ 2 - write
+        NOP                             ;\ 2
+        NOP                             ;\ 2
+        INX                             ;\ 2
+        DEY                             ;\ 2
+        BNE dcmd1                       ;\ 2
+        STA shifter%                    ; assume A=&FF
+        \ Wait for response, Y=0
 .wR1mm
-	JSR donothing			;\ 12
-	LDA mmc%
-	BPL dcmdex
-	DEY
-	BNE wR1mm
-	CMP #0
+        JSR donothing                   ;\ 12
+        LDA shifter%
+        BPL dcmdex
+        DEY
+        BNE wR1mm
+        CMP #0
 .dcmdex
-	RTS
-}					; A=result, X=X+8, Y=?
+        RTS
+}                                       ; A=result, X=X+8, Y=?
 
 
-	\\ *** Wait for data token ***
+        \\ *** Wait for data token ***
 .MMC_WaitForData
 {
-	LDX #&FF
+        LDX #&FF
 .wl1
-	STX mmc%
-	JSR donothing			;\ 12
-	LDA mmc%
-	CMP #&FE			;\ data token
-	BNE wl1
-	RTS				; A=&FE, X=&FF, Y unchanged
+        STX shifter%
+        JSR donothing                   ;\ 12
+        LDA shifter%
+        CMP #&FE                        ;\ data token
+        BNE wl1
+        RTS                             ; A=&FE, X=&FF, Y unchanged
 }
 
 
-	\\ *** Read 256 bytes to datptr ***
+        \\ *** Read 256 bytes to datptr ***
 .MMC_Read256
 {
-	LDX #&FF
-	STX mmc%
-	LDY TubeNoTransferIf0		;\ 4
-	BNE rdlT20			;\ 2
+        LDX #&FF
+        STX shifter%
+        LDY TubeNoTransferIf0           ;\ 4
+        BNE rdlT20                      ;\ 2
 
-	NOP				;\ 2
-	NOP				;\ 2
-	NOP				;\ 2
+        NOP                             ;\ 2
+        NOP                             ;\ 2
+        NOP                             ;\ 2
 .rdl1
-	LDA mmc%			;\ 2 - read
-	STX mmc%			;\ 2 - write
-	STA (datptr%),Y			;\ 6
-	INY				;\ 2
-	CPY #&FF			;\ 2
-	BNE rdl1			;\ 2
-	LDA mmc%			;\ 2 - read
-	STA (datptr%),Y
-	RTS
+        LDA shifter%                    ;\ 2 - read
+        STX shifter%                    ;\ 2 - write
+        STA (datptr%),Y                 ;\ 6
+        INY                             ;\ 2
+        CPY #&FF                        ;\ 2
+        BNE rdl1                        ;\ 2
+        LDA shifter%                    ;\ 2 - read
+        STA (datptr%),Y
+        RTS
 
-.rdlT20					;\ 7
-	LDY #0				;\ 9
-	JMP rdlT2			;\ 12
+.rdlT20                                 ;\ 7
+        LDY #0                          ;\ 9
+        JMP rdlT2                       ;\ 12
 }
 
 
-	\\ *** Read "byteslastsector" bytes
-	\\ to datptr ***
+        \\ *** Read "byteslastsector" bytes
+        \\ to datptr ***
 .MMC_ReadBLS
 {
-	LDX #&FF
-	STX mmc%			;\ write
-	LDY TubeNoTransferIf0		;\ 4
-	BNE rdlT1			;\ 2
-	DEC byteslastsec%		;\ 6
-	BEQ rdl3			;\ 2
+        LDX #&FF
+        STX shifter%                    ;\ write
+        LDY TubeNoTransferIf0           ;\ 4
+        BNE rdlT1                       ;\ 2
+        DEC byteslastsec%               ;\ 6
+        BEQ rdl3                        ;\ 2
 .rdl2
-	LDA mmc%			;\ 2 - read
-	STX mmc%			;\ 2 - write
-	STA (datptr%),Y			;\ 6
-	INY				;\ 2
-	DEC byteslastsec%		;\ 6
-	BNE rdl2			;\ 2
+        LDA shifter%                    ;\ 2 - read
+        STX shifter%                    ;\ 2 - write
+        STA (datptr%),Y                 ;\ 6
+        INY                             ;\ 2
+        DEC byteslastsec%               ;\ 6
+        BNE rdl2                        ;\ 2
 .rdl3
-	LDA mmc%			;\ 2 - read
-	STA (datptr%),Y
-	RTS
+        LDA shifter%                    ;\ 2 - read
+        STA (datptr%),Y
+        RTS
 }
 
-	\\ TUBE
-	\\ 24us delay=48 cycles
-	\ \ (7)
+        \\ TUBE
+        \\ 24us delay=48 cycles
+        \ \ (7)
 .rdlT1
-	LDY byteslastsec%		;\ (9)
+        LDY byteslastsec%               ;\ (9)
 .rdlT2
 {
-	DEY				;(11)
-	BEQ rdlT4			;(14)
+        DEY                             ;(11)
+        BEQ rdlT4                       ;(14)
 .rdlT3
-	NOP				;\ 2=37
-	LDA mmc%			;\ 4=41
-	STX mmc%			;\ 4=45
-	STA TUBE_R3_DATA		;\ 4=49
-	JSR donothing			;\ 12
-	JSR donothing			;\ 12=24
-	NOP				;\ 2=26
-	NOP				;\ 2=28
-	NOP				;\ 2=30
-	DEY				;\ 2=32
-	BNE rdlT3			;\ 3=35
+        NOP                             ;\ 2=37
+        LDA shifter%                    ;\ 4=41
+        STX shifter%                    ;\ 4=45
+        STA TUBE_R3_DATA                ;\ 4=49
+        JSR donothing                   ;\ 12
+        JSR donothing                   ;\ 12=24
+        NOP                             ;\ 2=26
+        NOP                             ;\ 2=28
+        NOP                             ;\ 2=30
+        DEY                             ;\ 2=32
+        BNE rdlT3                       ;\ 3=35
 
-	NOP				;\ 2=36
-	NOP				;\ 2=38
-	NOP				;\ 2=40
-	NOP				;\ 2=42
+        NOP                             ;\ 2=36
+        NOP                             ;\ 2=38
+        NOP                             ;\ 2=40
+        NOP                             ;\ 2=42
 
 .rdlT4
-	LDA mmc%			;\ (17) 4=46
-	STA TUBE_R3_DATA		;\ 4=50
-	RTS
+        LDA shifter%                    ;\ (17) 4=46
+        STA TUBE_R3_DATA                ;\ 4=50
+        RTS
 }
 
 
-	\\ **** Read 256 bytes to buffer ****
+        \\ **** Read 256 bytes to buffer ****
 .MMC_ReadBuffer
 {
-	LDA #&FF
-	STA CurrentCat
+        LDA #&FF
+        STA CurrentCat
 
-	LDY #0
-	LDX #&FF
-	STX mmc%
-	JSR donothing			;\ 12
+        LDY #0
+        LDX #&FF
+        STX shifter%
+        JSR donothing                   ;\ 12
 .rdl4
-	LDA mmc%			;\ 2 - read
-	STX mmc%			;\ 2 - write
-	STA buf%,Y			;\ \ 5
-	INY				;\ 2
-	CPY #&FF			;\ 2
-	BNE rdl4			;\ 2
-	LDA mmc%			;\ 2 - read
-	STA buf%,Y
-	RTS
+        LDA shifter%                    ;\ 2 - read
+        STX shifter%                    ;\ 2 - write
+        STA buf%,Y                      ;\ \ 5
+        INY                             ;\ 2
+        CPY #&FF                        ;\ 2
+        BNE rdl4                        ;\ 2
+        LDA shifter%                    ;\ 2 - read
+        STA buf%,Y
+        RTS
 }
 
-	\\ **** Send Data Token to card ****
+        \\ **** Send Data Token to card ****
 .MMC_SendingData
 {
-	LDX #&FF
-	STX mmc%
-	JSR donothing
-	STX mmc%
-	JSR donothing
-	DEX
-	STX mmc%
-	RTS
+        LDX #&FF
+        STX shifter%
+        JSR donothing
+        STX shifter%
+        JSR donothing
+        DEX
+        STX shifter%
+        RTS
 }
 
-	\\ **** Complete Write Operation *****
+        \\ **** Complete Write Operation *****
 .MMC_EndWrite
 {
-	JSR MMC_16Clocks
-	LDX #&FF
-	STX mmc%
-	JSR donothing			;\ 12
-	LDA mmc%
-	TAY
-	AND #&1F
-	CMP #5
-	BNE errWrite2
+        JSR MMC_16Clocks
+        LDX #&FF
+        STX shifter%
+        JSR donothing                   ;\ 12
+        LDA shifter%
+        TAY
+        AND #&1F
+        CMP #5
+        BNE errWrite2
 
-	LDA #&FF
+        LDA #&FF
 .ew1
-	STX mmc%
-	JSR donothing
-	CMP mmc%
-	BNE ew1
-	RTS
+        STX shifter%
+        JSR donothing
+        CMP shifter%
+        BNE ew1
+        RTS
 }
 
-	\\ **** Write 256 bytes from dataptr% ****
+        \\ **** Write 256 bytes from dataptr% ****
 .MMC_Write256
 {
-	LDY TubeNoTransferIf0
-	BNE wrT1
+        LDY TubeNoTransferIf0
+        BNE wrT1
 .wr1
-	LDA (datptr%),Y			;\ 6
-	STA mmc%			;\ 2 - write
-	INY				;\ 2
-	BNE wr1				;\ 3
-	RTS
+        LDA (datptr%),Y                 ;\ 6
+        STA shifter%                    ;\ 2 - write
+        INY                             ;\ 2
+        BNE wr1                         ;\ 3
+        RTS
 
-	\.wrT1	; To tube 24us delay
+        \.wrT1  ; To tube 24us delay
 .wrT1
-	LDY #0
+        LDY #0
 .wrT2
-	LDA TUBE_R3_DATA		;\ 4
-	STA mmc%			;\ 4=8
-	JSR donothing			;\ 12=20
-	JSR donothing			;\ 12=32
-	JSR donothing			;\ 12=44
-	INY				;\ 2=46
-	BNE wrT2			;\ 3=49
-	RTS
+        LDA TUBE_R3_DATA                ;\ 4
+        STA shifter%                    ;\ 4=8
+        JSR donothing                   ;\ 12=20
+        JSR donothing                   ;\ 12=32
+        JSR donothing                   ;\ 12=44
+        INY                             ;\ 2=46
+        BNE wrT2                        ;\ 3=49
+        RTS
 }
 
-	\\ **** Write 256 bytes from buffer ****
+        \\ **** Write 256 bytes from buffer ****
 .MMC_WriteBuffer
 {
-	LDY #0
+        LDY #0
 .wbm1
-	NOP				;\ 2
-	LDA buf%,Y			;\ 4
-	STA mmc%			;\ 2 - write
-	INY				;\ 2
-	BNE wbm1			;\ 3
-	RTS
+        NOP                             ;\ 2
+        LDA buf%,Y                      ;\ 4
+        STA shifter%                    ;\ 2 - write
+        INY                             ;\ 2
+        BNE wbm1                        ;\ 3
+        RTS
 }
