@@ -10,8 +10,9 @@ chipsel%=&FCD9  \\ output: bit 0 = SD_CS1, bit 1 = SD_CS2
 
         \\ RESET DEVICE
 .MMC_DEVICE_RESET
+        LDA #&FE
+        STA chipsel%
         RTS
-
 
         \\ Read byte (User Port)
         \\ Write FF
@@ -55,16 +56,38 @@ chipsel%=&FCD9  \\ output: bit 0 = SD_CS1, bit 1 = SD_CS2
         INX                             ;\ 2
         DEY                             ;\ 2
         BNE dcmd1                       ;\ 2
-        STA shifter%                    ; assume A=&FF
         \ Wait for response, Y=0
 .wR1mm
-        JSR donothing                   ;\ 12
+        JSR donothing
         LDA shifter%
         BPL dcmdex
+        LDA #&FF
+        STA shifter%
         DEY
         BNE wR1mm
         CMP #0
 .dcmdex
+IF _DEBUG_MMC
+{
+        PHP
+        PHA
+        LDY #0
+.loop
+        LDA cmdseq%,Y
+        JSR PrintHex
+        INY
+        CPY #7
+        BNE loop
+        LDA #':'
+        JSR OSWRCH
+        PLA
+        PHA
+        JSR PrintHex
+        JSR OSNEWL
+        PLA
+        PLP
+}
+ENDIF
         RTS
 }                                       ; A=result, X=X+8, Y=?
 
@@ -232,7 +255,8 @@ chipsel%=&FCD9  \\ output: bit 0 = SD_CS1, bit 1 = SD_CS2
         BNE wrT1
 .wr1
         LDA (datptr%),Y                 ;\ 6
-        STA shifter%                    ;\ 2 - write
+        STA shifter%                    ;\ 4
+        JSR donothing                   ;\ 12
         INY                             ;\ 2
         BNE wr1                         ;\ 3
         RTS
@@ -242,12 +266,10 @@ chipsel%=&FCD9  \\ output: bit 0 = SD_CS1, bit 1 = SD_CS2
         LDY #0
 .wrT2
         LDA TUBE_R3_DATA                ;\ 4
-        STA shifter%                    ;\ 4=8
-        JSR donothing                   ;\ 12=20
-        JSR donothing                   ;\ 12=32
-        JSR donothing                   ;\ 12=44
-        INY                             ;\ 2=46
-        BNE wrT2                        ;\ 3=49
+        STA shifter%                    ;\ 4
+        JSR donothing                   ;\ 12
+        INY                             ;\ 2
+        BNE wrT2                        ;\ 3
         RTS
 }
 
@@ -256,10 +278,14 @@ chipsel%=&FCD9  \\ output: bit 0 = SD_CS1, bit 1 = SD_CS2
 {
         LDY #0
 .wbm1
-        NOP                             ;\ 2
         LDA buf%,Y                      ;\ 4
-        STA shifter%                    ;\ 2 - write
+        STA shifter%                    ;\ 4
+        JSR donothing                   ;\ 12
         INY                             ;\ 2
         BNE wbm1                        ;\ 3
         RTS
 }
+
+\\ NOTE: When SR running of Phi2, then it takes 16
+\\ Phi2 cycles to shift out the data, so we need to ensure
+\\ the above loops don't execute any faster than this
