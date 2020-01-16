@@ -22,8 +22,6 @@ ENDMACRO
 
         \\ RESET DEVICE
 .MMC_DEVICE_RESET
-        LDA #&FE
-        STA chipsel%
         RTS
 
         \\ Read byte (User Port)
@@ -53,6 +51,32 @@ ENDMACRO
         \\ JSR+RTS = 12 cycles
         RTS                             ; A=&FF, Y=0
 
+\\ MMC_SlowClocks is used for SPI Initialization
+\\ Where the speed has to be between 100KHz-400KHz
+\\   A = corrupted
+\\   X = preserved
+\\   Y = number of clocks / 8
+
+.MMC_SlowClocks
+{
+        LDA #&FF
+        STA chipsel%            ; CS1=1
+        CLC
+.loop1
+        LDA #&61
+.loop2
+        STA data%               ; MOSI=1 SCK=0
+        ORA #&02
+        STA data%               ; MOSI=1 SCK=1
+        ADC #&02
+        BPL loop2
+        DEY
+        BNE loop1
+        STA data%               ; MOSI=1 SCK=0
+        LDA #&FE
+        STA chipsel%            ; CS1=0
+        RTS
+}
 
         \\ *** Send command to MMC ***
         \\ On exit A=result, Z=result=0

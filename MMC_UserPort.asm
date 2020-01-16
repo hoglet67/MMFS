@@ -39,7 +39,7 @@ ENDIF
     LDA sr%
     RTS
 }
-        
+
     \\ **** Send Data Token to card ****
 .MMC_SendingData
 {
@@ -47,7 +47,7 @@ ENDIF
     LDA #&FE
     \\ Fall through to UP_WriteByte
 }
-    
+
     \\ Write byte (User Port)
     \\ Ignore byte in
 .UP_WriteByte
@@ -80,7 +80,7 @@ ENDIF
 .MMC_16Clocks
     LDY #2
 .MMC_Clocks
-
+.MMC_SlowClocks
 {
 .clku1
     JSR UP_ReadByteX        ; Writes &FF
@@ -105,7 +105,7 @@ ENDIF
     BNE dcmdu1
     JSR waitresp_up
 IF _DEBUG_MMC
-    JSR UP_ReadBits7        
+    JSR UP_ReadBits7
     PHP
     PHA
     LDY #0
@@ -120,7 +120,7 @@ IF _DEBUG_MMC
     PLA
     PHA
     JSR PrintHex
-    JSR OSNEWL       
+    JSR OSNEWL
     PLA
     PLP
     RTS
@@ -147,7 +147,7 @@ ENDIF
     STA iorb%
     LDA sr%
     RTS
-    
+
     \\ wait for response bit
     \\ ie for clear bit (User Port only)
 .waitresp_up
@@ -208,7 +208,7 @@ ENDIF
     RTS
 
 .MMC_ReadToTube
-{        
+{
     JSR WaitForShiftDone
     STA TUBE_R3_DATA
     NOP
@@ -409,7 +409,7 @@ ENDIF
     LDA #&1C
     STA ier%
     \\ Fall through to ShiftRegMode0
-    
+
 .ShiftRegMode0
     LDA acr%   \\ Set SR Mode to mode 0
     AND #&E3   \\ 11100011 = SR Mode 0

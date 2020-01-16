@@ -44,7 +44,7 @@ attempts%=&C2
 	\\ 80 Clocks
 .iloop
 	LDY #10
-	JSR MMC_Clocks
+	JSR MMC_SlowClocks
 
 	\\ CMD0
 	LDA #go_idle_state
@@ -580,7 +580,7 @@ read16str%=MA+&1000
 	STA sec%, X
 	DEX
 	BPL loop
-	
+
 	JSR MMC_SetupRead
 	JSR MMC_StartRead
 	LDA #&00			; LO(read16str%)
@@ -719,12 +719,12 @@ read16str%=MA+&1000
 	LDA sec%
 	STA cmdseq%+4
 	LDA #0
-	STA cmdseq%+5		
+	STA cmdseq%+5
 	RTS
 
-		
+
 .setCommandAddressSDHC
-\\ Convert to 512b sectors by dividing by	
+\\ Convert to 512b sectors by dividing by
 	LDA #0
 	STA cmdseq%+2
 	LDA sec%+2
@@ -761,5 +761,3 @@ read16str%=MA+&1000
 	BEQ incMS
 	RTS
 }
-
-	

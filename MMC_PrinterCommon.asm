@@ -3,6 +3,7 @@
 .MMC_16Clocks
     LDY #2
 .MMC_Clocks
+.MMC_SlowClocks
 {
 .loop
     JSR P1_ReadByte  ; Writes &FF

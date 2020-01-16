@@ -27,6 +27,7 @@ mmc%=&FE18
 .MMC_16Clocks
 	LDY #2
 .MMC_Clocks
+.MMC_SlowClocks
 {
 	LDA #&FF
 .clk1
