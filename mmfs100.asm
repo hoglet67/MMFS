@@ -7522,4 +7522,8 @@ ENDIF
 
 PRINT "    code ends at",~P%," (",(guard_value - P%), "bytes free )"
 
+IF _DEVICE_='G'
+SAVE "", &8000, P%
+ELSE
 SAVE "", &8000, &C000
+ENDIF
