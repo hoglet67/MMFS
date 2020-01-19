@@ -93,6 +93,8 @@ NEXT
 \\   Y = number of clocks / 8
 .MMC_SlowClocks
 {
+    TYA
+    PHA
     LDA #&00
     LDX #&01
     JSR &FFF4
@@ -102,7 +104,7 @@ NEXT
     ORA #&20
     STA &FE34
 .not_master                     ; Y * 8 is the number of clocks
-    TYA
+    PLA
     ASL A
     ASL A
     ASL A
