@@ -9,7 +9,7 @@ ddra%=_VIA_BASE + &03
 \\ MISO is connected to D7
 
 clockbit%=&02
-        
+
 one_clockhigh%=&FF
 one_clocklow%=&FF-clockbit%
 
@@ -84,5 +84,9 @@ NEXT
     ORA #&03
     STA ddra%
     RTS
+
+\\ INITIALIZE DEVICE IN SPI MODE
+.MMC_SlowClocks
+    JMP MMC_Clocks
 
 INCLUDE "MMC_PrinterCommon.asm"

@@ -15,7 +15,7 @@ iorx%=_VIA_BASE + &0f
 sr%=&F8
 
 clockbit%=&02
-    
+
 one_clockhigh%=&FF
 one_clocklow%=&FF-clockbit%
 
@@ -68,7 +68,7 @@ ENDMACRO
     AND #&FE
     STA pcr%             \\ Set CA1 active edge to negative
     LDA #one_clockhigh%
-    STA iora%            \\ Reset CA1 int flag    
+    STA iora%            \\ Reset CA1 int flag
     LDY #0
 .loop
     DEY
@@ -111,5 +111,9 @@ NEXT
     ORA #&03
     STA ddra%
     RTS
+
+\\ INITIALIZE DEVICE IN SPI MODE
+.MMC_SlowClocks
+    JMP MMC_Clocks
 
 INCLUDE "MMC_PrinterCommon.asm"

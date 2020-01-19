@@ -86,4 +86,40 @@ NEXT
     STA chipsel%
     RTS
 
+\\ MMC_SlowClocks is used for SPI Initialization
+\\ Where the speed has to be between 100KHz-400KHz
+\\   A = corrupted
+\\   X = corrupted
+\\   Y = number of clocks / 8
+.MMC_SlowClocks
+{
+    LDA #&00
+    LDX #&01
+    JSR &FFF4
+    CPX #&03
+    BCC not_master
+    LDA &FE34               ; On the Master, map FCxx to the cartridge port
+    ORA #&20
+    STA &FE34
+.not_master                     ; Y * 8 is the number of clocks
+    TYA
+    ASL A
+    ASL A
+    ASL A
+    TAY
+    LDA #&FF
+    STA chipsel%            ; CS1=1
+    LDA #&01                ; %00000001
+    LDX #&03                ; %00000011
+.loop
+    STA data%               ; MOSI=1 SCK=0
+    STX data%               ; MOSI=1 SCK=1
+    DEY
+    BNE loop
+    STA data%               ; MOSI=1 SCK=0
+    LDA #&FE
+    STA chipsel%            ; CS1=0
+    RTS
+}
+
 INCLUDE "MMC_PrinterCommon.asm"

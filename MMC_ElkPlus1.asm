@@ -9,7 +9,7 @@ status%=&FC72
 \\ MISO is connected to Ack
 
 clockbit%=&02
-        
+
 one_clockhigh%=&FF
 one_clocklow%=&FF-clockbit%
 
@@ -24,7 +24,7 @@ MACRO READ_BIT
     ROL status%
     ROL sr%
 ENDMACRO
-    
+
 \\ Read byte (User Port)
 \\ Write FF
 .MMC_GetByte
@@ -84,5 +84,10 @@ NEXT
 \\ RESET DEVICE
 .MMC_DEVICE_RESET
     RTS
+
+\\ INITIALIZE DEVICE IN SPI MODE
+.MMC_SlowClocks
+    JMP MMC_Clocks
+
 
 INCLUDE "MMC_PrinterCommon.asm"
