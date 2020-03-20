@@ -447,19 +447,6 @@ IF _TURBOMMC
     ORA #&18          \\ 00011000 = SR Mode 6
     STA acr%          \\ CB1, CB2 are both outputs
     RTS
-
-.ShiftRegMode6Exit    \\ Sequence here is important to avoid brief bus conflicts
-    JSR ShiftRegMode0 \\ CB1,2 are both inputs
-                      \\ Briefly the clock will float
-                      \\ PB1 is set as an output again
-    LDA #&0B          \\ 00001011
-                      \\ PB0=1 sets MOSI to 1 (not very important)
-                      \\ PB1=1 sets SCLK to 1 (important to avoid glitches)
-                      \\ PB2=0 enables  buffer connecting MISO to CB2
-                      \\ PB3=1 disables buffer connecting CB2 to MOSI
-                      \\ PB4=0 enables  buffer connecting PB0 to MOSI
-    STA iorb%         \\ Flip the direction of the data bus
-    RTS
 ENDIF
 
     \\ **** Complete Write Operation *****
@@ -554,9 +541,19 @@ ELSE
 ENDIF
     INY
     BNE wbu1
-IF _TURBOMMC
-    BEQ ShiftRegMode6Exit
-ELSE
-    RTS
-ENDIF
 }
+
+IF _TURBOMMC
+.ShiftRegMode6Exit    \\ Sequence here is important to avoid brief bus conflicts
+    JSR ShiftRegMode0 \\ CB1,2 are both inputs
+                      \\ Briefly the clock will float
+                      \\ PB1 is set as an output again
+    LDA #&0B          \\ 00001011
+                      \\ PB0=1 sets MOSI to 1 (not very important)
+                      \\ PB1=1 sets SCLK to 1 (important to avoid glitches)
+                      \\ PB2=0 enables  buffer connecting MISO to CB2
+                      \\ PB3=1 disables buffer connecting CB2 to MOSI
+                      \\ PB4=0 enables  buffer connecting PB0 to MOSI
+    STA iorb%         \\ Flip the direction of the data bus
+ENDIF
+    RTS
