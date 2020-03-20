@@ -49,19 +49,21 @@ ENDIF
 	JSR ow7F			; returns result in A
 	LDY owresult%
 	STA (owbptr%),Y
+
+    \ Unrecognised FDC commands are ignored
+.owuknown
 	LDA #0				; Service done!
 	RTS
 
-	\ Unrecognise FDC commands are ignored
-.owuknown
+\.owuknown
 	\pha
 	\jsr PrintString
 	\equs "OW="
 	\nop
 	\pla
 	\jsr PrintHex
-	LDA #0
-	RTS
+	\LDA #0
+	\RTS
 
 .ow7F
 	\\ Check drive ready
@@ -129,7 +131,7 @@ ENDIF
 	LDA (owbptr%),Y			; SECTOR
 	CMP #10				; Check sector no.<10
 	BCS ownosector
-	CLC
+	; CLC ; C=0 at this point
 	ADC owsec%
 	STA owsec%
 	BCC owsk2
