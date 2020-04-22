@@ -7,25 +7,29 @@ VERSION=`grep '#VERSION#' VERSION.asm | cut -d\" -f2`
 echo "Building MMFS $VERSION"
 
 # Set the BEEBASM executable for the platform
-BEEBASM=tools/beebasm/beebasm.exe
+# Let's see if the user already has one on their path
+BEEBASM=$(type -path beebasm 2>/dev/null)
 if [ "$(uname -s)" == "Darwin" ]; then
-    BEEBASM=tools/beebasm/beebasm-darwin
+    BEEBASM=${BEEBASM:-tools/beebasm/beebasm-darwin}
     MD5SUM=md5
 elif [ "$(expr substr $(uname -s) 1 5)" == "Linux" ]; then
     if [ "$(uname -m)" == "x86_64" ]; then
-        BEEBASM=tools/beebasm/beebasm64
+        BEEBASM=${BEEBASM:-tools/beebasm/beebasm64}
     else
-        BEEBASM=tools/beebasm/beebasm32
+        BEEBASM=${BEEBASM:-tools/beebasm/beebasm32}
     fi
     MD5SUM=md5sum
 fi
+BEEBASM=${BEEBASM:-tools/beebasm/beebasm.exe}
+echo Using $BEEBASM
 
 # Device:
 # U is normal User Port VIA based
 # T is User Port connected "TurboMMC" interface
 # E is Electron Plus One Printer Port connected interface (experimental)
 # M is MemoryMapped IO based (typically &FE18, for BeebEm)
-for device in U T E M
+# P is Beeb Printer Port connected Interface (experimental)
+for device in U T E M P
 do
     build=build/${device}
     mkdir -p ${build}
@@ -40,7 +44,10 @@ do
 
     if [ $device == "E" ]
     then
-        filelist=top_E*.asm
+        filelist="top_E*.asm top_ZEMMFS.asm"
+    elif [ $device == "P" ]
+    then
+        filelist="top_[MS]*.asm top_ZMMFS.asm"
     else
         filelist=top_*.asm
     fi
@@ -79,6 +86,9 @@ do
 
             # Add into the SSD
             tools/mmb_utils/putfile.pl ${ssd} ${build}/${name}
+
+            # Delete the .inf file
+            rm -f ${build}/${name}.inf
         fi
 
         # Report end of code

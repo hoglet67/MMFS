@@ -13,6 +13,8 @@ ELIF _DEVICE_='T'
     incbin  "build/T/SWMMFS.rom"
 ELIF _DEVICE_='E'
     incbin  "build/E/SWMMFS.rom"
+ELIF _DEVICE_='P'
+    incbin  "build/P/SWMMFS.rom"
 ELIF _DEVICE_='M'
     incbin  "build/M/SWMMFS.rom"
 ELSE

@@ -5,7 +5,7 @@
 
 \** MAIN CODE **\
 
-\ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port
+\ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port, P=Beeb Printer Port
 INCLUDE "DEVICE.asm"
 
 \ MA/MP constants must be even numbers
@@ -65,9 +65,16 @@ MMC_SECTOR_VALID=VID+&B			; 1 bytes
 MMC_CIDCRC=VID+&C			; 2 bytes
 CHECK_CRC7=VID+&E			; 1 byte
 
-filesysno%=&04			; Filing System Number
-filehndl%=&10			; First File Handle - 1
+IF _DFS_EMUL
+	filesysno%=&04			; Filing System Number
+	filehndl%=&10			; First File Handle - 1
+ELSE
+	filesysno%=&74			; Filing System Number
+	filehndl%=&70			; First File Handle - 1
+ENDIF
+
 tubeid%=&0A			; See Tube Application Note No.004 Page 7
+				; &0A is unallocated so shouldn't clash
 
 MACRO BP12K_NEST
 	IF _BP12K_
@@ -1338,6 +1345,8 @@ ENDIF
 	EQUB &80
 	EQUS "MMFS"
 	EQUB &80
+	EQUS "CARD"
+	EQUB &80
 	BRK
 
 	\ COMMAND TABLE 3		; HELP
@@ -1423,6 +1432,7 @@ ENDIF
 .cmdaddr22
 	EQUW CMD_DISC-1
 	EQUW CMD_DISC-1
+	EQUW CMD_CARD-1
 	EQUW CMD_CARD-1
 	EQUW NotCmdTable22-1
 
@@ -6309,7 +6319,11 @@ ENDIF
 	\\ **** Load current drive with disk ****
 	\\ Word &B8 = Disc number
 .LoadDrive
+	LDX CurrentDrv
+.LoadDriveX
 {
+	TXA
+	PHA
 	LDA #&C0
 	STA &B7
 	JSR GetDiskStatus
@@ -6327,7 +6341,8 @@ ENDIF
 	JSR CheckCRC7
 	\ Make sure disk is not in another drive
 	JSR UnloadDisk
-	LDX CurrentDrv
+	PLA
+	TAX
 	LDA &B8
 	STA DRIVE_INDEX0,X
 	LDA &B9
@@ -6473,6 +6488,8 @@ ELIF _DEVICE_='M'
 	INCLUDE "MMC_MemoryMapped.asm"
 ELIF _DEVICE_='E'
 	INCLUDE "MMC_ElkPlus1.asm"
+ELIF _DEVICE_='P'
+	INCLUDE "MMC_BeebPrinter.asm"
 ENDIF
 
 .errWrite2

@@ -657,9 +657,9 @@ read16str%=MA+&1000
 	LDA #0
 	STA &B9
 	LDX #3
-.loop	STX CurrentDrv
+.loop
 	STX &B8
-	JSR LoadDrive
+	JSR LoadDriveX
 	DEX
 	BPL loop
 	RTS
