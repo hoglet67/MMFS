@@ -29,11 +29,11 @@ write_block=&58
 	\\ ***** Initialise MMC card *****
 	\\ Carry=0 if ok
 	\\ Carry=1 if card doesn't repsond at all!
-trys%=&32
-attempts%=&C2
-
 .MMC_INIT
 {
+	trys%=&32
+	attempts%=skipsec%
+
 	JSR SetLEDS
 	LDA #0
 	STA MMC_STATE
@@ -152,8 +152,12 @@ attempts%=&C2
 
 	\\ Failed to set block length
 .blkerr
+IF _MM32_
+	JSR mm32_MMC_error
+ELSE
 	JSR ReportMMCErrS
 	EQUB &FF
+ENDIF
 	EQUS "Set block len error ",0
 }
 
@@ -186,9 +190,14 @@ attempts%=&C2
 	JMP MMC_WaitForData
 
 .errRead
+IF _MM32_
+	JSR mm32_MMC_error
+	EQUS "Read fault ",0
+ELSE
 	JSR ReportMMCErrS
 	EQUB &C5
 	EQUS "MMC Read fault ",0
+ENDIF
 
 	\ **** Begin Write Transaction ****
 .MMC_StartWrite
@@ -197,9 +206,14 @@ attempts%=&C2
 	JMP MMC_SendingData
 
 .errWrite
+IF _MM32_
+	JSR mm32_MMC_error
+	EQUS "Write fault ",0
+ELSE
 	JSR ReportMMCErrS
 	EQUB &C5
 	EQUS "MMC Write fault ",0
+ENDIF
 
 	\\ **** Read 2 sectors to "Catalogue" ****
 	\\ i.e. pages &E and &F
@@ -242,6 +256,10 @@ attempts%=&C2
 {
 	PHA				; 0=read / 1=write
 
+IF _MM32_
+	LDA mm32_taddr%+2
+	AND mm32_taddr%+3
+ELSE
 	\ Copy load address to 1072
 	LDA MA+&1090
 	STA MA+&1072
@@ -250,6 +268,8 @@ attempts%=&C2
 
 	LDA MA+&1074
 	AND MA+&1075
+ENDIF
+
 	ORA TubePresentIf0
 	EOR #&FF
 	STA TubeNoTransferIf0
@@ -259,8 +279,14 @@ attempts%=&C2
 
 	JSR TUBE_CLAIM
 
-	LDX #&72			; tell SP
+IF _MM32_
+	LDX #LO(mm32_taddr%)
+	LDY #HI(mm32_taddr%)
+ELSE
+	LDX #&72
 	LDY #MP+&10
+ENDIF
+
 	PLA
 	PHA
 	JSR TubeCode			; YX=addr,A=0:initrd,A=1:initwr,A=4:strexe
@@ -278,10 +304,17 @@ attempts%=&C2
 	\\ define block
 .MMC_ReadBlock
 {
+IF _MM32_
+	LSR mm32_error%			; Clear error flag
+ENDIF
 	JSR SetLEDS
 	JSR rdblk
 	JMP ResetLEDS
 
+IF _MM32_
+.rb_err	;C=1
+	ROR mm32_error%			; Set bit7
+ENDIF
 .rb1_exit
 	RTS
 
@@ -316,7 +349,6 @@ ELSE
 	STX seccount%
 ENDIF
 	ASL sec%			; sec always even
-
 	JSR MMC_SetupRead
 
 IF _LARGEFILES
@@ -356,7 +388,14 @@ ENDIF
 	JSR MMC_16Clocks		; ignore CRC
 
 	\\ increment MMC sector
+IF _MM32_
+	JSR mm32_disk_next_sector
+	BCS rb_err				; Error, so exit
+
+	JSR MMC_SetupRead
+ELSE
 	JSR incCommandAddress
+ENDIF
 
 IF _LARGEFILES
 	LDA #&FE
@@ -423,6 +462,9 @@ ENDIF
 
 .MMC_WriteBlock
 {
+IF _MM32_
+	LSR mm32_error%			; Clear error flag
+ENDIF
 	JSR SetLEDS
 	JSR wrblk
 	JMP ResetLEDS
@@ -484,7 +526,14 @@ ENDIF
 
 	\\ sector+=2
 .wb4
+IF _MM32_
+	JSR mm32_disk_next_sector
+	BCS wb_err
+
+	JSR MMC_SetupWrite
+ELSE
 	JSR incCommandAddress
+ENDIF
 
 .wb2
 IF _LARGEFILES
@@ -539,6 +588,12 @@ ENDIF
 
 .wb5
 	RTS
+
+IF _MM32_
+.wb_err	;C=1
+	ROR mm32_error%			; Set bit7
+	RTS
+ENDIF
 }
 
 IF _LARGEFILES
@@ -562,6 +617,7 @@ IF _LARGEFILES
 }
 ENDIF
 
+IF NOT(_MM32_)
 	\\ *** Read the disc title to read16str% ***
 	\\ *** read16sec% contains the address   ***
 	\\ *** of the first disc sector          ***
@@ -580,7 +636,7 @@ read16str%=MA+&1000
 	STA sec%, X
 	DEX
 	BPL loop
-	
+
 	JSR MMC_SetupRead
 	JSR MMC_StartRead
 	LDA #&00			; LO(read16str%)
@@ -602,6 +658,7 @@ read16str%=MA+&1000
 
 	JMP ResetLEDS
 }
+ENDIF
 
 	\\ **** CHECK MMC STATUS ****
 	\\ Preserves AXY, and values in BC-C5
@@ -614,7 +671,11 @@ read16str%=MA+&1000
 	\\ Save values in BC-C5 at 1090-1099
 .MMC_BEGIN1
 {
+IF _MM32_
+	LDX #15
+ELSE
 	LDX #9
+ENDIF
 .begloop1
 	LDA &BC,X
 	STA MA+&1090,X
@@ -627,22 +688,37 @@ read16str%=MA+&1000
 	\\ Check if MMC initialised
 	\\ If not intialise the card
 	BIT MMC_STATE
+IF _MM32_
+	BVC begX
+
+	RTS
+
+.begX
+ELSE
 	BVS beg2
+ENDIF
 
 	JSR MMC_INIT
 	BCS carderr
+
 	JSR MMC_CheckCardID
+
+IF _MM32_
+	JMP mm32_init_dos
+ELSE
 
 	\\ Check MMC_SECTOR & DRIVE_INDEX initialised
 .beg2
 	JSR CheckCRC7
 	LDA MMC_SECTOR_VALID
 	BEQ beg3
+
 	RTS
 
 .beg3
 	JSR MMC_Sector_Reset
 	JMP MMC_LoadDisks
+ENDIF
 
 	\\ Failed to initialise card!
 .carderr
@@ -651,6 +727,7 @@ read16str%=MA+&1000
 	EQUS "Card?",0
 }
 
+IF NOT(_MM32_)
 	\\ Reset Discs in Drives
 .MMC_LoadDisks
 {
@@ -664,13 +741,18 @@ read16str%=MA+&1000
 	BPL loop
 	RTS
 }
+ENDIF
 
 	\\ If sector 0 set, check it's the same card
 	\\ If ok Z=1
 .MMC_CheckCardID
 {
 	JSR CheckCRC7
+IF _MM32_
+	LDA CLUST_SIZE
+ELSE
 	LDA MMC_SECTOR_VALID
+ENDIF
 	BEQ cid_x
 	JSR MMC_GetCIDCRC		; YA=CRC16
 	CMP MMC_CIDCRC+1
@@ -691,7 +773,11 @@ read16str%=MA+&1000
 	\\ **** END MMC TRANSACTION ****
 .MMC_END
 {
+IF _MM32_
+	LDX #15
+ELSE
 	LDX #9
+ENDIF
 .eloop0
 	LDA MA+&1090,X
 	STA &BC,X
@@ -699,6 +785,7 @@ read16str%=MA+&1000
 	BPL eloop0
 	RTS
 }
+
 
 \\ Translate the sector number into a SPI Command Address
 \\ Sector number is in 256 bytes sectors
@@ -719,12 +806,12 @@ read16str%=MA+&1000
 	LDA sec%
 	STA cmdseq%+4
 	LDA #0
-	STA cmdseq%+5		
+	STA cmdseq%+5
 	RTS
 
-		
+
 .setCommandAddressSDHC
-\\ Convert to 512b sectors by dividing by	
+\\ Convert to 512b sectors by dividing by
 	LDA #0
 	STA cmdseq%+2
 	LDA sec%+2
@@ -739,6 +826,8 @@ read16str%=MA+&1000
 	RTS
 }
 
+
+IF NOT(_MM32_)
 .incCommandAddress
 {
 	LDA CardSort
@@ -761,5 +850,4 @@ read16str%=MA+&1000
 	BEQ incMS
 	RTS
 }
-
-	
+ENDIF
