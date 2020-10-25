@@ -77,7 +77,7 @@ do
 
         # Create a blank SSD image
         tools/mmb_utils/blank_ssd.pl ${ssd}
-        tools/mmb_utils/title.pl ${ssd} "MMFS $device $VERSION"
+        tools/mmb_utils/title.pl ${ssd} "$system $device $VERSION"
         echo
 
         if [ $device == "E" ]
