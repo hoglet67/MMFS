@@ -6477,8 +6477,10 @@ ENDIF
 
 IF _MM32_
 	LDA b+6
-	AND #&3C
-	BNE errException		; If start or len >= &10000
+	AND #&30
+	BNE errException		; If len >= &10000
+	LDA b+5
+	BMI errException		; If len >= &8000
 ENDIF
 
 	CLC
