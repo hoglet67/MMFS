@@ -32,6 +32,10 @@ _INCLUDE_CMD_DOP_=_COMMANDS_
 _INCLUDE_CMD_DRECAT_=_COMMANDS_
 _INCLUDE_CMD_DABOUT_=_COMMANDS_
 
+_MM32_ = FALSE ; MM 11/05/19
+_MM32_DEBUG = FALSE
+_MM32_DDUMP = TRUE	;Optional command
+
 \ MA/MP constants must be even numbers
 IF _MASTER_
 	CPU 1				; 65C12
@@ -60,8 +64,15 @@ DirectoryParam=&CC
 CurrentDrv=&CD
 
 CurrentCat=MA+&1082
-TubeNoTransferIf0=MA+&109E
-MMC_STATE=MA+&109F			; Bit 6 set if card initialised
+
+IF _MM32_
+	TubeNoTransferIf0=MA+&10AE
+	MMC_STATE=MA+&10AF
+ELSE
+	TubeNoTransferIf0=MA+&109E
+	MMC_STATE=MA+&109F			; Bit 6 set if card initialised
+ENDIF
+
 FSMessagesOnIfZero=MA+&10C6
 CMDEnabledIf1=MA+&10C7
 DEFAULT_DIR=MA+&10C9
@@ -78,13 +89,23 @@ buf%=MA+&E00
 cat%=MA+&E00
 FilesX8=MA+&F05
 
-VID=MA+&10E0				; VID
-DRIVE_INDEX0=VID 			; 4 bytes
-DRIVE_INDEX4=VID+4			; 4 bytes
-MMC_SECTOR=VID+8			; 3 bytes
-MMC_SECTOR_VALID=VID+&B			; 1 bytes
-MMC_CIDCRC=VID+&C			; 2 bytes
-CHECK_CRC7=VID+&E			; 1 byte
+VID=MA+&10E0					; VID
+IF _MM32_
+	VID2=VID					; 14 bytes
+	MMC_CIDCRC=VID2+&E			; 2 bytes
+	CHECK_CRC7=VID2+&10			; 1 byte
+ELSE
+	DRIVE_INDEX0=VID 			; 4 bytes
+	DRIVE_INDEX4=VID+4			; 4 bytes
+	MMC_SECTOR=VID+8			; 3 bytes
+	MMC_SECTOR_VALID=VID+&B		; 1 bytes
+	MMC_CIDCRC=VID+&C			; 2 bytes
+	CHECK_CRC7=VID+&E			; 1 byte
+ENDIF
+
+IF _MM32_
+	OWCtlBlock = MA+&10B0		; 16 bytes
+ENDIF
 
 IF _DFS_EMUL
 	filesysno%=&04			; Filing System Number
@@ -95,7 +116,7 @@ ELSE
 ENDIF
 
 tubeid%=&0A			; See Tube Application Note No.004 Page 7
-				; &0A is unallocated so shouldn't clash
+					; &0A is unallocated so shouldn't clash
 
 MACRO BP12K_NEST
 	IF _BP12K_
@@ -286,6 +307,13 @@ ENDIF
 	CLC
 	JMP (&00AE)			;Return
 }
+
+IF _MM32_
+	\ Print space, on exit A=&20
+.PrintSpace
+	LDA #' '
+	BNE PrintChrA
+ENDIF
 
 .PrintNibFullStop
 	JSR PrintNibble
@@ -923,6 +951,7 @@ ENDIF
 	JMP rAXY_restore
 
 
+IF NOT(_MM32_)
 	\ ** Convert 9 bit binary in word &B8 to
 	\ ** 3 digit BCD in word &B5 (decno%)
 decno%=&B5
@@ -968,6 +997,7 @@ decno%=&B5
 	STY decno%
 	RTS
 }
+ENDIF
 
 	\ Convert binary in A to BCD
 .BinaryToBCD
@@ -1001,6 +1031,51 @@ decno%=&B5
 }
 
 
+IF _MM32_
+	\ MM32 reverts to (modified) original DFS code.
+	\ Convert decimal to binary
+	\ On exit: C=1 if error, else X=number
+.Param_ReadNum
+{
+	JSR GSINIT_A
+	SEC
+	BEQ L4			;If null str
+
+	PHP
+	LDA #0
+	STA &B9
+	BEQ L2			;always
+
+.L1	SEC
+	SBC #&30
+	BCC L3			;IF K<'0'
+
+	CMP #&0A
+	BCS L3			;If K>'9'
+
+	STA &B8
+	LDA &B9
+	ASL A
+	STA &B9
+	ASL A
+	ASL A
+	ADC &B9
+	ADC &B8
+	STA &B9			;?B9=?B9 X 10 + ?B8
+
+.L2	JSR GSREAD		;K=chr
+	BCC L1			;If not end of str
+
+	LDX &B9
+	PLP
+	CLC
+	RTS
+
+.L3	PLP				;C=1, Z=0
+
+.L4	RTS
+}
+ELSE
 	\\ **** Read decimal number at TxtPtr+Y ****
 	\\ on exit;
 	\\ if valid (0 - 510);
@@ -1087,6 +1162,7 @@ rn%=&B0
 	SEC
 	RTS
 }
+ENDIF
 
 
 .fscv5_starCAT
@@ -1112,12 +1188,14 @@ rn%=&B0
 	JSR PrintString			; Print " (n) "; n=cycle no.
 	EQUS " ("			; Print "Drive "
 
-	\LDA MA+&0F04
-	\JSR prthexA
-
+IF _MM32_
+	LDA MA+&0F04
+	JSR PrintHex
+ELSE
 	\ Print disk no. instead of cycle no.
 	LDX CurrentDrv
 	JSR PrtDiskNo
+ENDIF
 
 	JSR PrintString
 	EQUS ")",13,"Drive "
@@ -1414,6 +1492,26 @@ ENDIF
 	\ COMMAND TABLE 4		; DUTILS commands
 .cmdtable4
 	EQUB (cmdaddr4-cmdaddr1)/2-1
+IF _MM32_
+	EQUS "BOOT"
+	EQUB &80+&09
+IF _MM32_DEBUG
+	EQUS "BUG"
+	EQUB &80
+ENDIF
+	EQUS "CAT"
+	EQUB &80+&0E
+	EQUS "DIR"
+	EQUB &80+&09
+IF _MM32_DDUMP
+	EQUS "DUMP"
+	EQUB &80+&04
+ENDIF
+	EQUS "IN"
+	EQUB &80+&74
+	EQUS "OUT"
+	EQUB &80+&04
+ELSE
 	EQUS "BOOT"
 	EQUB &80+&07
 IF _INCLUDE_CMD_DCAT_
@@ -1439,6 +1537,7 @@ ENDIF
 IF _INCLUDE_CMD_DRECAT_
 	EQUS "RECAT"
 	EQUB &80
+ENDIF
 ENDIF
 IF _INCLUDE_CMD_DABOUT_
 	EQUS "ABOUT"
@@ -1532,6 +1631,19 @@ ENDIF
 	EQUW CMD_NOTHELPTBL-1
 
 .cmdaddr4
+IF _MM32_
+	EQUW mm32_cmd_dboot-&8001
+IF _MM32_DEBUG
+	EQUW mm32_cmd_dbug-&8001
+ENDIF
+	EQUW mm32_cmd_dcat-&8001
+	EQUW mm32_cmd_ddir-&8001
+IF _MM32_DDUMP
+	EQUW mm32_cmd_ddump-&8001
+ENDIF
+	EQUW mm32_cmd_din-&8001
+	EQUW mm32_cmd_dout-&8001
+ELSE
 	EQUW CMD_DBOOT-&8001
 IF _INCLUDE_CMD_DCAT_
 	EQUW CMD_DCAT-&8001
@@ -1549,6 +1661,7 @@ ENDIF
 	EQUW CMD_DOUT-&8001
 IF _INCLUDE_CMD_DRECAT_
 	EQUW CMD_DRECAT-&8001
+ENDIF
 ENDIF
 IF _INCLUDE_CMD_DABOUT_
 	EQUW CMD_DABOUT-1
@@ -1956,7 +2069,11 @@ ENDIF
 .stat_Y_gtreqC0
 	STA (&B0),Y
 	INY
+IF _MM32_
+	CPY #LO(CHECK_CRC7+1)
+ELSE
 	CPY #&F0
+ENDIF
 	BNE stat_loop1
 
 	PLA 				; Restore previous values
@@ -2031,11 +2148,17 @@ IF _INCLUDE_CMD_TITLE_
 	BCC cmdtit_loop2
 
 .cmdtit_savecat
+IF _MM32_
+	JMP SaveCatToDisk
+ELSE
 	JSR SaveCatToDisk		; save cat
 	JMP UpdateDiskTableTitle	; update disk table
+ENDIF
 
 .SetDiskTitleChr_Xpos
+IF NOT(_MM32_)
 	STA titlestr%,X
+ENDIF
 	CPX #&08
 	BCC setdisttit_page
 	STA MA+&0EF8,X
@@ -2046,7 +2169,7 @@ IF _INCLUDE_CMD_TITLE_
 }
 ENDIF
 
-IF _INCLUDE_CMD_TITLE_ OR _INCLUDE_CMD_BACKUP_
+IF NOT(_MM32_) AND (_INCLUDE_CMD_TITLE_ OR _INCLUDE_CMD_BACKUP_)
 	\ Update title in disk table for disk in current drive
 	\ Title at titlestr%
 .UpdateDiskTableTitle
@@ -2171,9 +2294,10 @@ ENDIF
 
 .CreateFile_FSP
 {
-	JSR read_fspBA_reset		; loads cat
-	JSR get_cat_firstentry80	; does file exist?
+	JSR read_fspBA_reset
+	JSR get_cat_firstentry80	; loads cat/does file exist?
 	BCC createfile_nodel		; If NO
+
 	JSR DeleteCatEntry_YFileOffset	; delete previous file
 
 .createfile_nodel
@@ -2361,13 +2485,17 @@ ENDIF
 	EQUB &CD
 	EQUS "drive",0
 
+
+IF NOT(_MM32_)
 .jmpSYNTAX
 	JMP errSYNTAX
+
 
 .errDISKNOTFOUND
 	JSR errDISK
 	EQUB 214
 	EQUS "not found",0
+
 
 	\\ Read parameters : drive optional
 	\\ (<drive>) <dno>/<dsp>
@@ -2456,6 +2584,7 @@ gdopt%=&B7
 	JSR GetDiskNext
 	JMP gddlp
 }
+ENDIF
 
 IF _INCLUDE_CMD_RENAME_
 .CMD_RENAME
@@ -2543,16 +2672,22 @@ ENDIF
 	EQUS "Escape",0
 
 .PrintHex100
-{
+;{
 	PHA 				; Print hex to &100+Y
 	JSR A_rorx4
-	JSR phex100
+	JSR PrintNib100
 	PLA
-.phex100
+
+.PrintNib100
 	JSR NibToASC
+IF _MM32_
+	STA &0100,X
+	INX
+ELSE
 	STA &0100,Y
 	INY
-}
+ENDIF
+;}
 .noesc
 	RTS
 
@@ -2770,10 +2905,18 @@ ENDIF
 
 .VIDRESET				; Reset VID
 {
+IF _MM32_
+	LDY #(CHECK_CRC7-VID-1)
+ELSE
 	LDY #&0E
+ENDIF
 	LDA #0
 .loop
+IF _MM32_
+	STA VID,Y
+ELSE
 	STA DRIVE_INDEX0,Y
+ENDIF
 	DEY
 	BPL loop
 	LDA #1
@@ -3093,6 +3236,7 @@ ENDIF
 	LDY &EF
 	INY
 	BPL notOSWORD7F
+
 	PHP
 	CLI
 	JSR Osword7F_8271_Emulation	; OSWORD &7F 8271 emulation
@@ -3104,6 +3248,7 @@ ENDIF
 	JSR LoadCurDrvCat2		; Load catalogue
 	INY
 	BMI OSWORD7E
+
 	LDY #&00			; OSWORD &7D return cycle no.
 	LDA MA+&0F04
 	STA (&B0),Y
@@ -4938,17 +5083,29 @@ ENDIF
 	EQUS '<' OR &80,"afsp>"				;2
 	EQUS '(' OR &80,"L)"				;3
 	EQUS '(' OR &80,"<drive>)"			;4
-	EQUS '(' OR &80,"<drive>)..."			;5
+	EQUS '(' OR &80,"<drive>)..."		;5
 	EQUS '(' OR &80,"<dir>)"			;6
-	EQUS '<' OR &80,"dno>/<dsp>"			;7
+IF _MM32_
+	EQUS '<' OR &80,"dos name>"			;7
+ELSE
+	EQUS '<' OR &80,"dno>/<dsp>"		;7
+ENDIF
 
 	EQUS '<' OR &80,"fsp>"				;8
+IF _MM32_
+	EQUS '(' OR &80,"<dos name>)"		;9
+ELSE
 	EQUS 'P' OR &80,"/U/N/K/R"			;9
+ENDIF
 	EQUS '<' OR &80,"title>"			;A
 	EQUS '(' OR &80,"<rom>)"			;B
 	EQUS '<' OR &80,"source> <dest.>"		;C
 	EQUS '<' OR &80,"old fsp> <new fsp>"		;D
+IF _MM32_
+	EQUS '(' OR &80,"<filter>)"			;E
+ELSE
 	EQUS '(' OR &80,"(<f.dno>) <t.dno>) (<adsp>)"	;E
+ENDIF
 	EQUS '4' OR &80,"0/80"				;F
 	EQUB &FF
 
@@ -5180,7 +5337,11 @@ IF _INCLUDE_CMD_BACKUP_
 	DEX
 	BPL tloop
 
+IF _MM32_
+	RTS
+ELSE
 	JMP UpdateDiskTableTitle
+ENDIF
 }
 ENDIF
 
@@ -5385,21 +5546,25 @@ IF _INCLUDE_CMD_FORM_VERIFY_
 .CMD_FORM
 	LDA #&FF			; \\\\\ *FORM
 .vform1
+;;{
 {
 	STA &C9
 	STA &B2				; If -ve, check go ok, calc. memory
 	BPL vform3_ok			; If verifying
 
 	JSR Param_SyntaxErrorIfNull	; Get number of tracks (40/80)
-	JSR Param_ReadNum		; rn% @ B0
+	JSR Param_ReadNum		; Read tracks parameter
 	BCS vform2_syntax
+IF NOT(_MM32_)
 	ASL A
 	BNE vform2_syntax
+ENDIF
 	STX &B5				; no. of tracks
 	CPX #&28
 	BEQ vform3_ok			; If =40
 	CPX #&50
 	BEQ vform3_ok			; If =80
+
 .vform2_syntax
 	JMP errSYNTAX
 
@@ -5444,6 +5609,9 @@ IF _INCLUDE_CMD_FORM_VERIFY_
 	STY &CA
 	BIT &B2				; If verifying or already done don't ask!
 	BPL vform7_go
+IF _MM32_
+	LSR &B2				; Clear bit 7
+ENDIF
 	JSR IsEnabledOrGo
 .vform7_go
 	JSR VFCurDrv
@@ -5461,17 +5629,28 @@ IF _INCLUDE_CMD_FORM_VERIFY_
 .VFCurDrv
 	BIT &C9
 	BMI vf1				; If formatting
+
+IF NOT(_MM32_)
 	JSR CheckCurDrvFormatted
+ENDIF
 	JSR PrintString
 	EQUS "Verifying"
 	BCC vf2				; always
+
 .vf1
+IF NOT(_MM32_)
 	JSR CheckCurDrvUnformatted
 	JSR ClearCatalogue
+ENDIF
 	JSR PrintString
 	EQUS "Formatting"
+
 	LDX CurrentDrv
-	STX &B2				; clear bit 7
+IF _MM32_
+	STX OWCtlBlock		; drive
+ELSE
+	STX &B2				; clear bit 7 (enabled flag)
+ENDIF
 
 .vf2
 	JSR PrintString
@@ -5481,27 +5660,64 @@ IF _INCLUDE_CMD_FORM_VERIFY_
 	JSR PrintString
 	EQUS " track   "
 	NOP
+IF _MM32_
+	LDA #&63			; Format cmd
+	LDX #5				; 5 parameters
+ENDIF
 	BIT &C9
 	BMI vf4				; If formatting
 
 	\ If verifying calc. no. of tracks
-	JSR TracksOnDisk
+	JSR TracksOnDisk	; reads catalogue, pops drive
 	TXA
 	BEQ vf6_exit
+
 	STA &B5				; number of tracks
+IF _MM32_
+	LDA #&5F			; Verify cmd
+	LDX #3				; 3 parameters
+ENDIF
 
 .vf4
+IF _MM32_
+	\ Pop control block
+	STA OWCtlBlock+6	; FDC command
+	STX OWCtlBlock+5	; param count
+	LDA #0
+	STA &B4				; track
+ELSE
 	LDX #&FF
 	STX CurrentCat			; Invalid catalogue
 	INX
 	STX &B4				; track
+ENDIF
+
 .vf5_trackloop
 	LDA #&08			; print track number
 	JSR PrintChrA
 	JSR PrintChrA
+
 	LDA &B4
+IF _MM32_
+	STA OWCtlBlock+7
+ENDIF
 	JSR PrintHex			; print track
+
+IF _MM32_
+	JSR OW7F_Execute
+	BEQ vfx1			; If no error
+
+	PHA
+	LDA #'?'
+	JSR PrintChrA
+	PLA
+	JMP ReportIfDiskFault
+
+.vfx1
+ELSE
 	JSR RW_Track
+ENDIF
+
 	INC &B4				; track
 	LDA &B4
 	CMP &B5				; more tracks?
@@ -5511,8 +5727,12 @@ IF _INCLUDE_CMD_FORM_VERIFY_
 	BPL vf6_exit			; If verifying
 
 	\ Save new catalogue
+IF NOT(_MM32_)
 	JSR MarkDriveAsFormatted
+ENDIF
+
 	JSR ClearCatalogue
+IF NOT(_MM32_)
 	LDA &B5
 	CMP #40
 	BNE vf7
@@ -5525,6 +5745,7 @@ IF _INCLUDE_CMD_FORM_VERIFY_
 .vf8
 	STX MA+&F07			; Disk size in sectors
 	STY MA+&F06
+ENDIF
 	JSR SaveCatToDisk
 .vf6_exit
 	JMP PrintNewLine
@@ -5532,18 +5753,40 @@ IF _INCLUDE_CMD_FORM_VERIFY_
 }
 ENDIF
 
+
+
 	\\ Reset catalogue pages
 .ClearCatalogue
 {
+IF NOT(_MM32_)
 	LDY #&FF
 	STY CurrentCat			; Invalid catalogue
 	INY
+ELSE
+	LDY #0
+ENDIF
 	TYA
 .ccatloop
 	STA MA+&0E00,Y
 	STA MA+&0F00,Y
 	INY
 	BNE ccatloop
+
+IF _MM32_
+	LDY &B5				; Pop number of sectors
+
+.loop2
+	LDA #&0A
+	CLC
+	ADC MA+&0F07
+	STA MA+&0F07
+	BCC label3
+
+	INC MA+&0F06
+
+.label3	DEY
+	BNE loop2
+ENDIF
 	RTS
 }
 
@@ -5576,7 +5819,7 @@ ENDIF
 .trkex
 	RTS
 }
-
+;;}
 
 IF _INCLUDE_CMD_FREE_MAP_
 .CMD_FREE
@@ -5810,6 +6053,7 @@ ENDIF
 	\\ A=MMC response
 	\\ If X<>0 print sector/parameter
 
+IF NOT(_MM32_)
 errno%=&B0
 errflag%=&B1
 errptr%=&B8
@@ -5864,6 +6108,7 @@ errptr%=&B8
 	STA &100,Y
 	JMP &100
 }
+ENDIF
 
 ; SFTODO: Slightly wasteful of space here
 IF _BP12K_
@@ -5880,20 +6125,27 @@ ENDIF
 
 datptr%=&BC
 sec%=&BE
-IF _LARGEFILES
-seccount%=&CE
+IF _MM32_
+	skipsec%=&C1
+	seccount%=&C4
+	byteslastsec%=&C6
 ELSE
-seccount%=&C1
+	IF _LARGEFILES
+		seccount%=&CE
+	ELSE
+		seccount%=&C1
+	ENDIF
+	skipsec%=&C2
+	byteslastsec%=&C3
 ENDIF
-skipsec%=&C2
-byteslastsec%=&C3
-
 cmdseq%=MA+&1087
 par%=MA+&1089
 
+IF NOT(_MM32_)
 	\ Include FAT routines here
 
 INCLUDE "FAT.asm"
+ENDIF
 
 	\ **** Calculate Check Sum (CRC7) ****
 	\ Exit: A=CRC7, X=0, Y=FF
@@ -5943,7 +6195,7 @@ INCLUDE "FAT.asm"
 	STA CHECK_CRC7
 	RTS
 
-
+IF NOT(_MM32_)
 	\\ *****  Reset MMC_SECTOR  *****
 	\\ (MMC_SECTION is the card address of
 	\\ Sector 0 of the image file.)
@@ -6207,25 +6459,38 @@ ENDIF
 	EQUB &FF
 	EQUS "overflow",0
 }
+ENDIF ;NOT(_MM32_)
 
 IF _SWRAM_
 	\ Check for exception - don't allow loading to memory >=&8000
 	\ i.e. don't overwrite filing system in SWRAM
 .CheckForException
 {
+IF _MM32_
+	b=&BC
+ELSE
+	b=MA+&1090
+ENDIF
+
 	LDA MA+&1074
 	AND MA+&1075
 	ORA TubePresentIf0
 	EOR #&FF
 	BNE noexception			; If Tube Xfer
 
+IF _MM32_
+	LDA b+6
+	AND #&3C
+	BNE errException		; If start or len >= &10000
+ENDIF
+
 	CLC
-	LDA MA+&1090
-	ADC MA+&1094
+	LDA b
+	ADC b+4
 	TAX
-	LDA MA+&1091
+	LDA b+1
 	BMI errException		; Start >= &8000
-	ADC MA+&1095
+	ADC b+5
 	BPL noexception			; OK if start+len <= &8000, i.e. start+len-1 < &8000
 	ASL A
 	BNE errException		; if start + len > &8000
@@ -6243,13 +6508,21 @@ ENDIF
 	\\ **** Load block of memory ****
 .LoadMemBlockEX
 IF _SWRAM_
+IF _MM32_
+	JSR CheckForException
+ELSE
 	JSR MMC_BEGIN1
 	JSR CalcRWVars
 	JSR CheckForException
 	JMP readblock
 ENDIF
+ENDIF
 
 .LoadMemBlock
+IF _MM32_
+	LDA #&85
+	BNE exec_block_rw
+ELSE
 	JSR MMC_BEGIN1
 	JSR CalcRWVars
 .readblock
@@ -6265,15 +6538,89 @@ ENDIF
 	LDA #1
 	RTS
 }
+ENDIF
 
 	\\ **** Save block of memory ****
 .SaveMemBlock
+IF _MM32_
+	LDA #&A5
+	;BNE exec_block_rw
+ELSE
 	JSR MMC_BEGIN1
 	JSR CalcRWVars
 	JSR CheckWriteProtect
-.writeblock
+;.writeblock
 	JSR MMC_WriteBlock
 	JMP rwblkexit
+ENDIF
+
+
+IF _MM32_
+\\ Block read/write
+\\ On entry A=FDC command
+.exec_block_rw
+{
+	\ Populate OSWORD control block
+	STA OWCtlBlock+6	; FDC Command
+	LDA #5
+	STA OWCtlBlock+5	; Param count
+	LDA CurrentDrv
+	STA OWCtlBlock		; Drive
+
+	\ Buffer address
+	LDX #2
+.loop0
+	LDA &BC-1,X
+	STA OWCtlBlock,X
+	LDA MA+&1074-1,X
+	STA OWCtlBlock+2,X
+	DEX
+	BNE loop0
+
+	\ Convert sector address to track & sector
+	LDA &C2
+	AND #3
+	TAX
+	LDA &C3		; X:A = sector address
+	LDY #&FF	; Y = track
+
+.loop1
+	SEC
+
+.loop2
+	INY
+	SBC #10
+	BCS loop2
+
+	DEX
+	BPL loop1
+
+	;C=0
+	ADC #10		; A = sector
+	STY OWCtlBlock+7
+	STA OWCtlBlock+8
+
+	\ Block size (bytes)
+	LDA &C1
+	STA OWCtlBlock+9
+	LDA &C2		; mixed byte
+	LSR A
+	LSR A
+	LSR A
+	LSR A
+	AND #3
+	STA OWCtlBlock+10
+	LDA &C0
+	STA OWCtlBlock+11
+
+	JSR OW7F_Execute
+	JSR ReportIfDiskFault
+
+	LDA #1
+	RTS
+}
+ENDIF
+
 
 
 	\\ **** Check if loaded catalogue is that
@@ -6286,13 +6633,19 @@ ENDIF
 
 	\\ **** Load catalogue of current drive ****
 .LoadCurDrvCat
+IF _MM32_
+	LDA #&53
+	BNE exec_cat_rw
+ELSE
 	JSR MMC_BEGIN1
 	JSR DiskStart
 	JSR MMC_ReadCatalogue
+
 .rwcatexit
 	LDA CurrentDrv
 	STA CurrentCat
 	JMP MMC_END
+ENDIF
 
 	\\ **** Save catalogue of current drive ****
 .SaveCatToDisk
@@ -6303,12 +6656,163 @@ ENDIF
 	STA MA+&0F04
 	CLD
 
+IF _MM32_
+	LDA #&4B
+	;BNE exec_cat_rw
+ELSE
 	JSR MMC_BEGIN1
 	JSR DiskStart
 	JSR CheckWriteProtect
 	JSR MMC_WriteCatalogue
 	JMP rwcatexit
+ENDIF
 
+
+IF _MM32_
+\\ Read/Write catalogue
+\\ On entry: A=FDC command
+.exec_cat_rw
+{
+	PHA
+	LDA CurrentDrv
+	LDX #0
+
+.loop
+	STA OWCtlBlock,X
+	LDA datax,X
+	INX
+	CPX #10
+	BNE loop
+
+	PLA
+	STA OWCtlBlock+6
+
+	JSR OW7F_Execute
+	JSR ReportIfDiskFault
+
+	LDA CurrentDrv
+	STA CurrentCat
+	RTS
+
+.datax	EQUB &00, MP+&0E, &FF, &FF, &03, &53, &00, &00, &22
+}
+
+
+\\ Call OSWORD &7F
+\\ On exit A=FDC result, Z=1 if A=0
+.OW7F_Execute
+{
+	LDA &B0
+	PHA
+	LDA &B1
+	PHA
+
+	LDA #LO(OWCtlBlock)
+	STA &B0
+	LDA #HI(OWCtlBlock)
+	STA &B1
+	JSR Osword7F_8271_Emulation
+
+	PLA
+	STA &B1
+	PLA
+	STA &B0
+
+	LDX OWCtlBlock+5
+	LDA OWCtlBlock+7,X		; A = result
+	RTS
+}
+
+
+\\ Report 'disk fault'
+\\ On entry: A=FDC result, Z=1 if A=0
+.ReportIfDiskFault
+{
+	trk = &CA
+	sec = &CB
+
+	BNE l0
+
+	RTS
+
+.l0	CMP #Rdrvnotrdy
+	BNE l1
+
+	JSR ReportErrorCB
+	EQUB &C7
+	EQUS "Drive empty",0
+
+.l1	CMP #Rwritepro
+	BNE l2
+
+	JSR errDISK
+	EQUB &C9
+	EQUS "read only",0
+
+	\ Assume sector not found
+.l2
+	\ Get track & sector
+	LDA CurrentDrv
+	STA OWCtlBlock
+	LDX #6
+
+.loop1
+	LDA spec,X
+	STA OWCtlBlock+1,X
+	DEX
+	BPL loop1
+
+	JSR OW7F_Execute
+	PHA
+
+	LDA CurrentDrv
+	AND #2			; Side
+	ASL A
+	ASL A			; C=0, A=0 OR 8
+	ADC #&12
+	STA OWCtlBlock+7
+	JSR OW7F_Execute
+	PHA
+
+	JSR errDISK
+	BRK
+	NOP
+
+	JSR ErrCONTINUE
+	EQUS &C7, "sector not found at "
+	NOP
+
+	LDA #':'
+	JSR mm32_PrintChr100
+
+	LDA CurrentDrv
+	JSR PrintNib100
+
+	LDA #' '
+	JSR mm32_PrintChr100
+
+	PLA				; Track
+	JSR PrintHex100
+
+	LDA #'/'
+	JSR mm32_PrintChr100
+
+	PLA				; Sector
+	JSR PrintHex100
+
+	JSR ErrCONTINUE	;BREAK
+	EQUB &C7, 0
+	NOP
+
+\ Read registers to get track/sector
+
+.spec
+	EQUB &00,&00,&00,&00,&01,&7D,&06	; Read special register (SCAN SECTOR)
+}
+ENDIF
+
+
+IF NOT(_MM32_)
 	\ **** Read / Write 'track' ****
 	\ ?&C9 : -ve = write, +ve = read
 	\ ?&B4 : track number
@@ -6342,6 +6846,7 @@ ENDIF
 	BNE rwtrk2_loop
 	RTS
 }
+
 
 	\\ **** Calc disk table sec & offset ****
 	\\ Entry: D = Disk no (B8)
@@ -6600,6 +7105,7 @@ ENDIF
 	STA gddiskno%+1
 	SEC
 	RTS
+ENDIF ;NOT(_MM32_)
 
 
 
@@ -6627,16 +7133,23 @@ ENDIF
 
 .errWrite2
 	TYA
+IF _MM32_
+	JSR mm32_MMC_error
+	EQUS "Write response fault ",0
+ELSE
 	JSR ReportMMCErrS
 	EQUB &C5
 	EQUS "MMC Write response fault "
 	BRK
+ENDIF
 
 	\\ Include high level MMC code here
 
 INCLUDE "MMC.asm"
 
 
+
+IF NOT(_MM32_)
 	\\ *DRECAT
 	\\ Refresh disk table with disc titles
 
@@ -6930,6 +7443,7 @@ dmAmbig%=MA+&100E	; string terminated with *
 	TXA
 	JMP PrintChrA
 }
+ENDIF ;NOT(_MM32_)
 
 
 IF _INCLUDE_CMD_DABOUT_
@@ -6943,6 +7457,8 @@ IF _INCLUDE_CMD_DABOUT_
 	RTS
 ENDIF
 
+
+IF NOT(_MM32_)
 	\\ *DBOOT <dno>/<dsp>
 .CMD_DBOOT
 	JSR Param_SyntaxErrorIfNull
@@ -6971,7 +7487,6 @@ ENDIF
 	TXA
 	STA DRIVE_INDEX4,X
 	JMP ResetCRC7
-
 
 	\\ *DCAT ((<f.dno>) <t.dno>) (<adsp>)
 dcEnd%=&A8	; last disk in range
@@ -7423,11 +7938,17 @@ IF _INCLUDE_CMD_DOP_
 }
 ENDIF
 
+ENDIF ;NOT(_MM32_)
 
 	\ Include OSWORD emulation routines here
 
-INCLUDE "OSWORD7F.asm"
+IF NOT(_MM32_)
+	INCLUDE "OSWORD7F.asm"
+ENDIF
 
+IF _MM32_ ; MM 11/05/19
+	INCLUDE "MM32.asm"
+ENDIF
 
 	\ Optional extras!
 IF _ROMS_

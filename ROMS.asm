@@ -11,16 +11,18 @@
 	LDA #&0F
 	STA &AA
 	JSR Sub_AADD_RomTablePtrBA
-	SEC 
+	SEC
 	JSR GSINIT
 	STY &AB
-	CLC 
+	CLC
 	BEQ Label_A9FF_notnum		; If null str (no parameter)
 .Label_A9E7_loop
-	JSR Param_ReadNum		; rn% @ B0
+	JSR Param_ReadNum
 	BCS Label_A9FF_notnum		; If not valid number
+IF NOT(_MM32_)
 	CMP #0				; Ignore if number >= 16
 	BNE Label_A9E7_loop
+ENDIF
 	CPX #16
 	BCS Label_A9E7_loop
 	TXA
@@ -59,7 +61,7 @@
 	BEQ Label_AA44
 	CMP #&22
 	BEQ Label_AA44			; If ="."
-	INY 
+	INY
 	CMP #&2A
 	BEQ Label_AA51_match		; If ="*"
 	JSR UcaseA2
@@ -73,7 +75,7 @@
 	CMP &AE
 	BEQ Label_AA1C_loop
 .Label_AA42_nomatch
-	CLC 
+	CLC
 	RTS
 
 .Label_AA44
@@ -91,39 +93,39 @@
 	LDY &AA				; Y=Rom nr
 	LDA (&B4),Y
 	BEQ Label_AA42_nomatch		; If RomTable(Y)=0
-	PHA 
+	PHA
 	JSR PrintString
 	EQUS "Rom "
-	TYA 
+	TYA
 	JSR PrintBCD			; Print ROM nr
 	JSR PrintString
 	EQUS " : "
 	LDA #&28			; A="("
 	JSR PrintChrA
-	PLA 
-	PHA 
+	PLA
+	PHA
 	BMI Label_AA78			; Bit 7 set = Service Entry
 	LDY #&20			; Y=" "
 	BNE Label_AA7A			; always
 .Label_AA78
 	LDY #&53			; Y="S"
 .Label_AA7A
-	TYA 
+	TYA
 	JSR PrintChrA
-	PLA 
+	PLA
 	LDY #&20			; Y=" "
 	ASL A
 	BPL Label_AA86			; Bit 6 set = Language Entry
 	LDY #&4C			; Y="L"
 .Label_AA86
-	TYA 
+	TYA
 	JSR PrintChrA
 	LDA #&29			; A=")"
 	JSR PrintChrA
 	JSR PrintSpaceSPL
 	JSR Label_AA9A_PrtRomTitle
 	JSR PrintNewLine
-	SEC 
+	SEC
 	RTS
 
 .Label_AA9A_PrtRomTitle
@@ -149,7 +151,7 @@
 	LDA #&20
 .Label_AABE
 	JSR PrintChrA
-	DEY 
+	DEY
 .Sub_AAC2_PrintRomStr
 	LDA &F6
 	CMP &AE
@@ -162,14 +164,14 @@
 
 .Sub_AACF_ReadRom
 	TYA 				; Read byte from ROM
-	PHA 
+	PHA
 	LDY &AA
 	JSR OSRDRM			; Address in wF6
 	INC &F6
-	TAX 
-	PLA 
-	TAY 
-	TXA 
+	TAX
+	PLA
+	TAY
+	TXA
 	RTS
 
 .Sub_AADD_RomTablePtrBA
