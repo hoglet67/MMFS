@@ -61,7 +61,7 @@ do
     do
         build=build/${device}
         mkdir -p ${build}
-        ssd=${build}/${system,,}.ssd
+        ssd=${build}/$(echo ${system} | tr '[:upper:]' '[:lower:]').ssd
         rm -f ${ssd}
 
         # Configure the system/device to be assembled
