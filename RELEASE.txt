@@ -1,7 +1,7 @@
 (c) 2011-2020 Martin Mather (mm67) (original developer)
 (c) 2014-2020 David Banks (hoglet) (current maintainer)
 
-This package contains binaries for MMFS and MMFS2, for a variety of
+This package contains binaries for MMFS and MMFS2 for a variety of
 hardware configurations.
 
 The top level directory is MMFS vs MMFS2:
@@ -10,7 +10,7 @@ The top level directory is MMFS vs MMFS2:
 file on the SD Card to store upto 511 200KB .SSD disk images.
 
 - MMFS2 is a more recent development that dispenses with the BEEB.MMB
-contains, and allows direct access to .SSD and .DSD disk files.
+container, allowing direct access to .SSD and .DSD disk files.
 
 In both cases, the SD Card should be formatted as FAT32.
 
@@ -24,10 +24,10 @@ contain versions for specific types of SD Card interface hardware:
 - M: MemoryMapped IO interface (typically &FE18, for BeebEm)
 - G: Mega Games Cartridge MKII (in development)
 
-Turbo and Non-Turbo interfaces are incompatible with each other, and
+Turbo and Non-Turbo interfaces are incompatible with each other and
 need different versions of MMFS. If you are not sure if you have a
-Turbo or Non-Turbo interface, then ask the vendor, or post a picture
-on Stardot.
+Turbo or Non-Turbo interface, ask the vendor, or post a picture on
+Stardot.
 
 Interfaces sold on eBay by ctorwy31 (Steve Picton) are Turbo, so
 use the versions in the T directory.
@@ -63,6 +63,6 @@ If in doubt, start with the "normal" version for your machine, and
 either program this into a ROM, or load it into a sideways RAM slot.
 
 Some versions use sideways RAM as workspace, resulting in a lower
-value of PAGE, leaving mode space for programs to use. These versions
+value of PAGE, leaving more space for programs to use. These versions
 must run from sideways RAM that is write-enabled. Otherwise you wll
 get a Card? error.
