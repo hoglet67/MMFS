@@ -14,7 +14,9 @@ _DEBUG_MMC=FALSE        ; true = enable debugging of MMC initialization
 _DFS_EMUL=TRUE          ; true = use DFS filesystem number + handles
 
 MACRO BASE_NAME
-	EQUS "Master MMFS"
+    EQUS "Master "
+    SYSTEM_NAME
+    EQUS " (FEA0)"
 ENDMACRO
 
 INCLUDE "mmfs100.asm"

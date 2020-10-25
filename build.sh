@@ -57,7 +57,7 @@ do
     # M is MemoryMapped IO based (typically &FE18, for BeebEm)
     # P is Beeb Printer Port connected Interface (experimental)
     # G is Mega Games Cartridge MKII
-    for device in G U T E M P
+    for device in U T E M P G
     do
         build=build/${device}
         mkdir -p ${build}
@@ -65,7 +65,10 @@ do
         rm -f ${ssd}
 
         # Configure the system/device to be assembled
-        echo "_DEVICE_ = '"$device"'" > DEVICE.asm
+        echo "_DEVICE_ = '"$device"'"  > DEVICE.asm
+        echo "MACRO SYSTEM_NAME"      >> DEVICE.asm
+        echo "    EQUS \"${system}\"" >> DEVICE.asm
+        echo "ENDMACRO"               >> DEVICE.asm
         if [ $system == "MMFS2" ]
         then
            echo "_MM32_      = TRUE"  >> DEVICE.asm

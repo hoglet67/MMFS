@@ -4916,8 +4916,9 @@ ENDIF
 {
 	PHA
 	JSR PrintString
-	EQUS 13,"MMFS "
-
+	EQUB 13
+	SYSTEM_NAME
+	EQUB 32
 	STX &BF
 	STY &B7				; ?&B7 = command counter
 

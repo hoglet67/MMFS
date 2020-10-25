@@ -15,7 +15,9 @@ _DFS_EMUL=TRUE          ; true = use DFS filesystem number + handles
 _USE_MGC_SHIFTREG=FALSE ; false = Bit Bang, true = Shift Reg
 
 MACRO BASE_NAME
-	EQUS "MGC MMFS SWRAM (Bit Bang)"
+    EQUS "MGC "
+    SYSTEM_NAME
+    EQUS " SWRAM (Bit Bang)"
 ENDMACRO
 
 INCLUDE "mmfs100.asm"
