@@ -7,7 +7,7 @@ if [ $# -eq 0 ]
 then
     SYSTEMS="MMFS MMFS2"
 else
-   SYSTEMS=${*^^}
+    SYSTEMS=$(echo $* | tr '[:lower:]' '[:upper:]')
 fi
 
 ## Sanity check systems
