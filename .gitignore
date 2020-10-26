@@ -6,3 +6,4 @@ nohup.out
 not_in_git/
 build/
 releases/
+DEVICE.asm
