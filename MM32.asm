@@ -1141,6 +1141,17 @@ ENDIF
 	STA str+1,X
 	INX
 
+\ Append 'SSD' if no extension given
+\ Bobbi 2020
+	LDA #'S'
+	STA str+1,X
+	INX
+	STA str+1,X
+	INX
+	LDA #'D'
+	STA str+1,X
+	INX
+
 .lx1
 	LDA #mm32_hash		; Add end markers
 	STA str
