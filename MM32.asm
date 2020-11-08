@@ -29,7 +29,8 @@ mm32_logging%=&B7	; 8 bit : bit 7 = cataloguing
 mm32_cluster%=&B7	; 24 bit
 mm32_attrib%=&B9	; 8 bit
 
-mm32_str%=MA+&1000		; 1000 - 103F
+mm32_str%=MA+&1000		; 1000 - 103F (64 bytes)
+mm32_drvtbl%=MA+&1040	; 1040 - 107F (64 bytes)
 
 ;; FOR INFO: sec%=&BE
 
@@ -117,6 +118,17 @@ ENDIF
 
 .mm32_init_dos
 {
+	\ Clear mm32_drvtbl
+	\ Bobbi 2020
+	tbl = mm32_drvtbl%
+	LDX #0
+	LDA #0
+.clrloop
+	STA tbl,X
+	INX
+	CPX #64
+	BNE clrloop
+
 	\ Byte order must match VID
 	lba_fat% = &C7	;16 bit
 	lba_data% = &C9	;16 bit
@@ -1401,8 +1413,26 @@ ENDIF
 	JMP ResetCRC7
 }
 
-
 IF _MM32_DDUMP
+\\ *DDRIVE
+\\ Show file mapping for drives
+\\ Bobbi 2020
+.mm32_cmd_ddrive
+{
+	LDY #0
+.l1
+	TYA
+	JSR PrintHex
+	JSR PrintString
+    EQUB "  ????????"
+	NOP
+	JSR PrintNewLine
+	INY
+	CPY #4
+	BNE l1
+	RTS
+}
+
 \\ *DDUMP (<drive>)
 \\ Dump contents of image
 \\ Output cannot be spooled.
