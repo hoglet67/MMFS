@@ -2886,6 +2886,11 @@ ENDIF
 
 .FSDefaults
 {
+IF _MM32_
+	LDA #' '           ; Bobbi
+	STA MA+&11C0       ; Reset the *DDRIVE table ...
+	STA MA+&11D0       ; ... for MMFS2
+ENDIF
 	LDA #'$'
 	STA DEFAULT_DIR
 	STA LIB_DIR
