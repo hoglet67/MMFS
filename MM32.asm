@@ -1301,6 +1301,15 @@ ENDIF
 	BCS notfound			; If error when reading parameter.
 	BEQ	l2					; If string zero length.
 
+.l0	LDA CurrentDrv
+	CMP #2					; If C=1, only scan for directories.
+	ROR mm32_flags%
+
+	JSR mm32_Scan_Dir
+	BCS notfound			; Not found.
+
+	\ File/Directory Found
+
 \ --------------------------------------------------------
 \ Bobbi 2020
 	LDX #0
@@ -1317,15 +1326,6 @@ ENDIF
 	CPX #MaxLen
 	BNE s0
 \ --------------------------------------------------------
-
-.l0	LDA CurrentDrv
-	CMP #2					; If C=1, only scan for directories.
-	ROR mm32_flags%
-
-	JSR mm32_Scan_Dir
-	BCS notfound			; Not found.
-
-	\ File/Directory Found
 
 	LDY #26					; Copy cluster number from directory
 	LDA (z),Y
