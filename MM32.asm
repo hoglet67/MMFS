@@ -30,7 +30,7 @@ mm32_cluster%=&B7	; 24 bit
 mm32_attrib%=&B9	; 8 bit
 
 mm32_str%=MA+&1000		; 1000 - 103F (64 bytes)
-mm32_drvtbl%=MA+&1040	; 1040 - 107F (64 bytes)
+mm32_drvtbl%=MA+&11C0	; 11C0 - 11DF (32 bytes)
 
 ;; FOR INFO: sec%=&BE
 
@@ -118,17 +118,6 @@ ENDIF
 
 .mm32_init_dos
 {
-	\ Clear mm32_drvtbl
-	\ Bobbi 2020
-	tbl = mm32_drvtbl%
-	LDX #0
-	LDA #0
-.clrloop
-	STA tbl,X
-	INX
-	CPX #64
-	BNE clrloop
-
 	\ Byte order must match VID
 	lba_fat% = &C7	;16 bit
 	lba_data% = &C9	;16 bit
@@ -1153,6 +1142,7 @@ ENDIF
 	STA str+1,X
 	INX
 
+\ --------------------------------------------------------
 \ Append 'SSD' if no extension given
 \ Bobbi 2020
 	LDA #'S'
@@ -1163,6 +1153,7 @@ ENDIF
 	LDA #'D'
 	STA str+1,X
 	INX
+\ --------------------------------------------------------
 
 .lx1
 	LDA #mm32_hash		; Add end markers
@@ -1300,6 +1291,8 @@ ENDIF
 {
 	z = mm32_zptr%
 	str = mm32_str%+16
+	tbl = mm32_drvtbl%
+	MaxLen = 16
 
 	BCC l0
 
@@ -1307,6 +1300,23 @@ ENDIF
 	JSR mm32_param_filename	; Read filename parameter.
 	BCS notfound			; If error when reading parameter.
 	BEQ	l2					; If string zero length.
+
+\ --------------------------------------------------------
+\ Bobbi 2020
+	LDX #0
+	LDA CurrentDrv
+	ASL A
+	ASL A
+	ASL A
+	ASL A
+	TAY
+.s0 LDA str,X
+	STA tbl,Y
+	INX
+    INY
+	CPX #MaxLen
+	BNE s0
+\ --------------------------------------------------------
 
 .l0	LDA CurrentDrv
 	CMP #2					; If C=1, only scan for directories.
@@ -1389,6 +1399,27 @@ ENDIF
 
 	LDY #0
 	;JMP mm32_clear_cluster_index
+
+\ --------------------------------------------------------
+\ Bobbi 2020
+
+	tbl = mm32_drvtbl%
+	MaxLen = 16
+
+	LDX #0
+	LDA CurrentDrv
+	ASL A
+	ASL A
+	ASL A
+	ASL A
+	TAY
+	LDA #' '
+.s0 STA tbl,Y
+	INX
+    INY
+	CPX #MaxLen
+	BNE s0
+\ --------------------------------------------------------
 }
 
 
@@ -1415,22 +1446,51 @@ ENDIF
 
 IF _MM32_DDUMP
 \\ *DDRIVE
-\\ Show file mapping for drives
+\\ Show file mapping for both drives (0 and 1)
 \\ Bobbi 2020
 .mm32_cmd_ddrive
 {
+	tbl = mm32_drvtbl%
+	MaxLen = 16
+
 	LDY #0
 .l1
 	TYA
+	PHA
 	JSR PrintHex
+	ASL A
+	ASL A
+	ASL A
+	ASL A
+	TAX
 	JSR PrintString
-    EQUB "  ????????"
+	EQUB ": "
 	NOP
-	JSR PrintNewLine
+	LDY #0
+	LDA tbl,X
+	CMP #mm32_hash
+	BNE empty
+	INX
+.l2	LDA tbl,X
+	CMP #mm32_hash
+	BEQ s1
+	JSR OSWRCH
+	INX
 	INY
-	CPY #4
+	CPY #MaxLen
+	BNE l2
+.s1	JSR PrintNewLine
+	PLA
+	TAY
+	INY
+	CPY #2
 	BNE l1
 	RTS
+.empty
+	JSR PrintString
+	EQUB "<Empty>"
+	NOP
+	JMP s1
 }
 
 \\ *DDUMP (<drive>)
