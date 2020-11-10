@@ -1245,7 +1245,7 @@ ENDIF
 	JMP initMMFS
 
 .bootdisk
-	EQUS "BOOT.DSD", 0
+	EQUS mm32_hash, "BOOT.DSD", mm32_hash, 0
 }
 
 
