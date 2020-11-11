@@ -1457,15 +1457,22 @@ IF _MM32_DDUMP
 .l1
 	TYA
 	PHA
-	JSR PrintHex
+	LDA #':'
+	JSR OSWRCH
+	PLA
+	PHA
+	CLC
+	ADC #&30
+	JSR OSWRCH
+	LDA #' '
+	JSR OSWRCH
+	PLA
+	PHA
 	ASL A
 	ASL A
 	ASL A
 	ASL A
 	TAX
-	JSR PrintString
-	EQUB ": "
-	NOP
 	LDY #0
 	LDA tbl,X
 	CMP #mm32_hash
