@@ -1204,7 +1204,7 @@ ENDIF
 
 
 \\ *DBOOT (<dosname>)
-\\ If dos name omitted, boot 'BOOT.DSD'
+\\ If dos name omitted, boot 'BOOT.'
 .mm32_cmd_dboot
 {
 	LDA #0
@@ -1232,7 +1232,7 @@ ENDIF
 	JMP initMMFS
 
 .bootdisk
-	EQUS mm32_hash, "BOOT.DSD", mm32_hash, 0
+	EQUS mm32_hash, "BOOT.", mm32_hash, 0
 }
 
 
