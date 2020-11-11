@@ -1142,19 +1142,6 @@ ENDIF
 	STA str+1,X
 	INX
 
-\ --------------------------------------------------------
-\ Append 'SSD' if no extension given
-\ Bobbi 2020
-	LDA #'S'
-	STA str+1,X
-	INX
-	STA str+1,X
-	INX
-	LDA #'D'
-	STA str+1,X
-	INX
-\ --------------------------------------------------------
-
 .lx1
 	LDA #mm32_hash		; Add end markers
 	STA str
@@ -1217,7 +1204,7 @@ ENDIF
 
 
 \\ *DBOOT (<dosname>)
-\\ If dos name omitted, boot 'BOOT.SSD'
+\\ If dos name omitted, boot 'BOOT.DSD'
 .mm32_cmd_dboot
 {
 	LDA #0
@@ -1265,6 +1252,64 @@ ENDIF
 ;	lda CurrentDrv
 ;	jmp PrintHex
 
+\\ Add extension .SSD to filename at mm32_str+16
+.mm32_add_ssd_ext
+{
+	str = mm32_str%+16
+	LDY #1			; Skip initial mm32_hash
+.l0	LDA str,Y
+	CMP #mm32_hash
+	BEQ s1
+	INY
+	JMP l0
+.s1	LDA #'S'
+	STA str,Y
+	STA str+1,Y
+	LDA #'D'
+	STA str+2,Y
+	LDA #mm32_hash
+	STA str+3,Y
+	LDA #0
+	STA str+4,Y
+	RTS
+}
+
+\\ Change extension .SSD to .DSD for filename at mm32_str+16
+.mm32_change_ext_dsd
+{
+	str = mm32_str%+16
+	LDY #1			; Skip initial mm32_hash
+.l0	LDA str,Y
+	CMP #'.'
+	BEQ s1
+	INY
+	JMP l0
+.s1	LDA #'D'		; Change 'S' after period to 'D'
+	STA str+1,Y
+	RTS
+}
+
+\\ Update mm32_dsktbl when a file is mounted
+.mm32_upd_dsktbl
+{
+	str = mm32_str%+16
+	tbl = mm32_drvtbl%
+	MaxLen = 16
+	LDX #0
+	LDA CurrentDrv
+	ASL A
+	ASL A
+	ASL A
+	ASL A
+	TAY
+.l0 LDA str,X
+	STA tbl,Y
+	INX
+    INY
+	CPX #MaxLen
+	BNE l0
+	RTS
+}
 
 \\ *DDIR (<dosname>)
 \\ Change current directory.
@@ -1291,8 +1336,6 @@ ENDIF
 {
 	z = mm32_zptr%
 	str = mm32_str%+16
-	tbl = mm32_drvtbl%
-	MaxLen = 16
 
 	BCC l0
 
@@ -1306,27 +1349,20 @@ ENDIF
 	ROR mm32_flags%
 
 	JSR mm32_Scan_Dir
-	BCS notfound			; Not found.
+	BCC found
+	JSR mm32_add_ssd_ext
+	JSR mm32_Scan_Dir
+	BCC found
+	JSR mm32_change_ext_dsd
+	JSR mm32_Scan_Dir
+	BCC found
 
+.notfound
+	JMP err_FILENOTFOUND
+
+.found
 	\ File/Directory Found
-
-\ --------------------------------------------------------
-\ Bobbi 2020
-	LDX #0
-	LDA CurrentDrv
-	ASL A
-	ASL A
-	ASL A
-	ASL A
-	TAY
-.s0 LDA str,X
-	STA tbl,Y
-	INX
-    INY
-	CPX #MaxLen
-	BNE s0
-\ --------------------------------------------------------
-
+	JSR mm32_upd_dsktbl
 	LDY #26					; Copy cluster number from directory
 	LDA (z),Y
 	STA mm32_cluster%
@@ -1383,8 +1419,6 @@ ENDIF
 	TAY						; else drive will be empty.
 	JMP mm32_clear_cluster_index
 
-.notfound
-	JMP err_FILENOTFOUND
 }
 
 
