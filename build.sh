@@ -122,8 +122,8 @@ do
                 exit
             fi
 
-            # To save space, exclude the Z builds from the .ssd image
-            if [[ $name != Z* ]]
+            # To save space, exclude the DBG and Z builds from the .ssd image
+            if [[ $name != Z* ]] && [[ $name != *DB* ]]
             then
                 # Create the .inf file
                 echo -e "\$."${name}"\t8000\t8000" > ${build}/${name}.inf
