@@ -1213,10 +1213,14 @@ ENDIF
 	JSR mm32_param_count
 	BCS l2				; If dos name given
 
-.*mm32_cmd_dboot_def
+.*mm32_cmd_dboot_autoboot
 	LDX #0
 	STX CurrentDrv
 	CLC
+
+	JSR PrintString
+	EQUB "MMFS2 booting BOOT.DSD or .SSD",13
+	NOP	
 .loop
 	LDA bootdisk,X
 	STA mm32_str%+16,X
@@ -1434,12 +1438,6 @@ ENDIF
 ;	jsr mm32_prtcurdrv
 ;	jsr PrintNewLine
 
-	LDY #0
-	;JMP mm32_clear_cluster_index
-
-\ --------------------------------------------------------
-\ Bobbi 2020
-
 	tbl = mm32_drvtbl%
 	MaxLen = 16
 
@@ -1456,7 +1454,9 @@ ENDIF
     INY
 	CPX #MaxLen
 	BNE s0
-\ --------------------------------------------------------
+
+	LDY #0
+	;JMP mm32_clear_cluster_index
 }
 
 

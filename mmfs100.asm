@@ -2865,11 +2865,14 @@ IF _MM32_
 	LDA MA+&11C0
 	CMP #' '
 	BNE skipautoboot
+	LDA MA+&11C1
+	CMP #'X'			; Only on coldboot
+	BNE skipautoboot
 	LDA MA+&11D0
 	CMP #' '
 	BNE skipautoboot
 	JSR MMC_BEGIN2
-	JSR mm32_cmd_dboot_def ;; EXPERIMENT
+	JSR mm32_cmd_dboot_autoboot
 .skipautoboot
 ENDIF
 	RTS
@@ -2898,9 +2901,11 @@ ENDIF
 .FSDefaults
 {
 IF _MM32_
-	LDA #' '           ; Bobbi
-	STA MA+&11C0       ; Reset the *DDRIVE table ...
-	STA MA+&11D0       ; ... for MMFS2
+	LDA #' '           ; Reset the *DDRIVE table (MMFS2)
+	STA MA+&11C0
+	STA MA+&11D0
+	LDA #'X'           ; Indicates coldboot
+	STA MA+&11C1
 ENDIF
 	LDA #'$'
 	STA DEFAULT_DIR
