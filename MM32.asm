@@ -1233,14 +1233,11 @@ ENDIF
 .l2	JSR mm32_chain_open2
 	BCC l3		; If file not found C=1, just return
 	JSR PrintString
-	EQUB "BOOT.DSD / BOOT.SSD not found",13
+	EQUB "BOOT.DSD / BOOT.SSD not found on SD card"
 	NOP
 	RTS
 
 .l3	LDA #0
-	JSR PrintString
-	EQUB "MMFS loading BOOT",13
-	NOP
 	JMP initMMFS
 
 .bootdisk
