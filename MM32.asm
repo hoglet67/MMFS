@@ -1368,8 +1368,11 @@ ENDIF
 	BCC found
 
 .notfound
-	SEC
-	RTS 	;TEST - ON BOOT SHOULD JUST RTS
+	JSR	iscoldboot
+	BCC notcoldstart
+	\SEC
+	RTS 					; On cold start, simply return
+.notcoldstart
 	JMP err_FILENOTFOUND
 
 .found

@@ -2858,21 +2858,18 @@ ENDIF
 	JSR LoadCurDrvCat
 	LDA MA+&0F06			; Get boot option
 	JSR A_rorx4
-	BNE notOPT0			; branch if not opt.0
+	BNE notOPT0				; branch if not opt.0
 
 .initdfs_exit
 IF _MM32_
-	LDA MA+&11C0
-	CMP #' '
-	BNE skipautoboot
-	LDA MA+&11C1
-	CMP #'X'			; Only on coldboot
-	BNE skipautoboot
-	LDA MA+&11D0
-	CMP #' '
-	BNE skipautoboot
+	JSR iscoldboot
+	BCC skipautoboot
 	JSR MMC_BEGIN2
 	JSR mm32_cmd_dboot_autoboot
+	JSR iscoldboot			; If DBOOT was unsuccessful
+	BCC skipautoboot
+	LDA #' '				; Then clear coldboot flag
+	STA MA+&11C1
 .skipautoboot
 ENDIF
 	RTS
@@ -2897,6 +2894,27 @@ ENDIF
 .jmpOSCLI
 	JMP OSCLI
 }
+
+\\ Exits with C=1 if this was a cold boot
+IF _MM32_
+.iscoldboot
+{
+	LDA MA+&11C0
+	CMP #' '
+	BNE notcold
+	LDA MA+&11C1
+	CMP #'X'			; Only on coldboot
+	BNE notcold
+	LDA MA+&11D0
+	CMP #' '
+	BNE notcold
+	SEC
+	RTS
+.notcold
+	CLC
+	RTS
+}
+ENDIF
 
 .FSDefaults
 {
