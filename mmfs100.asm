@@ -6214,6 +6214,9 @@ ENDIF
 	JSR RememberAXY
 	JSR CalculateCRC7
 	STA CHECK_CRC7
+IF _MM32_
+	CLC		; Return code from mm32_chain_open[2]
+ENDIF
 	RTS
 
 IF NOT(_MM32_)

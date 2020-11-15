@@ -1234,6 +1234,8 @@ ENDIF
 	;CLC
 
 .l2	JSR mm32_chain_open2
+	BCC l3		; If file not found C=1, just return
+	RTS
 
 .l3	LDA #0
 	JMP initMMFS
@@ -1336,6 +1338,7 @@ ENDIF
 \\ If found, set CHAIN_INDEX(X) to first cluster of chain,
 \\ else report FILE NOT FOUND.
 \\ On entry: CurrentDrv = chain index, If C=0, skip reading filename
+\\ On exit: C=1 if file was not found
 .mm32_chain_open
 	SEC
 
@@ -1365,6 +1368,8 @@ ENDIF
 	BCC found
 
 .notfound
+	SEC
+	RTS 	;TEST - ON BOOT SHOULD JUST RTS
 	JMP err_FILENOTFOUND
 
 .found
