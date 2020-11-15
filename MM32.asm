@@ -848,6 +848,10 @@ ENDIF
 	AND #&10
 	BNE l2				; It's a directory
 
+	LDA (z),Y
+	AND #&01
+	BNE l2				; File is read-only
+
 IF TRUE
 	LDX #&FF
 
