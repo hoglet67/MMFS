@@ -1213,7 +1213,10 @@ ENDIF
 	JSR mm32_param_count
 	BCS l2				; If dos name given
 
+.*mm32_cmd_dboot_def
 	LDX #0
+	STX CurrentDrv
+	CLC
 .loop
 	LDA bootdisk,X
 	STA mm32_str%+16,X

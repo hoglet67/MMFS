@@ -2861,6 +2861,17 @@ ENDIF
 	BNE notOPT0			; branch if not opt.0
 
 .initdfs_exit
+IF _MM32_
+	LDA MA+&11C0
+	CMP #' '
+	BNE skipautoboot
+	LDA MA+&11D0
+	CMP #' '
+	BNE skipautoboot
+	JSR MMC_BEGIN2
+	JSR mm32_cmd_dboot_def ;; EXPERIMENT
+.skipautoboot
+ENDIF
 	RTS
 
 	\ Assumes cmd strings all in same page!
