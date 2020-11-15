@@ -1218,9 +1218,6 @@ ENDIF
 	STX CurrentDrv
 	CLC
 
-	JSR PrintString
-	EQUB "MMFS2 booting BOOT.DSD or .SSD",13
-	NOP	
 .loop
 	LDA bootdisk,X
 	STA mm32_str%+16,X
@@ -1235,9 +1232,15 @@ ENDIF
 
 .l2	JSR mm32_chain_open2
 	BCC l3		; If file not found C=1, just return
+	JSR PrintString
+	EQUB "BOOT.DSD / BOOT.SSD not found",13
+	NOP
 	RTS
 
 .l3	LDA #0
+	JSR PrintString
+	EQUB "MMFS loading BOOT",13
+	NOP
 	JMP initMMFS
 
 .bootdisk
