@@ -1230,10 +1230,11 @@ ENDIF
 	STA mm32_flags%
 	;CLC
 
-.l2	JSR mm32_chain_open2
+.l2	LDA #$00	; Looking for a file
+	JSR mm32_chain_open2
 	BCC l3		; If file not found C=1, just return
 	JSR PrintString
-	EQUB "BOOT.DSD / BOOT.SSD not found on SD card"
+	EQUB "No BOOT.DSD / BOOT.SSD on SD card"
 	NOP
 	RTS
 
@@ -1254,6 +1255,7 @@ ENDIF
 
 	;jsr mm32_prtcurdrv
 
+	LDA #$00	; Looking for a file
 	JMP mm32_chain_open
 }
 
@@ -1330,6 +1332,7 @@ ENDIF
 	LDA #2
 	STA CurrentDrv
 
+	LDA #$ff	; Looking for a directory
 	\JMP mm32_chain_open
 }
 
@@ -1338,6 +1341,7 @@ ENDIF
 \\ If found, set CHAIN_INDEX(X) to first cluster of chain,
 \\ else report FILE NOT FOUND.
 \\ On entry: CurrentDrv = chain index, If C=0, skip reading filename
+\\           A=0 looking for file, A!=0 looking for dir
 \\ On exit: C=1 if file was not found
 .mm32_chain_open
 	SEC
@@ -1346,13 +1350,16 @@ ENDIF
 {
 	z = mm32_zptr%
 	str = mm32_str%+16
+	is_dir%=&B8
+
+	PHA						; A=0 files, A!=0 directories
 
 	BCC l0
 
 	CLC						; We are not cataloguing.
 	JSR mm32_param_filename	; Read filename parameter.
 	BCS notfound			; If error when reading parameter.
-	BEQ	l2					; If string zero length.
+	BEQ	zerolen				; If string zero length.
 
 .l0	LDA CurrentDrv
 	CMP #2					; If C=1, only scan for directories.
@@ -1368,6 +1375,7 @@ ENDIF
 	BCC found
 
 .notfound
+	PLA						; Fix up stack before exit
 	JSR	iscoldboot
 	BCC notcoldstart
 	\SEC
@@ -1376,6 +1384,29 @@ ENDIF
 	JMP err_FILENOTFOUND
 
 .found
+	PLA						; Recover A (0=file, otherwise dir)
+	BEQ file
+	LDA is_dir%
+	BNE okay
+	RTS
+.file
+	LDA is_dir%
+	BEQ okay
+	JSR ReportError
+	EQUB &D6
+	EQUB "Is directory",0
+	NOP
+	RTS
+
+.zerolen
+	\ No parameter given by user
+	PLA						; Fix up stack before exit
+	LDA mm32_flags%
+	AND #&80				; If directory marker found in parameter, set read only flag,
+	TAY						; else drive will be empty.
+	JMP mm32_clear_cluster_index
+
+.okay
 	\ File/Directory Found
 	JSR mm32_upd_dsktbl
 	LDY #26					; Copy cluster number from directory
@@ -1426,13 +1457,6 @@ ENDIF
 	LDA mm32_cluster%+2
 	STA CHAIN_INDEX+6,X
 	JMP ResetCRC7
-
-	\ No parameter given by user
-
-.l2	LDA mm32_flags%
-	AND #&80				; If directory marker found in parameter, set read only flag,
-	TAY						; else drive will be empty.
-	JMP mm32_clear_cluster_index
 
 }
 
