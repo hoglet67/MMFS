@@ -813,15 +813,19 @@ ENDIF
 
 .lx	JSR lspc
 
-	; A=&20
+	LDA #'D'
+	LDY is_dir%
+	BNE l00
+
+	LDA #'L'
 
 	BIT mm32_attrib%	; Flags
 	BMI l00				; If read only
 
-	LDA #'U'
+	LDA #' '
 
 .l00
-	JSR PrintChrA		; Print 'U' or space
+	JSR PrintChrA		; Print 'L' or space
 	JMP PrintSpace
 
 	; Pad with X spaces
