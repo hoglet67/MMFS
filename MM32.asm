@@ -1237,9 +1237,6 @@ ENDIF
 .l2	LDA #$00	; Looking for a file
 	JSR mm32_chain_open2
 	BCC l3		; If file not found C=1, just return
-	JSR PrintString
-	EQUB "No BOOT.DSD / BOOT.SSD on SD card"
-	NOP
 	RTS
 
 .l3	LDA #0
