@@ -1289,11 +1289,12 @@ ENDIF
 	str = mm32_str%+16
 	LDY #1			; Skip initial mm32_hash
 .l0	LDA str,Y
-	CMP #mm32_hash
+	CMP #'.'		; Filenames guaranteed to have '.'
 	BEQ s1
 	INY
 	JMP l0
-.s1	LDA #'S'
+.s1	INY
+	LDA #'S'
 	STA str,Y
 	STA str+1,Y
 	LDA #'D'
@@ -1388,6 +1389,10 @@ ENDIF
 
 	JSR mm32_Scan_Dir
 	BCC found
+	PLA						; Recover flags
+	PHA						; Stash them for l8r
+	AND #$01				; File or directory
+	BNE notfound			; If directory don't try appending suffixes
 	JSR mm32_add_ssd_ext
 	JSR mm32_Scan_Dir
 	BCC found
