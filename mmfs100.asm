@@ -2862,15 +2862,13 @@ ENDIF
 
 .initdfs_exit
 IF _MM32_
-	JSR iscoldboot
-	BCC skipautoboot
+	LDA #&FD				; Read hard/soft break
+	JSR osbyte_X0YFF		; X=0=soft,1=power up,2=hard
+	CPX #0
+	BEQ skipautoload
 	JSR MMC_BEGIN2
-	JSR mm32_cmd_dboot_autoboot
-	JSR iscoldboot			; If DBOOT was unsuccessful
-	BCC skipautoboot
-	LDA #' '				; Then clear coldboot flag
-	STA MA+&11C1
-.skipautoboot
+	JSR mm32_cmd_autoload
+.skipautoload
 ENDIF
 	RTS
 
@@ -2895,34 +2893,13 @@ ENDIF
 	JMP OSCLI
 }
 
-\\ Exits with C=1 if this was a cold boot
-IF _MM32_
-.iscoldboot
-{
-	LDA MA+&11C0
-	CMP #' '
-	BNE notcold
-	LDA MA+&11C1
-	CMP #'X'			; Only on coldboot
-	BNE notcold
-	LDA MA+&11D0
-	CMP #' '
-	BNE notcold
-	SEC
-	RTS
-.notcold
-	CLC
-	RTS
-}
-ENDIF
-
 .FSDefaults
 {
 IF _MM32_
-	LDA #' '           ; Reset the *DDRIVE table (MMFS2)
+	LDA #' '			; Reset the *DDRIVE table (MMFS2)
 	STA MA+&11C0
 	STA MA+&11D0
-	LDA #'X'           ; Indicates coldboot
+	LDA #'B'			; 'B' in MA+&11C1 indicates we are booting up
 	STA MA+&11C1
 ENDIF
 	LDA #'$'

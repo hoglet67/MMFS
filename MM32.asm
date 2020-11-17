@@ -1217,11 +1217,7 @@ ENDIF
 	JSR mm32_param_count
 	BCS l2				; If dos name given
 
-.*mm32_cmd_dboot_autoboot
 	LDX #0
-	STX CurrentDrv
-	CLC
-
 .loop
 	LDA bootdisk,X
 	STA mm32_str%+16,X
@@ -1258,6 +1254,29 @@ ENDIF
 
 	LDA #$00	; Looking for a file
 	JMP mm32_chain_open
+}
+
+\\ Automatically load BOOT.{SSD,DSD} into drive 0 at boot
+.mm32_cmd_autoload
+{
+	LDX #0
+	STX CurrentDrv
+.loop
+	LDA bootdisk,X
+	STA mm32_str%+16,X
+	BEQ l1
+	INX
+	BNE loop
+
+.l1	STA mm32_logging%
+	STA mm32_flags%
+
+	LDA #$00	; Looking for a file
+	CLC
+	JMP mm32_chain_open2
+	RTS
+.bootdisk
+	EQUS mm32_hash, "BOOT.", mm32_hash, 0
 }
 
 ;.mm32_prtcurdrv
@@ -1377,11 +1396,14 @@ ENDIF
 
 .notfound
 	PLA						; Fix up stack before exit
-	JSR	iscoldboot
-	BCC notcoldstart
-	\SEC
+	LDA MA+&11C1			; If booting up, this will be 'B'
+	CMP #'B'
+	BNE notbootup			; Report error only if not booting
+	LDA #' '				; Reset bootup status
+	STA MA+&11C1
+	SEC
 	RTS 					; On cold start, simply return
-.notcoldstart
+.notbootup
 	JMP err_FILENOTFOUND
 
 .found
@@ -1393,6 +1415,15 @@ ENDIF
 .file
 	LDA is_dir%
 	BEQ okay
+
+	LDA MA+&11C1			; If booting up, this will be 'B'
+	CMP #'B'
+	BNE notbootup2			; Report error only if not booting
+	LDA #' '				; Reset bootup status
+	STA MA+&11C1
+	SEC
+	RTS
+.notbootup2
 	JSR ReportError
 	EQUB &D6
 	EQUB "Is directory",0
