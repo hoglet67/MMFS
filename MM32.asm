@@ -1271,8 +1271,8 @@ ENDIF
 .l1	STA mm32_logging%
 	STA mm32_flags%
 
-	LDA #$00	; Looking for a file
 	CLC
+	LDA #$02	; Looking for a file, autoload mode
 	JMP mm32_chain_open2
 	RTS
 .bootdisk
@@ -1352,7 +1352,7 @@ ENDIF
 	LDA #2
 	STA CurrentDrv
 
-	LDA #$ff	; Looking for a directory
+	LDA #$01	; Looking for a directory
 	\JMP mm32_chain_open
 }
 
@@ -1361,7 +1361,9 @@ ENDIF
 \\ If found, set CHAIN_INDEX(X) to first cluster of chain,
 \\ else report FILE NOT FOUND.
 \\ On entry: CurrentDrv = chain index, If C=0, skip reading filename
-\\           A=0 looking for file, A!=0 looking for dir
+\\           Flags in A:
+\\           Bit 0 (LSB): 0 looking for file, 1 looking for dir
+\\           Bit 1: 0 normal, 1 'autoload mode' - don't report errors!
 \\ On exit: C=1 if file was not found
 .mm32_chain_open
 	SEC
@@ -1372,8 +1374,7 @@ ENDIF
 	str = mm32_str%+16
 	is_dir%=&B8
 
-	PHA						; A=0 files, A!=0 directories
-
+	PHA						; Store the flags for later
 	BCC l0
 
 	CLC						; We are not cataloguing.
@@ -1395,35 +1396,32 @@ ENDIF
 	BCC found
 
 .notfound
-	PLA						; Fix up stack before exit
-	LDA MA+&11C1			; If booting up, this will be 'B'
-	CMP #'B'
-	BNE notbootup			; Report error only if not booting
-	LDA #' '				; Reset bootup status
-	STA MA+&11C1
+	PLA						; Recover flags
+	AND #$02				; See if we are in autoload mode
+	BEQ notautoload
 	SEC
 	RTS 					; On cold start, simply return
-.notbootup
+.notautoload
 	JMP err_FILENOTFOUND
 
 .found
-	PLA						; Recover A (0=file, otherwise dir)
+	PLA						; Recover flags
+	PHA						; Stash them for l8r
+	AND #$01				; File or directory?
 	BEQ file
+	PLA						; Fix up stack
 	LDA is_dir%
 	BNE okay
 	RTS
 .file
-	LDA is_dir%
+	PLA						; Recover flags
+	LDX is_dir%
 	BEQ okay
-
-	LDA MA+&11C1			; If booting up, this will be 'B'
-	CMP #'B'
-	BNE notbootup2			; Report error only if not booting
-	LDA #' '				; Reset bootup status
-	STA MA+&11C1
+	AND #$02				; Autoload mode?
+	BEQ notautoload2
 	SEC
 	RTS
-.notbootup2
+.notautoload2
 	JSR ReportError
 	EQUB &D6
 	EQUB "Is directory",0

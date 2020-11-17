@@ -2899,8 +2899,6 @@ IF _MM32_
 	LDA #' '			; Reset the *DDRIVE table (MMFS2)
 	STA MA+&11C0
 	STA MA+&11D0
-	LDA #'B'			; 'B' in MA+&11C1 indicates we are booting up
-	STA MA+&11C1
 ENDIF
 	LDA #'$'
 	STA DEFAULT_DIR
