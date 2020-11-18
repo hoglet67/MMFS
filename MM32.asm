@@ -1604,10 +1604,46 @@ IF _MM32_DDUMP
 	JMP s1
 }
 
-\\ *DACCESS ...
+\\ *DACCESS <dos name> (L)
+\\ Set or clear FAT read-only attribute
 .mm32_cmd_daccess
 {
+	LDA #&80			; 1 or 2 parms
+	JSR mm32_param_count_a
+
+	SEC					;We are cataloguing.
+	JSR mm32_param_filename
+
+	LDX #&00			; Represents 'unlocked'
+	JSR GSINIT_A
+	BNE getparm
+.gotflag
+	STX &AA
+	
+	JSR mm32_Scan_Dir
+
+	LDA #&86
+	JSR OSBYTE			; get cursor pos
+	CPX #0
+	BEQ dcEven
+
+	JSR PrintNewLine
+
+.dcEven
 	RTS
+
+.parmloop
+	LDX #&80			; Represents 'locked'
+.getparm
+	JSR GSREAD_A
+	BCS gotflag			; If end of string
+	AND #&5F
+	CMP #&4C			; "L"?
+	BEQ parmloop
+.errbadparm
+	JSR errBAD			; Bad attribute
+	EQUB &CF
+	EQUS "attribute",0
 }
 
 \\ *DDUMP (<drive>)
