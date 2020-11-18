@@ -703,7 +703,7 @@ ENDIF
 	BEQ s1		; Cmd 0 -> Do nothing
 	CMP #2		; Cmd 2 -> Lock file
 	BEQ lock
-	;;JSR unlock_fat_file
+	JSR unlock_fat_file
 	JMP s1
 .lock
 	JSR lock_fat_file
@@ -769,7 +769,6 @@ ENDIF
 }
 
 \\ Clear read only bit
-IF FALSE
 .unlock_fat_file
 {
 	z = mm32_zptr%
@@ -783,7 +782,6 @@ IF FALSE
 	STA &AB
 	RTS
 }
-ENDIF
 
 \\ Copy name from directory
 .copy_name
