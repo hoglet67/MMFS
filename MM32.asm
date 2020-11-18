@@ -698,6 +698,17 @@ ENDIF
 	JSR dir_match
 	BCS skip	; Didn't match
 
+	LDA &AA		; Command: 0 NOP, 1 Unlock, 2 lock
+	BEQ s1		; Cmd 0 -> Do nothing
+	CMP #2		; Cmd 2 -> Lock file
+	BEQ lock
+	LDA #&00	;;; DEBUG
+	STA mm32_attrib%
+	JMP s1
+.lock
+	LDA #&80	;;; DEBUG
+	STA mm32_attrib%
+.s1
 	BIT mm32_logging%
 	BMI logging
 
@@ -1166,6 +1177,7 @@ ENDIF
 IF FALSE
 \ DEBUG: Print the string created by mm32_param_filename.
 .mm32_prtstr16
+
 {
 	lda #'"'
 	jsr OSWRCH
@@ -1189,10 +1201,13 @@ ENDIF
 \\ *DCAT (<filter>)
 .mm32_cmd_dcat
 {
+
 	JSR mm32_param_count
 
 	SEC					;We are cataloguing.
 	JSR mm32_param_filename
+	LDA #0
+	STA &AA				; Scan_Dir 'normal' mode
 	JSR mm32_Scan_Dir
 
 	LDA #&86
@@ -1387,6 +1402,8 @@ ENDIF
 	CMP #2					; If C=1, only scan for directories.
 	ROR mm32_flags%
 
+	LDA #0
+	STA &AA					; Scan_Dir 'normal' mode
 	JSR mm32_Scan_Dir
 	BCC found
 	PLA						; Recover flags
@@ -1614,11 +1631,11 @@ IF _MM32_DDUMP
 	SEC					;We are cataloguing.
 	JSR mm32_param_filename
 
-	LDX #&00			; Represents 'unlocked'
+	LDX #&01			; Unlock command (mm32_Scan_Dir)
 	JSR GSINIT_A
 	BNE getparm
 .gotflag
-	STX &AA
+	STX &AA				; Same location used by *ACCESS
 	
 	JSR mm32_Scan_Dir
 
@@ -1633,7 +1650,7 @@ IF _MM32_DDUMP
 	RTS
 
 .parmloop
-	LDX #&80			; Represents 'locked'
+	LDX #&02			; Lock command (mm32_Scan_Dir)
 .getparm
 	JSR GSREAD_A
 	BCS gotflag			; If end of string
