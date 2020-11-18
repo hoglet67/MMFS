@@ -641,6 +641,7 @@ ENDIF
 	z = mm32_zptr%
 
 	LDA #0
+	STA &AB		; Use &AB as a writeback flag
 	STA z
 	LDA #HI(cat%)
 
@@ -702,12 +703,10 @@ ENDIF
 	BEQ s1		; Cmd 0 -> Do nothing
 	CMP #2		; Cmd 2 -> Lock file
 	BEQ lock
-	LDA #&00	;;; DEBUG
-	STA mm32_attrib%
+	;;JSR unlock_fat_file
 	JMP s1
 .lock
-	LDA #&80	;;; DEBUG
-	STA mm32_attrib%
+	JSR lock_fat_file
 .s1
 	BIT mm32_logging%
 	BMI logging
@@ -739,9 +738,52 @@ ENDIF
 	;Z=0
 
 .exit
-	SEC
+	PHP			; Preserve flags for return
+	PHA			; Preserve A for return
+	LDA &AB		; If &AB is &FF then writeback
+	CMP #&FF
+	BNE nowrite
+	JSR MMC_WriteCatalogue
+.nowrite
+    LDY #&00	; Clear writeback flag
+    STY &AB
+	PLA			; Get A back
+	PLP			; Get flags back!
+    SEC
+    RTS
+}
+
+\\ Set read only bit
+.lock_fat_file
+{
+	z = mm32_zptr%
+	LDA #&80	; Set 'L' flag in logging printout
+	STA mm32_attrib%
+	LDY #11
+	LDA (z),Y	; Attribs
+	ORA #&01	; Set r/o bit
+	STA (z),Y
+	LDA #&FF	; Writeback flag
+	STA &AB
 	RTS
 }
+
+\\ Clear read only bit
+IF FALSE
+.unlock_fat_file
+{
+	z = mm32_zptr%
+	LDA #&00	; Clear 'L' flag in logging printout
+	STA mm32_attrib%
+	LDY #11
+	LDA (z),Y	; Attribs
+	AND #&FE	; Clear r/o bit
+	STA (z),Y
+	LDA #&FF	; Writeback flag
+	STA &AB
+	RTS
+}
+ENDIF
 
 \\ Copy name from directory
 .copy_name
