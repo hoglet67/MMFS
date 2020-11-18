@@ -1499,12 +1499,12 @@ ENDIF
 	EQUB &80+&0E
 	EQUS "DIR"
 	EQUB &80+&09
+	EQUS "DRIVE"
+	EQUB &80
 IF _MM32_DDUMP
 	EQUS "DUMP"
 	EQUB &80+&04
 ENDIF
-	EQUS "DRIVE" \ Bobbi
-	EQUB &80     \ Bobbi
 	EQUS "IN"
 	EQUB &80+&74
 	EQUS "OUT"
@@ -1636,10 +1636,10 @@ IF _MM32_DEBUG
 ENDIF
 	EQUW mm32_cmd_dcat-&8001
 	EQUW mm32_cmd_ddir-&8001
+	EQUW mm32_cmd_ddrive-&8001
 IF _MM32_DDUMP
 	EQUW mm32_cmd_ddump-&8001
 ENDIF
-	EQUW mm32_cmd_ddrive-&8001 \ Bobbi
 	EQUW mm32_cmd_din-&8001
 	EQUW mm32_cmd_dout-&8001
 ELSE
