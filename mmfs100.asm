@@ -2852,15 +2852,6 @@ ENDIF
 .initdfs_noreset
 	JSR TUBE_CheckIfPresent		; Tube present?
 
-	PLA
-	BNE initdfs_exit		; branch if not boot file
-
-	JSR LoadCurDrvCat
-	LDA MA+&0F06			; Get boot option
-	JSR A_rorx4
-	BNE notOPT0				; branch if not opt.0
-
-.initdfs_exit
 IF _MM32_
 	LDA #&FD				; Read hard/soft break
 	JSR osbyte_X0YFF		; X=0=soft,1=power up,2=hard
@@ -2870,6 +2861,16 @@ IF _MM32_
 	JSR mm32_cmd_autoload
 .skipautoload
 ENDIF
+
+	PLA
+	BNE initdfs_exit		; branch if not boot file
+
+	JSR LoadCurDrvCat
+	LDA MA+&0F06			; Get boot option
+	JSR A_rorx4
+	BNE notOPT0				; branch if not opt.0
+
+.initdfs_exit
 	RTS
 
 	\ Assumes cmd strings all in same page!
