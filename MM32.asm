@@ -1604,6 +1604,12 @@ IF _MM32_DDUMP
 	JMP s1
 }
 
+\\ *DACCESS ...
+.mm32_cmd_daccess
+{
+	RTS
+}
+
 \\ *DDUMP (<drive>)
 \\ Dump contents of image
 \\ Output cannot be spooled.

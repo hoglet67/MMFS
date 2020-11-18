@@ -1489,6 +1489,8 @@ ENDIF
 .cmdtable4
 	EQUB (cmdaddr4-cmdaddr1)/2-1
 IF _MM32_
+	EQUS "ACCESS"
+	EQUB &80+&37
 	EQUS "BOOT"
 	EQUB &80+&09
 IF _MM32_DEBUG
@@ -1630,6 +1632,7 @@ ENDIF
 
 .cmdaddr4
 IF _MM32_
+	EQUW mm32_cmd_daccess-&8001
 	EQUW mm32_cmd_dboot-&8001
 IF _MM32_DEBUG
 	EQUW mm32_cmd_dbug-&8001
