@@ -864,15 +864,9 @@ ENDIF
 
 .lx	JSR lspc
 
-	LDA #'D'
-	LDY is_dir%
-	BNE l00
-
 	LDA #'L'
-
 	BIT mm32_attrib%	; Flags
 	BMI l00				; If read only
-
 	LDA #' '
 
 .l00
