@@ -73,7 +73,7 @@ do
         then
            echo "_MM32_      = TRUE"  >> DEVICE.asm
            echo "_MM32_DEBUG = FALSE" >> DEVICE.asm
-           echo "_MM32_DDUMP = TRUE"  >> DEVICE.asm
+           echo "_MM32_DDUMP = FALSE" >> DEVICE.asm
         else
            echo "_MM32_      = FALSE" >> DEVICE.asm
         fi

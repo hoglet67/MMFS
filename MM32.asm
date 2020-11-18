@@ -1605,7 +1605,6 @@ ENDIF
 	JMP ResetCRC7
 }
 
-IF _MM32_DDUMP
 \\ *DDRIVE
 \\ Show file mapping for both drives (0 and 1)
 \\ Bobbi 2020
@@ -1703,6 +1702,7 @@ IF _MM32_DDUMP
 	EQUS "attribute",0
 }
 
+IF _MM32_DDUMP
 \\ *DDUMP (<drive>)
 \\ Dump contents of image
 \\ Output cannot be spooled.
