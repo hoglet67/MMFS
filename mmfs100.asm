@@ -1490,7 +1490,7 @@ ENDIF
 	EQUB (cmdaddr4-cmdaddr1)/2-1
 IF _MM32_
 	EQUS "ACCESS"
-	EQUB &80+&37
+	EQUB &80+&3E
 	EQUS "BOOT"
 	EQUB &80+&09
 IF _MM32_DEBUG
@@ -5120,7 +5120,7 @@ ENDIF
 	EQUS '<' OR &80,"source> <dest.>"		;C
 	EQUS '<' OR &80,"old fsp> <new fsp>"		;D
 IF _MM32_
-	EQUS '(' OR &80,"<filter>)"			;E
+	EQUS '<' OR &80,"filter>"			;E
 ELSE
 	EQUS '(' OR &80,"(<f.dno>) <t.dno>) (<adsp>)"	;E
 ENDIF
