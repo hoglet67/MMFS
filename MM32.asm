@@ -679,10 +679,10 @@ ENDIF
 	STA is_dir%
 	BEQ l1		; If not dir
 
-	;LDA #&80	; If directory, always read only
-	LDA (z),Y
-	LSR A
-	ROR A
+	LDA #&80	; If directory, always read only
+	;LDA (z),Y
+	;LSR A
+	;ROR A
 	BNE l2		; Always
 
 .l1	BIT mm32_flags%
