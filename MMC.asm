@@ -538,6 +538,10 @@ ENDIF
 	\\ sector+=2
 .wb4
 IF _MM32_
+    LDA #&FE                ; Bobbi
+    JSR dec_seccount        ; Bobbi
+    BEQ wb1_exit            ; Bobbi
+
 	JSR mm32_disk_next_sector
 	BCS wb_err
 
@@ -589,8 +593,14 @@ ENDIF
 	INC datptr%+1
 	JSR MMC_EndWrite
 IF _LARGEFILES
+
+IF _MM32_                   ; Bobbi
+    LDX seccount%           ; Bobbi
+ELSE                        ; Bobbi
 	LDA #&FE
 	JSR dec_seccount
+ENDIF
+
 ELSE
 	DEC seccount%
 	DEC seccount%
