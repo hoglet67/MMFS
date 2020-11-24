@@ -57,7 +57,7 @@ do
     # M is MemoryMapped IO based (typically &FE18, for BeebEm)
     # P is Beeb Printer Port connected Interface (experimental)
     # G is Mega Games Cartridge MKII
-    for device in U T E M P G
+    for device in U T E M P  # #  G
     do
         build=build/${device}
         mkdir -p ${build}

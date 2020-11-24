@@ -389,6 +389,10 @@ ENDIF
 
 	\\ increment MMC sector
 IF _MM32_
+    LDA #&FE
+    JSR dec_seccount
+    BEQ rb1_exit
+
 	JSR mm32_disk_next_sector
 	BCS rb_err				; Error, so exit
 
@@ -398,9 +402,15 @@ ELSE
 ENDIF
 
 IF _LARGEFILES
+
+IF _MM32_
+    LDX seccount%
+ELSE
 	LDA #&FE
 	JSR dec_seccount
 	BEQ rb1_exit
+ENDIF
+
 	LDA seccount%+1
 	BNE rb6_loop
 ELSE
@@ -418,6 +428,7 @@ ENDIF
 	JSR MMC_StartRead
 	JSR MMC_Read256
 	JMP rbx4
+
 
 	\\ A=byteslastsec>0
 .rb5

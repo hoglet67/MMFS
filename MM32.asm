@@ -6,7 +6,7 @@ CLUST_SIZE=VID2+4	;8bit
 CHAIN_INDEX=VID2+5	;3*24bit
 
 ATTRIB_X=&C2	;8bit
-FRAG_X=&C3		;8bit
+FRAG_X=&CE		;8bit
 CLUST_X=&C8		;24bit
 SECT_X=&CB		;8bit
 
