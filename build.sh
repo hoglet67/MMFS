@@ -145,7 +145,13 @@ do
             mv ${build}/${name} ${build}/${name}.rom
         done
         # Copy utilities
-        tools/mmb_utils/putfile.pl ${ssd} utilities/bin/*
+        if [ $system = MMFS ]; then
+          tools/mmb_utils/putfile.pl ${ssd} utilities/bin/IDTOM
+          tools/mmb_utils/putfile.pl ${ssd} utilities/bin/IMTOD
+        else
+          tools/mmb_utils/putfile.pl ${ssd} utilities/bin/IDTOM2
+          tools/mmb_utils/putfile.pl ${ssd} utilities/bin/IMTOD2
+        fi
         echo
         tools/mmb_utils/info.pl  ${ssd}
 
