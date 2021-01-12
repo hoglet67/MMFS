@@ -57,7 +57,7 @@ do
     # M is MemoryMapped IO based (typically &FE18, for BeebEm)
     # P is Beeb Printer Port connected Interface (experimental)
     # G is Mega Games Cartridge MKII
-    for device in U T E M P G
+    for device in U T E M P  # #  G
     do
         build=build/${device}
         mkdir -p ${build}
@@ -73,7 +73,7 @@ do
         then
            echo "_MM32_      = TRUE"  >> DEVICE.asm
            echo "_MM32_DEBUG = FALSE" >> DEVICE.asm
-           echo "_MM32_DDUMP = TRUE"  >> DEVICE.asm
+           echo "_MM32_DDUMP = FALSE" >> DEVICE.asm
         else
            echo "_MM32_      = FALSE" >> DEVICE.asm
         fi
@@ -145,7 +145,13 @@ do
             mv ${build}/${name} ${build}/${name}.rom
         done
         # Copy utilities
-        tools/mmb_utils/putfile.pl ${ssd} utilities/bin/*
+        if [ $system = MMFS ]; then
+          tools/mmb_utils/putfile.pl ${ssd} utilities/bin/IDTOM
+          tools/mmb_utils/putfile.pl ${ssd} utilities/bin/IMTOD
+        else
+          tools/mmb_utils/putfile.pl ${ssd} utilities/bin/IDTOM2
+          tools/mmb_utils/putfile.pl ${ssd} utilities/bin/IMTOD2
+        fi
         echo
         tools/mmb_utils/info.pl  ${ssd}
 

@@ -6,7 +6,7 @@ CLUST_SIZE=VID2+4	;8bit
 CHAIN_INDEX=VID2+5	;3*24bit
 
 ATTRIB_X=&C2	;8bit
-FRAG_X=&C3		;8bit
+FRAG_X=&CE		;8bit
 CLUST_X=&C8		;24bit
 SECT_X=&CB		;8bit
 
@@ -29,7 +29,8 @@ mm32_logging%=&B7	; 8 bit : bit 7 = cataloguing
 mm32_cluster%=&B7	; 24 bit
 mm32_attrib%=&B9	; 8 bit
 
-mm32_str%=MA+&1000		; 1000 - 103F
+mm32_str%=MA+&1000		; 1000 - 103F (64 bytes)
+mm32_drvtbl%=MA+&11C0	; 11C0 - 11DF (32 bytes)
 
 ;; FOR INFO: sec%=&BE
 
@@ -640,6 +641,7 @@ ENDIF
 	z = mm32_zptr%
 
 	LDA #0
+	STA &AB		; Use &AB as a writeback flag
 	STA z
 	LDA #HI(cat%)
 
@@ -678,6 +680,9 @@ ENDIF
 	BEQ l1		; If not dir
 
 	LDA #&80	; If directory, always read only
+	;LDA (z),Y
+	;LSR A
+	;ROR A
 	BNE l2		; Always
 
 .l1	BIT mm32_flags%
@@ -697,6 +702,15 @@ ENDIF
 	JSR dir_match
 	BCS skip	; Didn't match
 
+	LDA &AA		; Command: 0 NOP, 1 Unlock, 2 lock
+	BEQ s1		; Cmd 0 -> Do nothing
+	CMP #2		; Cmd 2 -> Lock file
+	BEQ lock
+	JSR unlock_fat_file
+	JMP s1
+.lock
+	JSR lock_fat_file
+.s1
 	BIT mm32_logging%
 	BMI logging
 
@@ -727,7 +741,48 @@ ENDIF
 	;Z=0
 
 .exit
-	SEC
+	PHP			; Preserve flags for return
+	PHA			; Preserve A for return
+	LDA &AB		; If &AB is &FF then writeback
+	CMP #&FF
+	BNE nowrite
+	JSR MMC_WriteCatalogue
+.nowrite
+    LDY #&00	; Clear writeback flag
+    STY &AB
+	PLA			; Get A back
+	PLP			; Get flags back!
+    SEC
+    RTS
+}
+
+\\ Set read only bit
+.lock_fat_file
+{
+	z = mm32_zptr%
+	LDA #&80	; Set 'L' flag in logging printout
+	STA mm32_attrib%
+	LDY #11
+	LDA (z),Y	; Attribs
+	ORA #&01	; Set r/o bit
+	STA (z),Y
+	LDA #&FF	; Writeback flag
+	STA &AB
+	RTS
+}
+
+\\ Clear read only bit
+.unlock_fat_file
+{
+	z = mm32_zptr%
+	LDA #&00	; Clear 'L' flag in logging printout
+	STA mm32_attrib%
+	LDY #11
+	LDA (z),Y	; Attribs
+	AND #&FE	; Clear r/o bit
+	STA (z),Y
+	LDA #&FF	; Writeback flag
+	STA &AB
 	RTS
 }
 
@@ -812,15 +867,13 @@ ENDIF
 
 .lx	JSR lspc
 
-	; A=&20
-
+	LDA #'L'
 	BIT mm32_attrib%	; Flags
 	BMI l00				; If read only
-
-	LDA #'U'
+	LDA #' '
 
 .l00
-	JSR PrintChrA		; Print 'U' or space
+	JSR PrintChrA		; Print 'L' or space
 	JMP PrintSpace
 
 	; Pad with X spaces
@@ -1161,6 +1214,7 @@ ENDIF
 IF FALSE
 \ DEBUG: Print the string created by mm32_param_filename.
 .mm32_prtstr16
+
 {
 	lda #'"'
 	jsr OSWRCH
@@ -1184,10 +1238,13 @@ ENDIF
 \\ *DCAT (<filter>)
 .mm32_cmd_dcat
 {
+
 	JSR mm32_param_count
 
 	SEC					;We are cataloguing.
 	JSR mm32_param_filename
+	LDA #0
+	STA &AA				; Scan_Dir 'normal' mode
 	JSR mm32_Scan_Dir
 
 	LDA #&86
@@ -1203,7 +1260,7 @@ ENDIF
 
 
 \\ *DBOOT (<dosname>)
-\\ If dos name omitted, boot 'BOOT.SSD'
+\\ If dos name omitted, boot 'BOOT.'
 .mm32_cmd_dboot
 {
 	LDA #0
@@ -1225,13 +1282,16 @@ ENDIF
 	STA mm32_flags%
 	;CLC
 
-.l2	JSR mm32_chain_open2
+.l2	LDA #$00	; Looking for a file
+	JSR mm32_chain_open2
+	BCC l3		; If file not found C=1, just return
+	RTS
 
 .l3	LDA #0
 	JMP initMMFS
 
 .bootdisk
-	EQUS "BOOT.DSD", 0
+	EQUS mm32_hash, "BOOT.", mm32_hash, 0
 }
 
 
@@ -1244,13 +1304,96 @@ ENDIF
 
 	;jsr mm32_prtcurdrv
 
+	LDA #$00	; Looking for a file
 	JMP mm32_chain_open
+}
+
+\\ Automatically load BOOT.{SSD,DSD} into drive 0 at boot
+.mm32_cmd_autoload
+{
+	LDX #0
+	STX CurrentDrv
+.loop
+	LDA bootdisk,X
+	STA mm32_str%+16,X
+	BEQ l1
+	INX
+	BNE loop
+
+.l1	STA mm32_logging%
+	STA mm32_flags%
+
+	CLC
+	LDA #$02	; Looking for a file, autoload mode
+	JMP mm32_chain_open2
+	RTS
+.bootdisk
+	EQUS mm32_hash, "BOOT.", mm32_hash, 0
 }
 
 ;.mm32_prtcurdrv
 ;	lda CurrentDrv
 ;	jmp PrintHex
 
+\\ Add extension .SSD to filename at mm32_str+16
+.mm32_add_ssd_ext
+{
+	str = mm32_str%+16
+	LDY #1			; Skip initial mm32_hash
+.l0	LDA str,Y
+	CMP #'.'		; Filenames guaranteed to have '.'
+	BEQ s1
+	INY
+	JMP l0
+.s1	INY
+	LDA #'S'
+	STA str,Y
+	STA str+1,Y
+	LDA #'D'
+	STA str+2,Y
+	LDA #mm32_hash
+	STA str+3,Y
+	LDA #0
+	STA str+4,Y
+	RTS
+}
+
+\\ Change extension .SSD to .DSD for filename at mm32_str+16
+.mm32_change_ext_dsd
+{
+	str = mm32_str%+16
+	LDY #1			; Skip initial mm32_hash
+.l0	LDA str,Y
+	CMP #'.'
+	BEQ s1
+	INY
+	JMP l0
+.s1	LDA #'D'		; Change 'S' after period to 'D'
+	STA str+1,Y
+	RTS
+}
+
+\\ Update mm32_dsktbl when a file is mounted
+.mm32_upd_dsktbl
+{
+	str = mm32_str%+16
+	tbl = mm32_drvtbl%
+	MaxLen = 16
+	LDX #0
+	LDA CurrentDrv
+	ASL A
+	ASL A
+	ASL A
+	ASL A
+	TAY
+.l0 LDA str,X
+	STA tbl,Y
+	INX
+    INY
+	CPX #MaxLen
+	BNE l0
+	RTS
+}
 
 \\ *DDIR (<dosname>)
 \\ Change current directory.
@@ -1262,6 +1405,7 @@ ENDIF
 	LDA #2
 	STA CurrentDrv
 
+	LDA #$01	; Looking for a directory
 	\JMP mm32_chain_open
 }
 
@@ -1270,6 +1414,10 @@ ENDIF
 \\ If found, set CHAIN_INDEX(X) to first cluster of chain,
 \\ else report FILE NOT FOUND.
 \\ On entry: CurrentDrv = chain index, If C=0, skip reading filename
+\\           Flags in A:
+\\           Bit 0 (LSB): 0 looking for file, 1 looking for dir
+\\           Bit 1: 0 normal, 1 'autoload mode' - don't report errors!
+\\ On exit: C=1 if file was not found
 .mm32_chain_open
 	SEC
 
@@ -1277,23 +1425,79 @@ ENDIF
 {
 	z = mm32_zptr%
 	str = mm32_str%+16
+	is_dir%=&B8
 
+	PHA						; Store the flags for later
 	BCC l0
 
 	CLC						; We are not cataloguing.
 	JSR mm32_param_filename	; Read filename parameter.
 	BCS notfound			; If error when reading parameter.
-	BEQ	l2					; If string zero length.
+	BEQ	zerolen				; If string zero length.
 
 .l0	LDA CurrentDrv
 	CMP #2					; If C=1, only scan for directories.
 	ROR mm32_flags%
 
+	LDA #0
+	STA &AA					; Scan_Dir 'normal' mode
 	JSR mm32_Scan_Dir
-	BCS notfound			; Not found.
+	BCC found
+	PLA						; Recover flags
+	PHA						; Stash them for l8r
+	AND #$01				; File or directory
+	BNE notfound			; If directory don't try appending suffixes
+	JSR mm32_add_ssd_ext
+	JSR mm32_Scan_Dir
+	BCC found
+	JSR mm32_change_ext_dsd
+	JSR mm32_Scan_Dir
+	BCC found
 
+.notfound
+	PLA						; Recover flags
+	AND #$02				; See if we are in autoload mode
+	BEQ notautoload
+	SEC
+	RTS 					; On cold start, simply return
+.notautoload
+	JMP err_FILENOTFOUND
+
+.found
+	PLA						; Recover flags
+	PHA						; Stash them for l8r
+	AND #$01				; File or directory?
+	BEQ file
+	PLA						; Fix up stack
+	LDA is_dir%
+	BNE okay
+	RTS
+.file
+	PLA						; Recover flags
+	LDX is_dir%
+	BEQ okay
+	AND #$02				; Autoload mode?
+	BEQ notautoload2
+	SEC
+	RTS
+.notautoload2
+	JSR ReportError
+	EQUB &D6
+	EQUB "Is directory",0
+	NOP
+	RTS
+
+.zerolen
+	\ No parameter given by user
+	PLA						; Fix up stack before exit
+	LDA mm32_flags%
+	AND #&80				; If directory marker found in parameter, set read only flag,
+	TAY						; else drive will be empty.
+	JMP mm32_clear_cluster_index
+
+.okay
 	\ File/Directory Found
-
+	JSR mm32_upd_dsktbl
 	LDY #26					; Copy cluster number from directory
 	LDA (z),Y
 	STA mm32_cluster%
@@ -1343,15 +1547,6 @@ ENDIF
 	STA CHAIN_INDEX+6,X
 	JMP ResetCRC7
 
-	\ No parameter given by user
-
-.l2	LDA mm32_flags%
-	AND #&80				; If directory marker found in parameter, set read only flag,
-	TAY						; else drive will be empty.
-	JMP mm32_clear_cluster_index
-
-.notfound
-	JMP err_FILENOTFOUND
 }
 
 
@@ -1363,6 +1558,23 @@ ENDIF
 
 ;	jsr mm32_prtcurdrv
 ;	jsr PrintNewLine
+
+	tbl = mm32_drvtbl%
+	MaxLen = 16
+
+	LDX #0
+	LDA CurrentDrv
+	ASL A
+	ASL A
+	ASL A
+	ASL A
+	TAY
+	LDA #' '
+.s0 STA tbl,Y
+	INX
+    INY
+	CPX #MaxLen
+	BNE s0
 
 	LDY #0
 	;JMP mm32_clear_cluster_index
@@ -1390,6 +1602,102 @@ ENDIF
 	JMP ResetCRC7
 }
 
+\\ *DDRIVE
+\\ Show file mapping for both drives (0 and 1)
+\\ Bobbi 2020
+.mm32_cmd_ddrive
+{
+	tbl = mm32_drvtbl%
+	MaxLen = 16
+
+	LDY #0
+.l1
+	TYA
+	PHA
+	LDA #':'
+	JSR OSWRCH
+	PLA
+	PHA
+	CLC
+	ADC #&30
+	JSR OSWRCH
+	LDA #' '
+	JSR OSWRCH
+	PLA
+	PHA
+	ASL A
+	ASL A
+	ASL A
+	ASL A
+	TAX
+	LDY #0
+	LDA tbl,X
+	CMP #mm32_hash
+	BNE empty
+	INX
+.l2	LDA tbl,X
+	CMP #mm32_hash
+	BEQ s1
+	JSR OSWRCH
+	INX
+	INY
+	CPY #MaxLen
+	BNE l2
+.s1	JSR PrintNewLine
+	PLA
+	TAY
+	INY
+	CPY #2
+	BNE l1
+	RTS
+.empty
+	JSR PrintString
+	EQUB "<Empty>"
+	NOP
+	JMP s1
+}
+
+\\ *DACCESS <dos name> (L)
+\\ Set or clear FAT read-only attribute
+.mm32_cmd_daccess
+{
+	LDA #&80			; 1 or 2 parms
+	JSR mm32_param_count_a
+
+	SEC					;We are cataloguing.
+	JSR mm32_param_filename
+
+	LDX #&01			; Unlock command (mm32_Scan_Dir)
+	JSR GSINIT_A
+	BNE getparm
+.gotflag
+	STX &AA				; Same location used by *ACCESS
+	
+	JSR mm32_Scan_Dir
+
+	LDA #&86
+	JSR OSBYTE			; get cursor pos
+	CPX #0
+	BEQ dcEven
+
+	JSR PrintNewLine
+
+.dcEven
+	RTS
+
+.parmloop
+	LDX #&02			; Lock command (mm32_Scan_Dir)
+.getparm
+	JSR GSREAD_A
+	BCS gotflag			; If end of string
+	AND #&5F
+	CMP #&4C			; "L"?
+	BEQ parmloop
+.errbadparm
+	JSR errBAD			; Bad attribute
+	EQUB &CF
+	EQUS "attribute",0
+}
 
 IF _MM32_DDUMP
 \\ *DDUMP (<drive>)

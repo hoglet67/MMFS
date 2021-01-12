@@ -1489,6 +1489,8 @@ ENDIF
 .cmdtable4
 	EQUB (cmdaddr4-cmdaddr1)/2-1
 IF _MM32_
+	EQUS "ACCESS"
+	EQUB &80+&3E
 	EQUS "BOOT"
 	EQUB &80+&09
 IF _MM32_DEBUG
@@ -1499,6 +1501,8 @@ ENDIF
 	EQUB &80+&0E
 	EQUS "DIR"
 	EQUB &80+&09
+	EQUS "DRIVE"
+	EQUB &80
 IF _MM32_DDUMP
 	EQUS "DUMP"
 	EQUB &80+&04
@@ -1628,12 +1632,14 @@ ENDIF
 
 .cmdaddr4
 IF _MM32_
+	EQUW mm32_cmd_daccess-&8001
 	EQUW mm32_cmd_dboot-&8001
 IF _MM32_DEBUG
 	EQUW mm32_cmd_dbug-&8001
 ENDIF
 	EQUW mm32_cmd_dcat-&8001
 	EQUW mm32_cmd_ddir-&8001
+	EQUW mm32_cmd_ddrive-&8001
 IF _MM32_DDUMP
 	EQUW mm32_cmd_ddump-&8001
 ENDIF
@@ -2849,13 +2855,23 @@ ENDIF
 .initdfs_noreset
 	JSR TUBE_CheckIfPresent		; Tube present?
 
+IF _MM32_
+	LDA #&FD				; Read hard/soft break
+	JSR osbyte_X0YFF		; X=0=soft,1=power up,2=hard
+	CPX #0
+	BEQ skipautoload
+	JSR MMC_BEGIN2
+	JSR mm32_cmd_autoload
+.skipautoload
+ENDIF
+
 	PLA
 	BNE initdfs_exit		; branch if not boot file
 
 	JSR LoadCurDrvCat
 	LDA MA+&0F06			; Get boot option
 	JSR A_rorx4
-	BNE notOPT0			; branch if not opt.0
+	BNE notOPT0				; branch if not opt.0
 
 .initdfs_exit
 	RTS
@@ -2883,10 +2899,15 @@ ENDIF
 
 .FSDefaults
 {
+IF _MM32_
+	LDA #' '			; Reset the *DDRIVE table (MMFS2)
+	STA MA+&11C0
+	STA MA+&11D0
+ENDIF
 	LDA #'$'
 	STA DEFAULT_DIR
 	STA LIB_DIR
-	LDA #3
+	LDA #0
 	STA LIB_DRIVE
 	LDY #&00
 	STY DEFAULT_DRIVE
@@ -5099,7 +5120,7 @@ ENDIF
 	EQUS '<' OR &80,"source> <dest.>"		;C
 	EQUS '<' OR &80,"old fsp> <new fsp>"		;D
 IF _MM32_
-	EQUS '(' OR &80,"<filter>)"			;E
+	EQUS '<' OR &80,"filter>"			;E
 ELSE
 	EQUS '(' OR &80,"(<f.dno>) <t.dno>) (<adsp>)"	;E
 ENDIF
@@ -6190,6 +6211,9 @@ ENDIF
 	JSR RememberAXY
 	JSR CalculateCRC7
 	STA CHECK_CRC7
+IF _MM32_
+	CLC		; Return code from mm32_chain_open[2]
+ENDIF
 	RTS
 
 IF NOT(_MM32_)
