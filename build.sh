@@ -57,7 +57,15 @@ do
     # M is MemoryMapped IO based (typically &FE18, for BeebEm)
     # P is Beeb Printer Port connected Interface (experimental)
     # G is Mega Games Cartridge MKII
-    for device in U T E M P  # #  G
+
+    if [ $system == "MMFS2" ]
+    then
+        DEVICES="U T E M P"
+    else
+        DEVICES="U T E M P G"
+    fi
+
+    for device in $DEVICES
     do
         build=build/${device}
         mkdir -p ${build}
