@@ -97,6 +97,9 @@ do
         elif [ $device == "G" ]
         then
             filelist="top_MGC*.asm"
+        elif [ $device == "M" ]
+        then
+            filelist="top_MMFS.asm top_MMFSDBG.asm top_SWMMFS.asm top_SWMMFS+.asm top_MAMMFS.asm"
         elif [ $device == "P" ]
         then
             filelist="top_MMFS*.asm top_MAMMFS*.asm top_SWMMFS*.asm top_ZMMFS.asm"
@@ -131,7 +134,7 @@ do
             fi
 
             # To save space, exclude the DBG and Z builds from the .ssd image
-            if [[ $name != Z* ]] && [[ $name != *DB* ]]
+            if [[ $name != Z* ]] && ( [[ $name != *DB* ]] || ( [[ $device != U ]] && [[ $device != T ]] ) )
             then
                 # Create the .inf file
                 echo -e "\$."${name}"\t8000\t8000" > ${build}/${name}.inf
