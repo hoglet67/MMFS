@@ -5,7 +5,11 @@
 \\ MEMORY MAPPED MMC DEVICE
 
 
+IF _MASTER_
+mmc%=&FEDC
+ELSE
 mmc%=&FE18
+ENDIF
 
 	\\ RESET DEVICE
 .MMC_DEVICE_RESET
@@ -65,6 +69,25 @@ mmc%=&FE18
 	BNE wR1mm
 	CMP #0
 .dcmdex
+IF _DEBUG_MMC
+	PHP
+	PHA
+	LDY #0
+.dcmdu2
+	LDA cmdseq%,Y
+	JSR PrintHex
+	INY
+	CPY #7
+	BNE dcmdu2
+	LDA #':'
+	JSR OSWRCH
+	PLA
+	PHA
+	JSR PrintHex
+	JSR OSNEWL
+	PLA
+	PLP
+ENDIF
 	RTS
 }					; A=result, X=X+8, Y=?
 
