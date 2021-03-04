@@ -1,8 +1,13 @@
 \\ EXPERIMENTAL DRIVER FOR ELK PLUS 1
 \\ WITH MMC CONNECTED TO PRINTER PORT
 
+IF _ELECTRON_
 data%=&FC71
 status%=&FC72
+ELSE
+data%=&FEDC
+status%=&FEDC
+ENDIF
 
 \\ MOSI is connected to D0
 \\ SCK is connected to D1
