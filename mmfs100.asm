@@ -957,9 +957,8 @@ ENDIF
 
 
 IF NOT(_MM32_)
-
 IF _LARGEMMB
-   \ ** Convert 12 bit binary in word &B8/9 to
+	\ ** Convert 12 bit binary in word &B8/9 to
 	\ ** 4 digit BCD in word &B5/6 (decno%)
 decno%=&B5
 	\Used by GetDisk
@@ -6366,12 +6365,16 @@ IF NOT(_MM32_)
 	LDX CurrentDrv
 	LDA DRIVE_INDEX4,X
 	BPL errNoDisk			; Bit 7 clear = no disk
-	AND #&08
+IF _LARGEMMB
+	AND #&20					; Bit 5 set = unformatted
+ELSE
+	AND #&08					; Bit 3 set = unformatted
+ENDIF
 	BCS chkdrv2
-	BNE errNotFormatted		; Bit 3 set = unformatted
+	BNE errNotFormatted		; Bit 3/5 set = unformatted
 	RTS
 .chkdrv2
-	BEQ errFormatted		; Bit 3 clear = formatted
+	BEQ errFormatted		; Bit 3/5 clear = formatted
 	RTS
 }					; exit: X=drive no
 
@@ -7025,7 +7028,6 @@ IF _LARGEMMB
 
 	\\ A = (D+1) >> 5
 	LDA &B9
-	AND #DISKMASK
 	STA &B1
 	LDA &B8
 	CLC
@@ -7181,7 +7183,13 @@ ENDIF
 	BPL ldiskrw			; 0F = read/write
 	\CMP #&F0			; F0 = unformatted
 	\BNE [.notvaliderr]		; Disk number not valid
+IF _LARGEMMB
+	\\ b7 = loaded, b6 = writeprot, b5=unformatted
+	LDA #&E0
+ELSE
+	\\ b7 = loaded, b6 = writeprot, b3=unformatted
 	LDA #&C8
+ENDIF
 	BNE ldisknf			; not formatted
 .ldiskrw
 	LDA #&80
@@ -7202,10 +7210,11 @@ ENDIF
 }
 
 	\\ **** Calculate disk table sector ****
-	\\ A=sector code (sector + &80)
 .DiskTableSec
 {
 IF _LARGEMMB
+	\\ DiskTableIndex = sector code
+	\\
 	\\ Disk table at the start of the MMB File
 	\\ 8192 * 16 = 131072 bytes = 512 sectors
 	\\
@@ -7234,6 +7243,8 @@ IF _LARGEMMB
 	STA sec%
 
 ELSE
+	\\ A=sector code (sector + &80)
+	\\
 	\\ Disk table at the start of the MMB File
 	\\ 512 * 16 = 8192 bytes = 32 sectors
 	\\
@@ -7528,18 +7539,16 @@ ENDIF
 
 	\ If gdptr% = 0
 	JSR SaveDiskTable
-IF _LARGEMMB
-	INC gdsec%
-	BEQ drc_label7			; if end of table
-ELSE
 	CLC
 	LDA gdsec%
+IF _LARGEMMB
+	ADC #1
+ELSE
 	ADC #2
 	CMP #&A0			; (&80 OR 32)
+ENDIF
 	BEQ drc_label7			; if end of table
 	STA gdsec%
-ENDIF
-
 	JSR CheckESCAPE
 
 	JSR LoadDiskTable
