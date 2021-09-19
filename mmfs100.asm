@@ -3,6 +3,14 @@
 \** August 2011
 \** Includes code from Acorn's DFS 2.26, and DFS 2.24 (Master)
 
+_LARGEMMB=TRUE
+
+IF _LARGEMMB
+	DISKMASK=&1F			; Support 8192 disks
+ELSE
+	DISKMASK=&01			; Support 511 disks
+ENDIF
+
 \** MAIN CODE **\
 
 \ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port, P=Beeb Printer Port
@@ -948,7 +956,45 @@ ENDIF
 
 
 IF NOT(_MM32_)
-	\ ** Convert 9 bit binary in word &B8 to
+
+IF _LARGEMMB
+   \ ** Convert 12 bit binary in word &B8/9 to
+	\ ** 4 digit BCD in word &B5/6 (decno%)
+decno%=&B5
+	\Used by GetDisk
+.DecNo_BIN2BCD
+{
+	SED		; Switch to decimal mode
+	LDA #0		; Ensure the result is clear
+	STA decno%+0
+	STA decno%+1
+	STA decno%+1
+;	STA decno%+2
+	LDX #16			; The number of source bits
+.loop
+   ROL &B8			; Shift out one bit
+	ROL &B9
+	PHP
+	LDA decno%+0	; And add into result
+	ADC decno%+0
+	STA decno%+0
+	LDA decno%+1	; propagating any carry
+	ADC decno%+1
+	STA decno%+1
+;	LDA decno%+2	; ... thru whole result
+;	ADC decno%+2
+;	STA decno%+2
+	PLP
+	DEX				; And repeat for next bit
+	BNE loop
+   ROL &B8			; Restore the original value
+	ROL &B9
+	CLD				; Back to binary
+	RTS
+}
+
+ELSE
+   \ ** Convert 9 bit binary in word &B8 to
 	\ ** 3 digit BCD in word &B5 (decno%)
 decno%=&B5
 	\Used by GetDisk
@@ -993,6 +1039,7 @@ decno%=&B5
 	STY decno%
 	RTS
 }
+ENDIF
 ENDIF
 
 	\ Convert binary in A to BCD
@@ -1130,7 +1177,7 @@ rn%=&B0
 	TXA
 	ADC #0
 	STA rn%+1
-	CMP #2
+	CMP #DISKMASK+1
 	BCS rnnotval
 	JSR GSREAD
 	BCC rnloop
@@ -1139,7 +1186,12 @@ rn%=&B0
 .rnexit
 	LDX rn%
 	LDA rn%+1
+IF _LARGEMMB
+   CMP #DISKMASK
+	BNE rnok
+ELSE
 	BEQ rnok
+ENDIF
 	INX
 	BEQ rnnotval
 	DEX
@@ -6296,7 +6348,7 @@ IF NOT(_MM32_)
 	LDA DRIVE_INDEX0,X
 	STA &B8
 	LDA DRIVE_INDEX4,X
-	AND #1
+	AND #DISKMASK
 	STA &B9
 	RTS
 
@@ -6346,10 +6398,65 @@ IF NOT(_MM32_)
 	\\ sec% = MMC_SECTOR + 32 + drvidx * 800
 	\\ Call after MMC_BEGIN
 
+IF _LARGEMMB
+.DiskStartZero
+	LDA #0
+	STA sec%
+	STA sec%+1
+	STA sec%+2
+	BEQ dsaddoffset
+ENDIF
+
 	\\ Current drive
 .DiskStart
 	JSR CheckCurDrvFormatted	; X=drive
 .DiskStartX
+
+IF _LARGEMMB
+   \\ Multiply drive index by 800
+	\\ Note: these are 256b sectors
+	\\ 800 = 32 + 256 + 256 + 256
+
+	\\ 52 bytes
+
+	TYA
+	PHA
+	\\ sec% = drvindx
+	LDA #0
+	STA sec%+2
+	LDA DRIVE_INDEX4,X
+	AND #DISKMASK
+	STA sec%+1
+	LDA DRIVE_INDEX0,X
+	\\ Loop1: sec% *= 32
+	LDY #5
+.dsxloop1
+	ASL A
+	ROL sec%+1
+	ROL sec%+2
+	DEY
+	BNE dsxloop1
+	STA sec%
+	\\ Loop2: sec% += 3 * 256 * drvidx
+	LDY #3
+.dsxloop2
+	LDA DRIVE_INDEX0,X
+	CLC \\ Don't thing this is needed, as sec% cannot overflow
+	ADC sec%+1
+	STA sec%+1
+	LDA DRIVE_INDEX4,X
+	AND #DISKMASK
+	ADC sec%+2
+	STA sec%+2
+	DEY
+	BNE dsxloop2
+	PLA
+	TAY
+
+ELSE
+
+	\\ 58 bytes
+
 	LDA DRIVE_INDEX4,X
 	ROR A				; C = bit 0
 	LDA DRIVE_INDEX0,X
@@ -6389,6 +6496,10 @@ IF NOT(_MM32_)
 	LDA sec%+2
 	ADC #0
 	STA sec%+2
+
+ENDIF
+
+.dsaddoffset
 
 	\\ add offset + 32
 	SEC
@@ -6963,7 +7074,7 @@ IF NOT(_MM32_)
 	CMP &B8
 	BNE uldskip
 	LDA DRIVE_INDEX4,X
-	AND #1
+	AND #DISKMASK
 	CMP &B9
 	BNE uldskip
 	STA DRIVE_INDEX4,X		; Reset bit 7
@@ -7013,6 +7124,17 @@ IF NOT(_MM32_)
 	\\ **** Calculate disk table sector ****
 	\\ A=sector code (sector + &80)
 .DiskTableSec
+IF _LARGEMMB
+	\\ Disk table at the end of the MMB file
+	\\ 8192 * 16 = 131072 bytes = 512 sectors
+	\\  32 sectors (old disk table)
+	\\ 800 * 8191 sectors (8191)
+	\\ 768 sectors (padding)
+	\\ =
+
+ELSE
+	\\ Disk table at the start of the MMB File
+	\\ 512 * 16 = 8192 bytes = 32 sectors
 	AND #&7E
 	CLC
 	ADC MMC_SECTOR
@@ -7023,6 +7145,7 @@ IF NOT(_MM32_)
 	LDA MMC_SECTOR+2
 	ADC #0
 	STA sec%+2
+ENDIF
 .ldtloaded
 	RTS
 
@@ -7195,10 +7318,17 @@ IF _INCLUDE_CMD_DRECAT_
 	STA gdptr%+1
 
 	\ set read16sec% to first disk
+IF _LARGEMMB
+  JSR DiskStartZero
+ELSE
+   \\ This is the only use of DiskStartA
+   \\ TODO: Depricate DiskStartA and replaxe with DiskStart0
 	LDA #0
 	CLC
 	JSR DiskStartA
-	LDX #3
+ENDIF
+
+   LDX #3
 .drc_loop1
 	LDA sec%,X
 	STA read16sec%,X
@@ -7434,7 +7564,7 @@ dmAmbig%=MA+&100E	; string terminated with *
 	LDA DRIVE_INDEX0,X
 	STA &B8
 	LDA DRIVE_INDEX4,X
-	AND #1
+	AND #DISKMASK
 	STA &B9
 	JSR DecNo_BIN2BCD
 	LDX #0
@@ -7769,7 +7899,7 @@ IF _INCLUDE_CMD_DDRIVE_
 	LDA DRIVE_INDEX4,X
 	BPL ddcont			; drive not loaded
 
-	AND #1
+	AND #DISKMASK
 	STA &B9
 	LDA DRIVE_INDEX0,X
 	STA &B8
