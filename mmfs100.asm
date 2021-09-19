@@ -88,6 +88,7 @@ RAMBufferSize=MA+&10D0			; HIMEM-PAGE
 ForceReset=MA+&10D3
 TubePresentIf0=MA+&10D6
 CardSort=MA+&10DE
+DiskTableIndex=MA+&10DF
 
 buf%=MA+&E00
 cat%=MA+&E00
@@ -994,7 +995,7 @@ decno%=&B5
 }
 
 ELSE
-   \ ** Convert 9 bit binary in word &B8 to
+	\ ** Convert 9 bit binary in word &B8 to
 	\ ** 3 digit BCD in word &B5 (decno%)
 decno%=&B5
 	\Used by GetDisk
@@ -1187,7 +1188,7 @@ rn%=&B0
 	LDX rn%
 	LDA rn%+1
 IF _LARGEMMB
-   CMP #DISKMASK
+	CMP #DISKMASK
 	BNE rnok
 ELSE
 	BEQ rnok
@@ -6413,7 +6414,7 @@ ENDIF
 .DiskStartX
 
 IF _LARGEMMB
-   \\ Multiply drive index by 800
+	\\ Multiply drive index by 800
 	\\ Note: these are 256b sectors
 	\\ 800 = 32 + 256 + 256 + 256
 
@@ -6452,6 +6453,27 @@ IF _LARGEMMB
 	BNE dsxloop2
 	PLA
 	TAY
+
+.dsaddoffset
+
+	\\ add offset + 512
+	LDA sec%
+	ADC MMC_SECTOR
+	STA sec%
+	LDA sec%+1
+	ADC MMC_SECTOR+1
+	PHA
+	LDA sec%+2
+	ADC MMC_SECTOR+2
+	STA sec%+2
+	PLA
+	CLC
+	ADC #2
+	STA sec%+1
+	BCC dsret
+	INC sec%+2
+.dsret
+	RTS
 
 ELSE
 
@@ -6497,10 +6519,6 @@ ELSE
 	ADC #0
 	STA sec%+2
 
-ENDIF
-
-.dsaddoffset
-
 	\\ add offset + 32
 	SEC
 	LDA sec%
@@ -6515,6 +6533,7 @@ ENDIF
 	STA sec%+2
 	RTS
 
+ENDIF
 
 	\\ **** Initialise VARS for MMC R/W ****
 	\\ Call only after MMC_BEGIN
@@ -6986,11 +7005,71 @@ IF NOT(_MM32_)
 }
 
 
+IF _LARGEMMB
 	\\ **** Calc disk table sec & offset ****
-	\\ Entry: D = Disk no (B8)
+	\\ Entry: D = Disk no (B8/B9)
 	\\ Exit: (B0) = &E00 + (D + 1) x 16
 	\\     : A=Table Sector Code
 	\\ Note; D = 511 not valid
+	\\
+	\\ Sector Code is in 512b units = 32 disks
+	\\
+	\\ A  =  (D+1) >> 5
+	\\ B0 = ((D+1) AND &0F) << 4
+	\\ B1 = &E + ((D+1) AND &10) ? 1 : 0
+	\\ (49 bytes)
+
+.GetIndex
+{
+	\\ TODO: Could save a couple of bytes using TYA/TAY
+
+	\\ A = (D+1) >> 5
+	LDA &B9
+	AND #DISKMASK
+	STA &B1
+	LDA &B8
+	CLC
+	ADC #1
+	STA &B0	\\ B0 = LSB of (D+1)
+	BCC skip1
+	INC &B1
+.skip1
+	LSR &B1
+	ROR A
+	LSR &B1
+	ROR A
+	LSR &B1
+	ROR A
+	LSR &B1
+	ROR A
+	LSR &B1
+	ROR A
+	PHA		\\ A = (D+1) >> 5
+
+	\\	B0 = ((D+1) AND &0F) << 4
+	LDA &B0	\\ LSB of (D+1)
+	ASL A
+	ASL A
+	ASL A
+	ASL A		\\ C = (D+1) & 10
+	AND #&F0
+	STA &B0
+
+	\\ B1 = &E + ((D+1) AND &10) ? 1 : 0
+	LDA #MP+&0E
+	ADC #0
+	STA &B1
+
+  	PLA		\\ A = (D+1) >> 5
+	RTS
+}
+ELSE
+	\\ **** Calc disk table sec & offset ****
+	\\ Entry: D = Disk no (B8/B9)
+	\\ Exit: (B0) = &E00 + (D + 1) x 16
+	\\     : A=Table Sector Code
+	\\ Note; D = 511 not valid
+	\\ (38 bytes)
 .GetIndex
 {
 	LDA &B9
@@ -7026,6 +7105,7 @@ IF NOT(_MM32_)
 	RTS				; X unchanged
 }
 
+ENDIF
 
 	\\ Return status of disk in current drive
 .GetDriveStatus
@@ -7124,17 +7204,42 @@ IF NOT(_MM32_)
 	\\ **** Calculate disk table sector ****
 	\\ A=sector code (sector + &80)
 .DiskTableSec
+{
 IF _LARGEMMB
-	\\ Disk table at the end of the MMB file
+	\\ Disk table at the start of the MMB File
 	\\ 8192 * 16 = 131072 bytes = 512 sectors
-	\\  32 sectors (old disk table)
-	\\ 800 * 8191 sectors (8191)
-	\\ 768 sectors (padding)
-	\\ =
+	\\
+	\\ Disk Table Index is in units of 2x 256b sectors
+	\\
+	\\ sec% = MMC_SECTOR + DiskTableIndex * 2
+	LDA MMC_SECTOR+2
+	STA sec%+2
+	LDA MMC_SECTOR+1
+	STA sec%+1
+	LDA MMC_SECTOR
+	CLC
+	ADC DiskTableIndex
+	BCC skip1
+	INC sec%+1
+	BNE skip1
+	INC sec%+2
+.skip1
+	CLC
+	ADC DiskTableIndex
+	BCC skip2
+	INC sec%+1
+	BNE skip2
+	INC sec%+2
+.skip2
+	STA sec%
 
 ELSE
 	\\ Disk table at the start of the MMB File
 	\\ 512 * 16 = 8192 bytes = 32 sectors
+	\\
+	\\ A is in units of 256b sectors
+	\\
+	\\ sec% = MMC_SECTOR + (A & &7E)
 	AND #&7E
 	CLC
 	ADC MMC_SECTOR
@@ -7146,8 +7251,33 @@ ELSE
 	ADC #0
 	STA sec%+2
 ENDIF
+}
 .ldtloaded
 	RTS
+
+IF _LARGEMMB
+
+.CheckDiskTable
+	\\ 10xxxxxx in CurrentCat indicates DriveTableIndex valid
+	BIT CurrentCat
+	BPL LoadDiskTable
+	BVS LoadDiskTable
+	CMP DiskTableIndex
+	BEQ ldtloaded
+
+	\\ A=sector code
+.LoadDiskTable
+	STA DiskTableIndex
+	LDA #&80
+	STA CurrentCat
+	JSR DiskTableSec
+	JMP MMC_ReadCatalogue
+
+.SaveDiskTable
+	JSR DiskTableSec
+	JMP MMC_WriteCatalogue
+
+ELSE
 
 	\\ A=sector code (sector or &80)
 .CheckDiskTable
@@ -7164,6 +7294,7 @@ ENDIF
 	LDA CurrentCat
 	JSR DiskTableSec
 	JMP MMC_WriteCatalogue
+ENDIF
 
 
 	\\ GetDisk, returns name of disks
@@ -7194,7 +7325,11 @@ ENDIF
 	STA gdptr%
 	LDA #MP+&0E
 	STA gdptr%+1
+IF _LARGEMMB
+	LDA #&00
+ELSE
 	LDA #&80
+ENDIF
 	STA gdsec%
 	JSR CheckDiskTable
 	JMP gdfirst
@@ -7217,11 +7352,16 @@ ENDIF
 	STA gdptr%+1
 	ROR A
 	BCS gdx1
+IF _LARGEMMB
+	INC gdsec%
+	BEQ gdfin
+ELSE
 	LDA gdsec%
 	ADC #2
 	CMP #&A0			; (&80 OR 32)
 	BEQ gdfin
 	STA gdsec%
+ENDIF
 	JSR CheckDiskTable
 .gdx1
 	INC gddiskno%
@@ -7234,9 +7374,15 @@ ENDIF
 	LDA decno%
 	ADC #1
 	STA decno%
+IF _LARGEMMB
+	LDA decno%+1
+	ADC #0
+	STA decno%+1
+ELSE
 	BCC gddec
 	INC decno%+1
 .gddec
+ENDIF
 	CLD
 
 .gdfirst
@@ -7307,7 +7453,11 @@ IF NOT(_MM32_)
 IF _INCLUDE_CMD_DRECAT_
 .CMD_DRECAT
 {
+IF _LARGEMMB
+	LDA #&00
+ELSE
 	LDA #&80
+ENDIF
 	STA gdsec%
 	JSR LoadDiskTable
 
@@ -7319,16 +7469,15 @@ IF _INCLUDE_CMD_DRECAT_
 
 	\ set read16sec% to first disk
 IF _LARGEMMB
-  JSR DiskStartZero
+	JSR DiskStartZero
 ELSE
-   \\ This is the only use of DiskStartA
-   \\ TODO: Depricate DiskStartA and replaxe with DiskStart0
+	\\ This is the only use of DiskStartA
+	\\ TODO: Depricate DiskStartA and replaxe with DiskStart0
 	LDA #0
 	CLC
 	JSR DiskStartA
 ENDIF
-
-   LDX #3
+	LDX #3
 .drc_loop1
 	LDA sec%,X
 	STA read16sec%,X
@@ -7379,12 +7528,17 @@ ENDIF
 
 	\ If gdptr% = 0
 	JSR SaveDiskTable
+IF _LARGEMMB
+	INC gdsec%
+	BEQ drc_label7			; if end of table
+ELSE
 	CLC
 	LDA gdsec%
 	ADC #2
 	CMP #&A0			; (&80 OR 32)
 	BEQ drc_label7			; if end of table
 	STA gdsec%
+ENDIF
 
 	JSR CheckESCAPE
 
@@ -7785,7 +7939,11 @@ IF _INCLUDE_CMD_DFREE_
 	STX dfTotal%
 	STX dfTotal%+1
 
+IF _LARGEMMB
+	LDA #&00
+ELSE
 	LDA #&80
+ENDIF
 	JSR CheckDiskTable
 	LDA #&10
 	STA dfPtr%
@@ -7827,9 +7985,13 @@ IF _INCLUDE_CMD_DFREE_
 	STA dfPtr%+1
 	ROR A
 	BCS dfreelp
+IF _LARGEMMB
+	INC DiskTableIndex
+ELSE
 	LDA CurrentCat
 	ADC #2
 	CMP #(&80+32)
+ENDIF
 	BEQ dffin
 	JSR CheckDiskTable
 	JMP dfreelp
