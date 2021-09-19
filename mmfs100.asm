@@ -5,12 +5,6 @@
 
 _LARGEMMB=TRUE
 
-IF _LARGEMMB
-	DISKMASK=&1F			; Support 8192 disks
-ELSE
-	DISKMASK=&01			; Support 511 disks
-ENDIF
-
 \** MAIN CODE **\
 
 \ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port, P=Beeb Printer Port
@@ -88,7 +82,20 @@ RAMBufferSize=MA+&10D0			; HIMEM-PAGE
 ForceReset=MA+&10D3
 TubePresentIf0=MA+&10D6
 CardSort=MA+&10DE
+
+IF _LARGEMMB
+DiskNoMask=MA+&10D4
+DiskTableSize=MA+&10D5
 DiskTableIndex=MA+&10DF
+ENDIF
+
+MACRO MASK_DISKNO
+IF _LARGEMMB
+	AND DiskNoMask
+ELSE
+	AND #&01
+ENDIF
+ENDMACRO
 
 buf%=MA+&E00
 cat%=MA+&E00
@@ -1177,8 +1184,15 @@ rn%=&B0
 	TXA
 	ADC #0
 	STA rn%+1
-	CMP #DISKMASK+1
+IF _LARGEMMB
+	CMP DiskNoMask
+	BEQ rnskip
 	BCS rnnotval
+.rnskip
+ELSE
+	CMP #2
+	BCS rnnotval
+ENDIF
 	JSR GSREAD
 	BCC rnloop
 
@@ -1187,7 +1201,7 @@ rn%=&B0
 	LDX rn%
 	LDA rn%+1
 IF _LARGEMMB
-	CMP #DISKMASK
+	CMP DiskNoMask
 	BNE rnok
 ELSE
 	BEQ rnok
@@ -6279,13 +6293,12 @@ IF NOT(_MM32_)
 
 	\\ Default image: BEEB.MMB
 .MMC_Sector_Reset
+{
 	LDX #&A
 	JSR CopyDOSFilename
 
 	\\ Search for Image File
 	\\ Name at file at fatfilename%
-.SelectImage
-{
 	JSR MMC_GetCIDCRC		; YA=CRC16
 	STA MMC_CIDCRC+1
 	STY MMC_CIDCRC
@@ -6308,7 +6321,6 @@ IF NOT(_MM32_)
 	STA MMC_SECTOR+2
 	LDA #&FF
 	STA MMC_SECTOR_VALID
-
 	JMP ResetCRC7
 
 .fileerr
@@ -6348,7 +6360,7 @@ IF NOT(_MM32_)
 	LDA DRIVE_INDEX0,X
 	STA &B8
 	LDA DRIVE_INDEX4,X
-	AND #DISKMASK
+	MASK_DISKNO
 	STA &B9
 	RTS
 
@@ -6404,6 +6416,8 @@ ENDIF
 
 IF _LARGEMMB
 .DiskStartZero
+	TYA
+	PHA
 	LDA #0
 	STA sec%
 	STA sec%+1
@@ -6429,7 +6443,7 @@ IF _LARGEMMB
 	LDA #0
 	STA sec%+2
 	LDA DRIVE_INDEX4,X
-	AND #DISKMASK
+	MASK_DISKNO
 	STA sec%+1
 	LDA DRIVE_INDEX0,X
 	\\ Loop1: sec% *= 32
@@ -6449,33 +6463,52 @@ IF _LARGEMMB
 	ADC sec%+1
 	STA sec%+1
 	LDA DRIVE_INDEX4,X
-	AND #DISKMASK
+	MASK_DISKNO
 	ADC sec%+2
 	STA sec%+2
 	DEY
 	BNE dsxloop2
-	PLA
-	TAY
 
 .dsaddoffset
 
-	\\ add offset + 512
-	LDA sec%
-	ADC MMC_SECTOR
+	\\ Add Disk Table Size in 256b sectors + MMC Sector
+	\\
+	\\							Size
+	\\	  512 += 0x20		0x10
+	\\	 1024 += 0x40		0x20
+	\\	 2048 += 0x80		0x40
+	\\	 4096 += 0x100		0x80
+	\\	 8192 += 0x200  	0x00 (== 0x100)
+	LDY #2
+.dsxloop3
+	LDA DiskTableSize
+	SEC
+	SBC #1
+	SEC
+	ADC sec%
 	STA sec%
-	LDA sec%+1
-	ADC MMC_SECTOR+1
-	PHA
-	LDA sec%+2
-	ADC MMC_SECTOR+2
-	STA sec%+2
-	PLA
-	CLC
-	ADC #2
-	STA sec%+1
-	BCC dsret
+	BCC skip
+	INC sec%+1
+	BNE skip
 	INC sec%+2
-.dsret
+.skip
+	DEY
+	BNE dsxloop3
+
+	\\ Add in MMC_SECTOR
+	LDA MMC_SECTOR
+	CLC
+	ADC sec%
+	STA sec%
+	LDA MMC_SECTOR+1
+	ADC sec%+1
+	STA sec%+1
+	LDA MMC_SECTOR+2
+	ADC sec%+2
+	STA sec%+2
+
+	PLA
+	TAY
 	RTS
 
 ELSE
@@ -7156,7 +7189,7 @@ ENDIF
 	CMP &B8
 	BNE uldskip
 	LDA DRIVE_INDEX4,X
-	AND #DISKMASK
+	MASK_DISKNO
 	CMP &B9
 	BNE uldskip
 	STA DRIVE_INDEX4,X		; Reset bit 7
@@ -7269,7 +7302,7 @@ ENDIF
 IF _LARGEMMB
 
 .CheckDiskTable
-	\\ 10xxxxxx in CurrentCat indicates DriveTableIndex valid
+	\\ 10xxxxxx in CurrentCat indicates DiskTableIndex valid
 	BIT CurrentCat
 	BPL LoadDiskTable
 	BVS LoadDiskTable
@@ -7366,6 +7399,7 @@ ENDIF
 IF _LARGEMMB
 	LDA gdsec%
 	ADC #1
+	CMP DiskTableSize
 ELSE
 	LDA gdsec%
 	ADC #2
@@ -7543,6 +7577,7 @@ ENDIF
 	LDA gdsec%
 IF _LARGEMMB
 	ADC #1
+	CMP DiskTableSize
 ELSE
 	ADC #2
 	CMP #&A0			; (&80 OR 32)
@@ -7727,7 +7762,7 @@ dmAmbig%=MA+&100E	; string terminated with *
 	LDA DRIVE_INDEX0,X
 	STA &B8
 	LDA DRIVE_INDEX4,X
-	AND #DISKMASK
+	MASK_DISKNO
 	STA &B9
 	JSR DecNo_BIN2BCD
 	LDX #0
@@ -7997,6 +8032,7 @@ ENDIF
 IF _LARGEMMB
 	LDA DiskTableIndex
 	ADC #1
+	CMP DiskTableSize
 ELSE
 	LDA CurrentCat
 	ADC #2
@@ -8071,7 +8107,7 @@ IF _INCLUDE_CMD_DDRIVE_
 	LDA DRIVE_INDEX4,X
 	BPL ddcont			; drive not loaded
 
-	AND #DISKMASK
+	MASK_DISKNO
 	STA &B9
 	LDA DRIVE_INDEX0,X
 	STA &B8

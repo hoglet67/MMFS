@@ -742,11 +742,59 @@ IF NOT(_MM32_)
 	\\ Reset Discs in Drives
 .MMC_LoadDisks
 {
+IF _LARGEMMB
+	LDA #&00
+	JSR LoadDiskTable
+	\\ Default values for legacy MMB (512 disks)
+	LDA #1
+	STA DiskNoMask
+	LDA #&10
+	STA DiskTableSize
+	\\			Mask	Size
+	\\	0x00	0x01  0x10		(511 disks)
+	\\	0xA1	0x03  0x20		(1023 disks)
+	\\	0xA2	0x07  0x40		(2047 disks)
+	\\	0xA3	0x0F  0x80		(4095 disks)
+	\\	0xA4	0x1F  0x00		(8191 disks)
+	LDA MA+&0E08
+	BEQ dtdone
+	CMP #&A1
+	BCC dtdone
+	CMP #&A5
+	BCS dtdone
+	AND #&07
+	TAX
+.dtloop
+	ASL DiskTableSize
+	SEC
+	ROL DiskNoMask
+	DEX
+	BNE dtloop
+.dtdone
+ENDIF
+
+\\IF _LARGEMMB
+\\	LDX #&03
+\\.loop
+\\	\\ Load the first sector of the disk table
+\\	TXA
+\\	PHA
+\\	LDA #&00
+\\	JSR LoadDiskTable \\ Corrupts A, X, Y
+\\	PLA
+\\	TAX
+\\	\\ Copy the drive mapping from the disk table to &B8/B9
+\\	LDA MA+&0E00, X
+\\	STA &B8
+\\	LDA MA+&0E04, X
+\\	STA &B9
+\\ELSE
 	LDA #0
 	STA &B9
 	LDX #3
 .loop
 	STX &B8
+\\ENDIF
 	JSR LoadDriveX
 	DEX
 	BPL loop
