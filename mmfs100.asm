@@ -7353,15 +7353,15 @@ ENDIF
 	ROR A
 	BCS gdx1
 IF _LARGEMMB
-	INC gdsec%
-	BEQ gdfin
+	LDA gdsec%
+	ADC #1
 ELSE
 	LDA gdsec%
 	ADC #2
 	CMP #&A0			; (&80 OR 32)
+ENDIF
 	BEQ gdfin
 	STA gdsec%
-ENDIF
 	JSR CheckDiskTable
 .gdx1
 	INC gddiskno%
@@ -7986,7 +7986,8 @@ ENDIF
 	ROR A
 	BCS dfreelp
 IF _LARGEMMB
-	INC DiskTableIndex
+	LDA DiskTableIndex
+	ADC #1
 ELSE
 	LDA CurrentCat
 	ADC #2
