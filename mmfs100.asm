@@ -7040,22 +7040,20 @@ IF _LARGEMMB
 	\\ A  =  (D+1) >> 5
 	\\ B0 = ((D+1) AND &0F) << 4
 	\\ B1 = &E + ((D+1) AND &10) ? 1 : 0
-	\\ (42 bytes)
+	\\ (41 bytes)
 
 .GetIndex
 {
-	\\ TODO: Could save a couple of bytes using TYA/TAY
-
 	\\ A = (D+1) >> 5
-	LDA &B9
-	STA &B1
 	LDA &B8
 	CLC
 	ADC #1
 	STA &B0	\\ B0 = LSB of (D+1)
-	BCC skip1
-	INC &B1
-.skip1
+	LDY &B9
+	BCC skip
+	INY
+.skip
+	STY &B1	\\ B1 = MSB of (D+1), A = LSB of (D+1)
 
 	LDY #5
 .loop
