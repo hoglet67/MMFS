@@ -6332,23 +6332,24 @@ IF NOT(_MM32_)
 	STA MMC_SECTOR_VALID
 
 IF _LARGEMMB
-
+	\\ Read the 8th byte of the disk table which now  indicates it's size:
+	\\ 	8th byte	DISKNO_MASK	DISK_TABLE_SIZE
+	\\		0xA0		0x01  		0x10		(511 disks)
+	\\		0xA1		0x03  		0x20		(1023 disks)
+	\\		0xA2		0x07 			0x40		(2047 disks)
+	\\		0xA3		0x0F  		0x80		(4095 disks)
+	\\		0xA4		0x1F  		0x00		(8191 disks)
+	\\ Any other value default to 511
+	\\
+	\\ Load the first sector of the disk table
 	LDA #&00
 	JSR LoadDiskTable
-
-\\ Default values for legacy MMB (512 disks)
+	\\ Default values for legacy MMB (512 disks)
 	LDA #&10
 	STA DISK_TABLE_SIZE
 	LDA #&01
 	STA DISKNO_MASK
-	\\			Mask	Size
-	\\	0x00	0x01  0x10		(511 disks)
-	\\	0xA1	0x03  0x20		(1023 disks)
-	\\	0xA2	0x07  0x40		(2047 disks)
-	\\	0xA3	0x0F  0x80		(4095 disks)
-	\\	0xA4	0x1F  0x00		(8191 disks)
 	LDA MA+&0E08
-	BEQ dtdone
 	EOR #&A0
 	BEQ dtdone
 	CMP #&05
@@ -7573,6 +7574,9 @@ IF NOT(_MM32_)
 	\\ Refresh disk table with disc titles
 
 	\ load first sector of disk table
+
+	\\ TODO: Rewrite using GetDiskFirstAll / GetDiskNext to save a fair bir of space
+
 IF _INCLUDE_CMD_DRECAT_
 .CMD_DRECAT
 {
@@ -8080,6 +8084,7 @@ dfTotal%=&AA	; total number of disks
 .dfSyntax
 	JMP errSYNTAX
 
+	\\ TODO: Rewrite using GetDiskFirstAll / GetDiskNext to save a fair bir of space
 IF _INCLUDE_CMD_DFREE_
 .CMD_DFREE
 {
