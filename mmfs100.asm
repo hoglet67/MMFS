@@ -6414,16 +6414,6 @@ ENDIF
 	\\ sec% = MMC_SECTOR + 32 + drvidx * 800
 	\\ Call after MMC_BEGIN
 
-IF _LARGEMMB
-.DiskStartZero
-	TYA
-	PHA
-	LDA #0
-	STA sec%
-	STA sec%+1
-	STA sec%+2
-	BEQ dsaddoffset
-ENDIF
 
 	\\ Current drive
 .DiskStart
@@ -6431,17 +6421,25 @@ ENDIF
 .DiskStartX
 
 IF _LARGEMMB
+{
+	TYA
+	PHA
+
+	\\ Start at sector 0
+	LDA #0
+	STA sec%
+	STA sec%+1
+	STA sec%+2
+
+	\\ If X < 0 the calculate the address of service; this is just used by DRECAT
+	TXA
+	BMI dsaddoffset
+
 	\\ Multiply drive index by 800
 	\\ Note: these are 256b sectors
 	\\ 800 = 32 + 256 + 256 + 256
 
-	\\ 52 bytes
-
-	TYA
-	PHA
 	\\ sec% = drvindx
-	LDA #0
-	STA sec%+2
 	LDA DRIVE_INDEX4,X
 	MASK_DISKNO
 	STA sec%+1
@@ -6469,8 +6467,6 @@ IF _LARGEMMB
 	DEY
 	BNE dsxloop2
 
-.dsaddoffset
-
 	\\ Add Disk Table Size in 256b sectors + MMC Sector
 	\\
 	\\							Size
@@ -6479,6 +6475,7 @@ IF _LARGEMMB
 	\\	 2048 += 0x80		0x40
 	\\	 4096 += 0x100		0x80
 	\\	 8192 += 0x200  	0x00 (== 0x100)
+.dsaddoffset
 	LDY #2
 .dsxloop3
 	LDA DiskTableSize
@@ -6499,6 +6496,7 @@ IF _LARGEMMB
 	TAY
 
 	JMP add_mmc_sector
+}
 
 ELSE
 
@@ -7499,7 +7497,8 @@ ENDIF
 
 	\ set read16sec% to first disk
 IF _LARGEMMB
-	JSR DiskStartZero
+	LDX #&FF
+	JSR DiskStartX
 ELSE
 	\\ This is the only use of DiskStartA
 	\\ TODO: Depricate DiskStartA and replaxe with DiskStart0
