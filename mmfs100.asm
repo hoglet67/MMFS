@@ -7389,10 +7389,15 @@ ENDIF
 	STA decno%+1
 	STA gddiskno%
 	STA gddiskno%+1
+IF _LARGEMMB
+	\\ Code space optimization onlt
+	JSR gdptr_init
+ELSE
 	LDA #&10
 	STA gdptr%
 	LDA #MP+&0E
 	STA gdptr%+1
+ENDIF
 IF _LARGEMMB
 	LDA #&00
 ELSE
@@ -7421,7 +7426,16 @@ IF _LARGEMMB
 \\ Add 16 to disk table index pointer (&E00-&FF0)
 \\ Exit with C=0 when MSB flips back from &F to &E
 
-.disk_index_inc16
+.gdptr_init
+{
+	LDA #&10
+	STA gdptr%
+	LDA #MP+&0E
+	STA gdptr%+1
+	RTS
+}
+
+.gdptr_inc16
 {
 	CLC
 	LDA gdptr%
@@ -7451,7 +7465,7 @@ ENDIF
 
 IF _LARGEMMB
 	\\ Code space optimization onlt
-	JSR disk_index_inc16
+	JSR gdptr_inc16
 ELSE
 	CLC
 	LDA gdptr%
@@ -7574,10 +7588,15 @@ ENDIF
 	JSR LoadDiskTable
 
 	\ pointer to first entry
+IF _LARGEMMB
+	\\ Code space optimization onlt
+	JSR gdptr_init
+ELSE
 	LDA #&10
 	STA gdptr%
 	LDA #MP+&0E
 	STA gdptr%+1
+ENDIF
 
 	\ set read16sec% to first disk
 IF _LARGEMMB
@@ -7630,7 +7649,7 @@ ENDIF
 	\ gdptr% += 16
 IF _LARGEMMB
 	\\ Code space optimization onlt
-	JSR disk_index_inc16
+	JSR gdptr_inc16
 ELSE
 	CLC
 	LDA gdptr%
@@ -8086,10 +8105,15 @@ ELSE
 	LDA #&80
 ENDIF
 	JSR CheckDiskTable
+IF _LARGEMMB
+	\\ Code space optimization onlt
+	JSR gdptr_init
+ELSE
 	LDA #&10
 	STA gdptr%
 	LDA #MP+&0E
 	STA gdptr%+1
+ENDIF
 
 .dfreelp
 	LDY #15
@@ -8128,7 +8152,7 @@ ENDIF
 
 IF _LARGEMMB
 	\\ Code space optimization only
-	JSR disk_index_inc16
+	JSR gdptr_inc16
 ELSE
 	CLC
 	LDA gdptr%
