@@ -7040,35 +7040,38 @@ IF _LARGEMMB
 	\\ A  =  (D+1) >> 5
 	\\ B0 = ((D+1) AND &0F) << 4
 	\\ B1 = &E + ((D+1) AND &10) ? 1 : 0
-	\\ (41 bytes)
+	\\ (39 bytes)
 
 .GetIndex
 {
-	\\ A = (D+1) >> 5
+	\\ Calculate (D+1)
 	LDA &B8
 	CLC
 	ADC #1
-	STA &B0	\\ B0 = LSB of (D+1)
+	PHA		\\ push LSB of (D+1) for later
 	LDY &B9
 	BCC skip
 	INY
 .skip
 	STY &B1	\\ B1 = MSB of (D+1), A = LSB of (D+1)
 
+	\\ Shift (D+1) right by 5 places
 	LDY #5
 .loop
 	LSR &B1
 	ROR A
 	DEY
 	BNE loop
-	PHA		\\ A = (D+1) >> 5
+
+	\\ Save (D+1) >> 5 in Y
+	TAY
 
 	\\	B0 = ((D+1) AND &0F) << 4
-	LDA &B0	\\ LSB of (D+1)
+	PLA	  	\\ LSB of (D+1)
 	ASL A
 	ASL A
 	ASL A
-	ASL A		\\ C = (D+1) & 10
+	ASL A		\\ C = (D+1) & 10, used for B1 below
 	AND #&F0
 	STA &B0
 
@@ -7077,7 +7080,8 @@ IF _LARGEMMB
 	ADC #0
 	STA &B1
 
-  	PLA		\\ A = (D+1) >> 5
+	\\ Restore (D+1) >> 5 from Y to A
+  	TYA
 	RTS
 }
 ELSE
