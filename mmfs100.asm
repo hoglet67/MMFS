@@ -7040,7 +7040,7 @@ IF _LARGEMMB
 	\\ A  =  (D+1) >> 5
 	\\ B0 = ((D+1) AND &0F) << 4
 	\\ B1 = &E + ((D+1) AND &10) ? 1 : 0
-	\\ (49 bytes)
+	\\ (42 bytes)
 
 .GetIndex
 {
@@ -7056,16 +7056,13 @@ IF _LARGEMMB
 	BCC skip1
 	INC &B1
 .skip1
+
+	LDY #5
+.loop
 	LSR &B1
 	ROR A
-	LSR &B1
-	ROR A
-	LSR &B1
-	ROR A
-	LSR &B1
-	ROR A
-	LSR &B1
-	ROR A
+	DEY
+	BNE loop
 	PHA		\\ A = (D+1) >> 5
 
 	\\	B0 = ((D+1) AND &0F) << 4
