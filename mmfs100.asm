@@ -7403,6 +7403,20 @@ ENDIF
 	JSR CheckDiskTable
 	JMP gdfirst
 
+IF _LARGEMMB
+.bcd_inc16_zp_y
+	SED
+	CLC
+	LDA 0, Y
+	ADC #1
+	STA 0, Y
+	LDA 1, Y
+	ADC #0
+	STA 1, Y
+	CLD
+	RTS
+ENDIF
+
 .gdnextloop
 	CMP #&FF
 	BEQ gdfin
@@ -7439,21 +7453,20 @@ ENDIF
 	INC gddiskno%+1
 .gdx50
 	\\ inc decno%
+IF _LARGEMMB
+	LDY #decno%
+	JSR bcd_inc16_zp_y
+ELSE
 	SED
 	CLC
 	LDA decno%
 	ADC #1
 	STA decno%
-IF _LARGEMMB
-	LDA decno%+1
-	ADC #0
-	STA decno%+1
-ELSE
 	BCC gddec
 	INC decno%+1
 .gddec
-ENDIF
 	CLD
+ENDIF
 
 .gdfirst
 	LDY #&F
@@ -7942,6 +7955,10 @@ IF _INCLUDE_CMD_DCAT_
 	BCS dcnxt
 	JSR PrintDCat
 
+IF _LARGEMMB
+	LDY #dcCount%
+	JSR bcd_inc16_zp_y
+ELSE
 	SED
 	CLC
 	LDA dcCount%
@@ -7951,6 +7968,7 @@ IF _INCLUDE_CMD_DCAT_
 	ADC #0
 	STA dcCount%+1
 	CLD
+ENDIF
 
 .dcnxt
 	JSR CheckESCAPE
@@ -8026,6 +8044,15 @@ ENDIF
 	CMP #&FF
 	BEQ dffin
 
+IF _LARGEMMB
+	TAY
+	BPL dffmted
+	LDY #dfFree%
+	JSR bcd_inc16_zp_y
+.dffmted
+	LDY #dfTotal%
+	JSR bcd_inc16_zp_y
+ELSE
 	SED
 	TAY
 	BPL dffmted
@@ -8044,6 +8071,7 @@ ENDIF
 	INC dfTotal%+1
 .dfnotval
 	CLD
+ENDIF
 
 	CLC
 	LDA dfPtr%
