@@ -742,32 +742,34 @@ IF NOT(_MM32_)
 	\\ Reset Discs in Drives
 .MMC_LoadDisks
 {
-
-\\IF _LARGEMMB
-\\	LDX #&03
-\\.loop
-\\	\\ Load the first sector of the disk table
-\\	TXA
-\\	PHA
-\\	LDA #&00
-\\	JSR LoadDiskTable \\ Corrupts A, X, Y
-\\	PLA
-\\	TAX
-\\	\\ Copy the drive mapping from the disk table to &B8/B9
-\\	LDA MA+&0E00, X
-\\	STA &B8
-\\	LDA MA+&0E04, X
-\\	STA &B9
-\\ELSE
+IF _LARGEMMB AND NOT(_SWRAM_)
+	LDX #&03
+.loop
+	\\ Load the first sector of the disk table
+	TXA
+	PHA
+	LDA #&00
+	JSR LoadDiskTable \\ Corrupts A, X, Y
+	PLA
+	TAX
+	\\ Copy the drive mapping from the disk table to &B8/B9
+	LDA MA+&0E00, X
+	STA &B8
+	LDA MA+&0E04, X
+	STA &B9
+	JSR LoadDriveX
+	DEX
+	BPL loop
+ELSE
 	LDA #0
 	STA &B9
 	LDX #3
 .loop
 	STX &B8
-\\ENDIF
 	JSR LoadDriveX
 	DEX
 	BPL loop
+ENDIF
 	RTS
 }
 ENDIF
