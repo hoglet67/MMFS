@@ -983,7 +983,6 @@ decno%=&B5
 	LDA #0		; Ensure the result is clear
 	STA decno%+0
 	STA decno%+1
-	STA decno%+1
 ;	STA decno%+2
 	LDX #16			; The number of source bits
 .loop
@@ -7404,7 +7403,9 @@ ENDIF
 	JMP gdfirst
 
 IF _LARGEMMB
+\\ 16-bit BCD increment on ZP,Y and ZP+1,Y
 .bcd_inc16_zp_y
+{
 	SED
 	CLC
 	LDA 0, Y
@@ -7415,6 +7416,28 @@ IF _LARGEMMB
 	STA 1, Y
 	CLD
 	RTS
+}
+
+\\ Add 16 to disk table index pointer (&E00-&FF0)
+\\ Exit with C=0 when MSB flips back from &F to &E
+
+.disk_index_inc16
+{
+	CLC
+	LDA gdptr%
+	ADC #16
+	STA gdptr%
+	BNE exitc1
+	LDA gdptr%+1
+	EOR #1
+	STA gdptr%+1
+	ROR A
+	RTS
+.exitc1
+	SEC
+	RTS
+}
+
 ENDIF
 
 .gdnextloop
@@ -7425,6 +7448,11 @@ ENDIF
 
 	\\ Get next disk
 .GetDiskNext
+
+IF _LARGEMMB
+	\\ Code space optimization onlt
+	JSR disk_index_inc16
+ELSE
 	CLC
 	LDA gdptr%
 	ADC #16
@@ -7434,6 +7462,7 @@ ENDIF
 	EOR #1
 	STA gdptr%+1
 	ROR A
+ENDIF
 	BCS gdx1
 IF _LARGEMMB
 	LDA gdsec%
@@ -7599,6 +7628,10 @@ ENDIF
 	BPL drc_loop4
 
 	\ gdptr% += 16
+IF _LARGEMMB
+	\\ Code space optimization onlt
+	JSR disk_index_inc16
+ELSE
 	CLC
 	LDA gdptr%
 	ADC #16
@@ -7608,6 +7641,7 @@ ENDIF
 	EOR #1
 	STA gdptr%+1
 	ROR A
+ENDIF
 	BCS drc_loop2
 
 	\ If gdptr% = 0
@@ -8010,7 +8044,6 @@ ENDIF
 	\\ *DFREE
 dfFree%=&A8	; number of unformatted disks
 dfTotal%=&AA	; total number of disks
-dfPtr%=&B0
 
 .dfSyntax
 	JMP errSYNTAX
@@ -8034,13 +8067,13 @@ ELSE
 ENDIF
 	JSR CheckDiskTable
 	LDA #&10
-	STA dfPtr%
+	STA gdptr%
 	LDA #MP+&0E
-	STA dfPtr%+1
+	STA gdptr%+1
 
 .dfreelp
 	LDY #15
-	LDA (dfPtr%),Y
+	LDA (gdptr%),Y
 	CMP #&FF
 	BEQ dffin
 
@@ -8073,15 +8106,20 @@ ELSE
 	CLD
 ENDIF
 
+IF _LARGEMMB
+	\\ Code space optimization only
+	JSR disk_index_inc16
+ELSE
 	CLC
-	LDA dfPtr%
+	LDA gdptr%
 	ADC #16
-	STA dfPtr%
+	STA gdptr%
 	BNE dfreelp
-	LDA dfPtr%+1
+	LDA gdptr%+1
 	EOR #1
-	STA dfPtr%+1
+	STA gdptr%+1
 	ROR A
+ENDIF
 	BCS dfreelp
 IF _LARGEMMB
 	LDA DiskTableIndex
