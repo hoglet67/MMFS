@@ -742,8 +742,9 @@ IF NOT(_MM32_)
 	\\ Reset Discs in Drives
 .MMC_LoadDisks
 {
+	LDA #0
+	STA &B9
 IF _LARGEMMB
-	LDA #&00
 	JSR LoadDiskTable
 	\\ Default values for legacy MMB (512 disks)
 	LDA #1
@@ -788,8 +789,6 @@ ENDIF
 \\	LDA MA+&0E04, X
 \\	STA &B9
 \\ELSE
-	LDA #0
-	STA &B9
 	LDX #3
 .loop
 	STX &B8
