@@ -6495,21 +6495,10 @@ IF _LARGEMMB
 	DEY
 	BNE dsxloop3
 
-	\\ Add in MMC_SECTOR
-	LDA MMC_SECTOR
-	CLC
-	ADC sec%
-	STA sec%
-	LDA MMC_SECTOR+1
-	ADC sec%+1
-	STA sec%+1
-	LDA MMC_SECTOR+2
-	ADC sec%+2
-	STA sec%+2
-
 	PLA
 	TAY
-	RTS
+
+	JMP add_mmc_sector
 
 ELSE
 
@@ -7244,7 +7233,6 @@ ENDIF
 
 	\\ **** Calculate disk table sector ****
 .DiskTableSec
-{
 IF _LARGEMMB
 	\\ DiskTableIndex = sector code
 	\\
@@ -7254,27 +7242,25 @@ IF _LARGEMMB
 	\\ Disk Table Index is in units of 2x 256b sectors
 	\\
 	\\ sec% = MMC_SECTOR + DiskTableIndex * 2
-	LDA MMC_SECTOR+2
-	STA sec%+2
-	LDA MMC_SECTOR+1
+	LDA #0
 	STA sec%+1
+	STA sec%+2
+	LDA DiskTableIndex
+	ASL A
+	ROL sec%+1
+	STA sec%
+.add_mmc_sector
+	\\ Add in MMC_SECTOR
 	LDA MMC_SECTOR
 	CLC
-	ADC DiskTableIndex
-	BCC skip1
-	INC sec%+1
-	BNE skip1
-	INC sec%+2
-.skip1
-	CLC
-	ADC DiskTableIndex
-	BCC skip2
-	INC sec%+1
-	BNE skip2
-	INC sec%+2
-.skip2
+	ADC sec%
 	STA sec%
-
+	LDA MMC_SECTOR+1
+	ADC sec%+1
+	STA sec%+1
+	LDA MMC_SECTOR+2
+	ADC sec%+2
+	STA sec%+2
 ELSE
 	\\ A=sector code (sector + &80)
 	\\
@@ -7295,7 +7281,6 @@ ELSE
 	ADC #0
 	STA sec%+2
 ENDIF
-}
 .ldtloaded
 	RTS
 
