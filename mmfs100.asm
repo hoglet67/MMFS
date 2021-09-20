@@ -7840,12 +7840,25 @@ dmAmbig%=MA+&100E	; string terminated with *
 	JSR DecNo_BIN2BCD
 	LDX #0
 
+IF _LARGEMMB
+.DecNo_Print
+	LDY #decno%
+.DecNo_Print_zp_y
+	\\ Code space optimization only
+	LDA 0, Y
+	PHA
+	LDA 1, Y
+	LDY #4
+	JSR PrintDec
+	PLA
+ELSE
 	\ Print 4 dig decno% padded with chr X
 .DecNo_Print
 	LDY #4
 	LDA decno%+1
 	JSR PrintDec
 	LDA decno%
+ENDIF
 
 .PrintDec
 {
@@ -8018,12 +8031,19 @@ ENDIF
 	BEQ dcEven
 	JSR PrintNewLine
 .dcEven
+IF _LARGEMMB
+	\\ Code space optimization only
+	LDX #0
+	LDY #dcCount%
+	JSR DecNo_Print_zp_y
+ELSE
 	LDA dcCount%+1
 	LDX #0
 	LDY #4
 	JSR PrintDec
 	LDA dcCount%
 	JSR PrintDec
+ENDIF
 	JSR PrintString
 	EQUS " disc"
 	LDA dcCount%+1
@@ -8135,20 +8155,34 @@ ENDIF
 	JMP dfreelp
 
 .dffin
+IF _LARGEMMB
+	\\ Code space optimization only
+	LDX #0
+	LDY #dfFree%
+	JSR DecNo_Print_zp_y
+ELSE
 	LDY #4
 	LDX #0
 	LDA dfFree%+1
 	JSR PrintDec
 	LDA dfFree%
 	JSR PrintDec
+ENDIF
 	JSR PrintString
 	EQUS " of "
+IF _LARGEMMB
+	\\ Code space optimization only
+	LDX #0
+	LDY #dfTotal%
+	JSR DecNo_Print_zp_y
+ELSE
 	LDX #0
 	LDY #4
 	LDA dfTotal%+1
 	JSR PrintDec
 	LDA dfTotal%
 	JSR PrintDec
+ENDIF
 	JSR PrintString
 	EQUS " disc"
 	LDA dfTotal%+1
