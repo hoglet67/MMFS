@@ -3,12 +3,13 @@
 \** August 2011
 \** Includes code from Acorn's DFS 2.26, and DFS 2.24 (Master)
 
-_LARGEMMB=TRUE
-
 \** MAIN CODE **\
 
 \ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port, P=Beeb Printer Port
 INCLUDE "DEVICE.asm"
+
+_LARGEMMB=NOT(_MM32_)
+
 
 ;; At the moment, we either include or exclude all the optional commands
 
