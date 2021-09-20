@@ -84,14 +84,12 @@ TubePresentIf0=MA+&10D6
 CardSort=MA+&10DE
 
 IF _LARGEMMB
-DiskNoMask=MA+&10D4
-DiskTableSize=MA+&10D5
-DiskTableIndex=MA+&10DF
+DiskTableIndex=MA+&10D4
 ENDIF
 
 MACRO MASK_DISKNO
 IF _LARGEMMB
-	AND DiskNoMask
+	AND DISKNO_MASK
 ELSE
 	AND #&01
 ENDIF
@@ -101,18 +99,28 @@ buf%=MA+&E00
 cat%=MA+&E00
 FilesX8=MA+&F05
 
-VID=MA+&10E0					; VID
+\\ TODO: CardSort should be protected by VID...
+
 IF _MM32_
+	VID=MA+&10E0					; VID
 	VID2=VID					; 14 bytes
 	MMC_CIDCRC=VID2+&E			; 2 bytes
 	CHECK_CRC7=VID2+&10			; 1 byte
 ELSE
+IF _LARGEMMB
+	VID=MA+&10DF					; VID
+	DISK_TABLE_SIZE=VID+&E    ; 1 byte
+	DISKNO_MASK=VID+&F    ; 1 byte
+	CHECK_CRC7=VID+&10			; 1 byte
+ELSE
+	VID=MA+&10E0					; VID
+	CHECK_CRC7=VID+&E			; 1 byte
+ENDIF
 	DRIVE_INDEX0=VID 			; 4 bytes
 	DRIVE_INDEX4=VID+4			; 4 bytes
 	MMC_SECTOR=VID+8			; 3 bytes
 	MMC_SECTOR_VALID=VID+&B		; 1 bytes
 	MMC_CIDCRC=VID+&C			; 2 bytes
-	CHECK_CRC7=VID+&E			; 1 byte
 ENDIF
 
 IF _MM32_
@@ -1185,7 +1193,7 @@ rn%=&B0
 	ADC #0
 	STA rn%+1
 IF _LARGEMMB
-	CMP DiskNoMask
+	CMP DISKNO_MASK
 	BEQ rnskip
 	BCS rnnotval
 .rnskip
@@ -1201,7 +1209,7 @@ ENDIF
 	LDX rn%
 	LDA rn%+1
 IF _LARGEMMB
-	CMP DiskNoMask
+	CMP DISKNO_MASK
 	BNE rnok
 ELSE
 	BEQ rnok
@@ -2995,13 +3003,15 @@ ENDIF
 IF _MM32_
 	LDY #(CHECK_CRC7-VID-1)
 ELSE
-	LDY #&0E
+	\\ TODO: Don't need to clear the last byte
+	LDY #(CHECK_CRC7-VID)
 ENDIF
 	LDA #0
 .loop
 IF _MM32_
 	STA VID,Y
 ELSE
+	\\ TODO: this case is really the same as the MM32 one
 	STA DRIVE_INDEX0,Y
 ENDIF
 	DEY
@@ -6321,6 +6331,39 @@ IF NOT(_MM32_)
 	STA MMC_SECTOR+2
 	LDA #&FF
 	STA MMC_SECTOR_VALID
+
+IF _LARGEMMB
+
+	LDA #&00
+	JSR LoadDiskTable
+
+\\ Default values for legacy MMB (512 disks)
+	LDA #&10
+	STA DISK_TABLE_SIZE
+	LDA #&01
+	STA DISKNO_MASK
+	\\			Mask	Size
+	\\	0x00	0x01  0x10		(511 disks)
+	\\	0xA1	0x03  0x20		(1023 disks)
+	\\	0xA2	0x07  0x40		(2047 disks)
+	\\	0xA3	0x0F  0x80		(4095 disks)
+	\\	0xA4	0x1F  0x00		(8191 disks)
+	LDA MA+&0E08
+	BEQ dtdone
+	EOR #&A0
+	BEQ dtdone
+	CMP #&05
+	BCS dtdone
+	TAX
+.dtloop
+	ASL DISK_TABLE_SIZE
+	SEC
+	ROL DISKNO_MASK
+	DEX
+	BNE dtloop
+.dtdone
+ENDIF
+
 	JMP ResetCRC7
 
 .fileerr
@@ -6478,7 +6521,7 @@ IF _LARGEMMB
 .dsaddoffset
 	LDY #2
 .dsxloop3
-	LDA DiskTableSize
+	LDA DISK_TABLE_SIZE
 	SEC
 	SBC #1
 	SEC
@@ -7381,7 +7424,7 @@ ENDIF
 IF _LARGEMMB
 	LDA gdsec%
 	ADC #1
-	CMP DiskTableSize
+	CMP DISK_TABLE_SIZE
 ELSE
 	LDA gdsec%
 	ADC #2
@@ -7560,7 +7603,7 @@ ENDIF
 	LDA gdsec%
 IF _LARGEMMB
 	ADC #1
-	CMP DiskTableSize
+	CMP DISK_TABLE_SIZE
 ELSE
 	ADC #2
 	CMP #&A0			; (&80 OR 32)
@@ -8015,7 +8058,7 @@ ENDIF
 IF _LARGEMMB
 	LDA DiskTableIndex
 	ADC #1
-	CMP DiskTableSize
+	CMP DISK_TABLE_SIZE
 ELSE
 	LDA CurrentCat
 	ADC #2
