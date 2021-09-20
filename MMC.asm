@@ -758,11 +758,10 @@ IF _LARGEMMB
 	\\	0xA4	0x1F  0x00		(8191 disks)
 	LDA MA+&0E08
 	BEQ dtdone
-	CMP #&A1
-	BCC dtdone
-	CMP #&A5
+	EOR #&A0
+	BEQ dtdone
+	CMP #&05
 	BCS dtdone
-	AND #&07
 	TAX
 .dtloop
 	ASL DiskTableSize
