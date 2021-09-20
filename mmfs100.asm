@@ -6456,12 +6456,10 @@ ENDIF
 	\\ sec% = MMC_SECTOR + 32 + drvidx * 800
 	\\ Call after MMC_BEGIN
 
-
 	\\ Current drive
 .DiskStart
 	JSR CheckCurDrvFormatted	; X=drive
 .DiskStartX
-
 IF _LARGEMMB
 {
 	TYA
@@ -7397,14 +7395,10 @@ ELSE
 	STA gdptr%
 	LDA #MP+&0E
 	STA gdptr%+1
-ENDIF
-IF _LARGEMMB
-	LDA #&00
-ELSE
 	LDA #&80
-ENDIF
 	STA gdsec%
 	JSR CheckDiskTable
+ENDIF
 	JMP gdfirst
 
 IF _LARGEMMB
@@ -7428,6 +7422,9 @@ IF _LARGEMMB
 
 .gdptr_init
 {
+	LDA #&00
+	STA gdsec%
+	JSR CheckDiskTable
 	LDA #&10
 	STA gdptr%
 	LDA #MP+&0E
@@ -7580,18 +7577,14 @@ IF _INCLUDE_CMD_DRECAT_
 .CMD_DRECAT
 {
 IF _LARGEMMB
-	LDA #&00
+	\\ Code space optimization onlt
+	JSR gdptr_init
 ELSE
 	LDA #&80
-ENDIF
 	STA gdsec%
 	JSR LoadDiskTable
 
 	\ pointer to first entry
-IF _LARGEMMB
-	\\ Code space optimization onlt
-	JSR gdptr_init
-ELSE
 	LDA #&10
 	STA gdptr%
 	LDA #MP+&0E
@@ -8100,15 +8093,11 @@ IF _INCLUDE_CMD_DFREE_
 	STX dfTotal%+1
 
 IF _LARGEMMB
-	LDA #&00
-ELSE
-	LDA #&80
-ENDIF
-	JSR CheckDiskTable
-IF _LARGEMMB
 	\\ Code space optimization onlt
 	JSR gdptr_init
 ELSE
+	LDA #&80
+	JSR CheckDiskTable
 	LDA #&10
 	STA gdptr%
 	LDA #MP+&0E
