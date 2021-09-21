@@ -113,24 +113,24 @@ FilesX8=MA+&F05
 \\ TODO: CardSort should be protected by VID...
 
 IF _MM32_
-	VID=MA+&10E0					; VID
-	VID2=VID					; 14 bytes
+	VID=MA+&10E0				; VID
+	VID2=VID				; 14 bytes
 	MMC_CIDCRC=VID2+&E			; 2 bytes
 	CHECK_CRC7=VID2+&10			; 1 byte
 ELSE
 IF _LARGEMMB
-	VID=MA+&10DF					; VID
-	DISK_TABLE_SIZE=VID+&E    ; 1 byte
-	DISKNO_MASK=VID+&F    ; 1 byte
+	VID=MA+&10DF				; VID
+	DISK_TABLE_SIZE=VID+&E    		; 1 byte
+	DISKNO_MASK=VID+&F    			; 1 byte
 	CHECK_CRC7=VID+&10			; 1 byte
 ELSE
-	VID=MA+&10E0					; VID
+	VID=MA+&10E0				; VID
 	CHECK_CRC7=VID+&E			; 1 byte
 ENDIF
 	DRIVE_INDEX0=VID 			; 4 bytes
 	DRIVE_INDEX4=VID+4			; 4 bytes
 	MMC_SECTOR=VID+8			; 3 bytes
-	MMC_SECTOR_VALID=VID+&B		; 1 bytes
+	MMC_SECTOR_VALID=VID+&B			; 1 bytes
 	MMC_CIDCRC=VID+&C			; 2 bytes
 ENDIF
 
@@ -995,9 +995,9 @@ decno%=&B5
 	STA decno%+0
 	STA decno%+1
 ;	STA decno%+2
-	LDX #16			; The number of source bits
+	LDX #16		; The number of source bits
 .loop
-   ROL &B8			; Shift out one bit
+   ROL &B8		; Shift out one bit
 	ROL &B9
 	PHP
 	LDA decno%+0	; And add into result
@@ -1010,11 +1010,11 @@ decno%=&B5
 ;	ADC decno%+2
 ;	STA decno%+2
 	PLP
-	DEX				; And repeat for next bit
+	DEX		; And repeat for next bit
 	BNE loop
-   ROL &B8			; Restore the original value
+   ROL &B8		; Restore the original value
 	ROL &B9
-	CLD				; Back to binary
+	CLD		; Back to binary
 	RTS
 }
 
@@ -6352,11 +6352,11 @@ IF NOT(_MM32_)
 IF _LARGEMMB
 	\\ Read the 8th byte of the disk table which now  indicates it's size:
 	\\ 	8th byte	DISKNO_MASK	DISK_TABLE_SIZE
-	\\		0xA0		0x01  		0x10		(511 disks)
-	\\		0xA1		0x03  		0x20		(1023 disks)
-	\\		0xA2		0x07 			0x40		(2047 disks)
-	\\		0xA3		0x0F  		0x80		(4095 disks)
-	\\		0xA4		0x1F  		0x00		(8191 disks)
+	\\	0xA0		0x01  		0x10		(511 disks)
+	\\	0xA1		0x03  		0x20		(1023 disks)
+	\\	0xA2		0x07 		0x40		(2047 disks)
+	\\	0xA3		0x0F  		0x80		(4095 disks)
+	\\	0xA4		0x1F  		0x00		(8191 disks)
 	\\ Any other value default to 511
 	\\
 	\\ Load the first sector of the disk table
@@ -6439,9 +6439,9 @@ ENDIF
 	LDA DRIVE_INDEX4,X
 	BPL errNoDisk			; Bit 7 clear = no disk
 IF _LARGEMMB
-	AND #&20					; Bit 5 set = unformatted
+	AND #&20			; Bit 5 set = unformatted
 ELSE
-	AND #&08					; Bit 3 set = unformatted
+	AND #&08			; Bit 3 set = unformatted
 ENDIF
 	BCS chkdrv2
 	BNE errNotFormatted		; Bit 3/5 set = unformatted
@@ -6526,57 +6526,7 @@ IF _LARGEMMB
 	DEY
 	BNE dsxloop2
 
-	\\ Add Disk Table Size in 256b sectors + MMC Sector
-	\\
-	\\							Size
-	\\	  512 += 0x20		0x10
-	\\	 1024 += 0x40		0x20
-	\\	 2048 += 0x80		0x40
-	\\	 4096 += 0x100		0x80
-	\\	 8192 += 0x200  	0x00 (== 0x100)
-	\\
-	\\	LDY #2
-	\\.dsxloop3
-	\\	LDA DISK_TABLE_SIZE
-	\\	SEC
-	\\	SBC #1
-	\\	SEC
-	\\	ADC sec%
-	\\	STA sec%
-	\\	BCC skip
-	\\	INC sec%+1
-	\\	BNE skip
-	\\	INC sec%+2
-	\\.skip
-	\\	DEY
-	\\	BNE dsxloop3
-
 .dsaddoffset
-	\\ Add Disk Table Size in 256b sectors + MMC Sector
-	\\
-	\\ Original: Add 0x0020 sectors
-	\\ Large:    Add 0x0340 sectors (0x20 + 0x320 where 0x320 is one disk)
-	\\	LDA DISK_TABLE_SIZE
-	\\	CMP #&10
-	\\	BNE large
-	\\.small
-	\\	LDY #&00
-	\\	LDA #&20
-	\\	BNE doadd
-	\\.large
-	\\	LDY #&03
-	\\	LDA #&40
-	\\.doadd
-	\\	CLC
-	\\	ADC sec%
-	\\	STA sec%
-	\\	TYA
-	\\	ADC sec%+1
-	\\	STA sec%+1
-	\\	BCC done
-	\\	INC sec%+2
-	\\.done
-
 	LDA #&20
 	CLC
 	ADC sec%
@@ -6585,8 +6535,8 @@ IF _LARGEMMB
 	INC sec%+1
 	BNE done
 	INC sec%+2
-.done
 
+.done
 	PLA
 	TAY
 
@@ -7143,12 +7093,12 @@ IF _LARGEMMB
 	LDA &B8
 	CLC
 	ADC #1
-	PHA		\\ push LSB of (D+1) for later
+	PHA		; push LSB of (D+1) for later
 	LDY &B9
 	BCC skip
 	INY
 .skip
-	STY &B1	\\ B1 = MSB of (D+1), A = LSB of (D+1)
+	STY &B1		; B1 = MSB of (D+1), A = LSB of (D+1)
 
 	\\ Shift (D+1) right by 5 places
 	LDY #5
@@ -7161,12 +7111,12 @@ IF _LARGEMMB
 	\\ Save (D+1) >> 5 in Y
 	TAY
 
-	\\	B0 = ((D+1) AND &0F) << 4
-	PLA	  	\\ LSB of (D+1)
+	\\ B0 = ((D+1) AND &0F) << 4
+	PLA	  	; LSB of (D+1)
 	ASL A
 	ASL A
 	ASL A
-	ASL A		\\ C = (D+1) & 10, used for B1 below
+	ASL A		; C = (D+1) & 10, used for B1 below
 	AND #&F0
 	STA &B0
 
@@ -7367,12 +7317,12 @@ IF _LARGEMMB
 	\\ Is the MMB size = 512 disks (i.e. the original format)
 	LDA DISK_TABLE_SIZE
 	CMP #&10
-	BEQ add_disk_table_index \\ yes, then no need to correct
+	BEQ add_disk_table_index ; yes, then no need to correct
 
 	\\ Is the disk table index < 0x10
 	LDA DiskTableIndex
 	CMP #&10
-	BCC add_disk_table_index \\ yes, then no need to correct
+	BCC add_disk_table_index ; yes, then no need to correct
 
 	\\ Start with sec% = 0x064000 as the initial correction factor
 	LDA #&40
@@ -7383,12 +7333,12 @@ IF _LARGEMMB
 	\\ Disk Table Size 0x40: sec <<= 2 which gives 0x190000 (== 2048 disks)
 	\\ Disk Table Size 0x80: sec <<= 4 which gives 0x320000 (== 4096 disks)
 	\\ Disk Table Size 0x00: sec <<= 8 which gives 0x640000 (== 8192 disks)
-	LDA DISK_TABLE_SIZE	\\ A = 20, 40, 80, 00
-	SBC #&01					\\ A = 1F, 3F, 7F, FF (carry was set earlier by CMP)
+	LDA DISK_TABLE_SIZE	; A = 20, 40, 80, 00
+	SBC #&01		; A = 1F, 3F, 7F, FF (carry was set earlier by CMP)
 .loop
-	ASL sec%+1	\\ sec <<= 1
+	ASL sec%+1		; sec <<= 1
 	ROL sec%+2
-	LSR A			\\ A >>= 1 (i.e. FF->7F->3F->1F->0F)
+	LSR A			; A >>= 1 (i.e. FF->7F->3F->1F->0F)
 	CMP #&10
 	BCS loop
 	\\ At this point, sec% = correction Factor
@@ -7503,7 +7453,7 @@ ENDIF
 	STA gddiskno%
 	STA gddiskno%+1
 IF _LARGEMMB
-	\\ Code space optimization onlt
+	\\ Code space optimization only
 	JSR gdptr_init
 ELSE
 	LDA #&10
@@ -7576,7 +7526,7 @@ ENDIF
 .GetDiskNext
 
 IF _LARGEMMB
-	\\ Code space optimization onlt
+	\\ Code space optimization only
 	JSR gdptr_inc16
 ELSE
 	CLC
@@ -7695,7 +7645,7 @@ IF _INCLUDE_CMD_DRECAT_
 .CMD_DRECAT
 {
 IF _LARGEMMB
-	\\ Code space optimization onlt
+	\\ Code space optimization only
 	JSR gdptr_init
 ELSE
 	LDA #&80
@@ -7759,7 +7709,7 @@ ENDIF
 
 	\ gdptr% += 16
 IF _LARGEMMB
-	\\ Code space optimization onlt
+	\\ Code space optimization only
 	JSR gdptr_inc16
 ELSE
 	CLC
@@ -8212,7 +8162,7 @@ IF _INCLUDE_CMD_DFREE_
 	STX dfTotal%+1
 
 IF _LARGEMMB
-	\\ Code space optimization onlt
+	\\ Code space optimization only
 	JSR gdptr_init
 ELSE
 	LDA #&80
