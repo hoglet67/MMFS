@@ -6529,22 +6529,48 @@ IF _LARGEMMB
 	\\	 2048 += 0x80		0x40
 	\\	 4096 += 0x100		0x80
 	\\	 8192 += 0x200  	0x00 (== 0x100)
+	\\
+	\\	LDY #2
+	\\.dsxloop3
+	\\	LDA DISK_TABLE_SIZE
+	\\	SEC
+	\\	SBC #1
+	\\	SEC
+	\\	ADC sec%
+	\\	STA sec%
+	\\	BCC skip
+	\\	INC sec%+1
+	\\	BNE skip
+	\\	INC sec%+2
+	\\.skip
+	\\	DEY
+	\\	BNE dsxloop3
+
 .dsaddoffset
-	LDY #2
-.dsxloop3
+	\\ Add Disk Table Size in 256b sectors + MMC Sector
+	\\
+	\\ Original: Add 0x0020 sectors
+	\\ Large:    Add 0x0340 sectors (0x20 + 0x320 where 0x320 is one disk)
 	LDA DISK_TABLE_SIZE
-	SEC
-	SBC #1
-	SEC
+	CMP #&10
+	BNE large
+.small
+	LDY #&00
+	LDA #&20
+	BNE doadd
+.large
+	LDY #&03
+	LDA #&40
+.doadd
+	CLC
 	ADC sec%
 	STA sec%
-	BCC skip
-	INC sec%+1
-	BNE skip
+	TYA
+	ADC sec%+1
+	STA sec%+1
+	BCC done
 	INC sec%+2
-.skip
-	DEY
-	BNE dsxloop3
+.done
 
 	PLA
 	TAY
