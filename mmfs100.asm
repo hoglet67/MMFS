@@ -38,7 +38,12 @@ _INCLUDE_CMD_DONBOOT_=FALSE
 ENDIF
 _INCLUDE_CMD_DOP_=_COMMANDS_
 _INCLUDE_CMD_DRECAT_=_COMMANDS_
+\\ FIXME: Gain a bit of space in the SWRAM version
+IF _LARGEMMB AND _SWRAM_
+_INCLUDE_CMD_DABOUT_=FALSE
+ELSE
 _INCLUDE_CMD_DABOUT_=_COMMANDS_
+ENDIF
 
 \ MA/MP constants must be even numbers
 IF _MASTER_
@@ -6485,7 +6490,7 @@ IF _LARGEMMB
 	STA sec%+1
 	STA sec%+2
 
-	\\ If X < 0 the calculate the address of service; this is just used by DRECAT
+	\\ If X < 0 the calculate the address of disk 0; this is just used by DRECAT
 	TXA
 	BMI dsaddoffset
 
@@ -6551,24 +6556,34 @@ IF _LARGEMMB
 	\\
 	\\ Original: Add 0x0020 sectors
 	\\ Large:    Add 0x0340 sectors (0x20 + 0x320 where 0x320 is one disk)
-	LDA DISK_TABLE_SIZE
-	CMP #&10
-	BNE large
-.small
-	LDY #&00
+	\\	LDA DISK_TABLE_SIZE
+	\\	CMP #&10
+	\\	BNE large
+	\\.small
+	\\	LDY #&00
+	\\	LDA #&20
+	\\	BNE doadd
+	\\.large
+	\\	LDY #&03
+	\\	LDA #&40
+	\\.doadd
+	\\	CLC
+	\\	ADC sec%
+	\\	STA sec%
+	\\	TYA
+	\\	ADC sec%+1
+	\\	STA sec%+1
+	\\	BCC done
+	\\	INC sec%+2
+	\\.done
+
 	LDA #&20
-	BNE doadd
-.large
-	LDY #&03
-	LDA #&40
-.doadd
 	CLC
 	ADC sec%
 	STA sec%
-	TYA
-	ADC sec%+1
-	STA sec%+1
 	BCC done
+	INC sec%+1
+	BNE done
 	INC sec%+2
 .done
 
@@ -7313,21 +7328,81 @@ ENDIF
 IF _LARGEMMB
 	\\ DiskTableIndex = sector code
 	\\
-	\\ Disk table at the start of the MMB File
-	\\ 8192 * 16 = 131072 bytes = 512 sectors
-	\\
 	\\ Disk Table Index is in units of 2x 256b sectors
 	\\
-	\\ sec% = MMC_SECTOR + DiskTableIndex * 2
+	\\  512 disks: disk table is  32 sectors
+	\\ 1024 disks: disk table is  64 sectors
+	\\ 2048 disks: disk table is 128 sectors
+	\\ 4096 disks: disk table is 256 sectors
+	\\ 8192 disks: disk table is 512 sectors
+	\\
+	\\ For 512 disk MMB files, the disk table fits in the 8K space
+	\\ before the disk images.
+	\\
+	\\ For larger MMB sizes the disk table is split into two physical
+	\\ chunks with seperated by the disk images. This retains
+	\\ compatibility with the original format.
+	\\
+	\\ The split is handled by adding a correction factor in certain
+	\\ cases.
+	\\ 1. When the DiskTableIndex being accessed is >= 0x10
+	\\ 2. When the MMB file is larger the 512 disks,
+	\\
+	\\ Theoretically, checking (1) is sufficient, as we should never be
+	\\ asked to read beyond the end of the disk table, given the
+	\\ current disk size. But for now we check (1) and (2).
+	\\
+	\\ Correction Factors:
+	\\ 0x10  512 disks - No correction
+	\\ 0x20 1024 disks - Add 0x0C8000 sectors
+	\\ 0x40 2048 disks - Add 0x190000 sectors
+	\\ 0x80 4096 disks - Add 0x320000 sectors
+	\\ 0x00 8192 disks - Add 0x640000 sectors
+
+	\\ Zero the sector
 	LDA #0
 	STA sec%+1
 	STA sec%+2
+
+	\\ Is the MMB size = 512 disks (i.e. the original format)
+	LDA DISK_TABLE_SIZE
+	CMP #&10
+	BEQ add_disk_table_index \\ yes, then no need to correct
+
+	\\ Is the disk table index < 0x10
+	LDA DiskTableIndex
+	CMP #&10
+	BCC add_disk_table_index \\ yes, then no need to correct
+
+	\\ Start with sec% = 0x064000 as the initial correction factor
+	LDA #&40
+	STA sec%+1
+	LDA #&06
+	STA sec%+2
+	\\ Disk Table Size 0x20: sec <<= 1 which gives 0x0C8000 (== 1024 disks)
+	\\ Disk Table Size 0x40: sec <<= 2 which gives 0x190000 (== 2048 disks)
+	\\ Disk Table Size 0x80: sec <<= 4 which gives 0x320000 (== 4096 disks)
+	\\ Disk Table Size 0x00: sec <<= 8 which gives 0x640000 (== 8192 disks)
+	LDA DISK_TABLE_SIZE	\\ A = 20, 40, 80, 00
+	SBC #&01					\\ A = 1F, 3F, 7F, FF (carry was set earlier by CMP)
+.loop
+	ASL sec%+1	\\ sec <<= 1
+	ROL sec%+2
+	LSR A			\\ A >>= 1 (i.e. FF->7F->3F->1F->0F)
+	CMP #&10
+	BCS loop
+	\\ At this point, sec% = correction Factor
+
+	\\ sec% += DiskTableIndex * 2
+.add_disk_table_index
 	LDA DiskTableIndex
 	ASL A
-	ROL sec%+1
 	STA sec%
+	BCC add_mmc_sector
+	INC sec%+1
+
+	\\ sec% += MMC_SECTOR
 .add_mmc_sector
-	\\ Add in MMC_SECTOR
 	LDA MMC_SECTOR
 	CLC
 	ADC sec%
