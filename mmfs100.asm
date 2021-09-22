@@ -10,7 +10,6 @@ INCLUDE "DEVICE.asm"
 
 _LARGEMMB=NOT(_MM32_)
 
-
 ;; At the moment, we either include or exclude all the optional commands
 
 ;; Normal Commands
@@ -7439,7 +7438,9 @@ ENDIF
 	\\ If ?&B7=0, skip unformatted disks
 
 .GetDiskFirst
+IF NOT(_LARGEMMB)
 	JSR DecNo_BIN2BCD
+ENDIF
 	JSR GetIndex
 	STA gdsec%
 	JSR CheckDiskTable
@@ -7448,8 +7449,10 @@ ENDIF
 	\\ Return ALL disks
 .GetDiskFirstAll
 	LDA #0
+IF NOT(_LARGEMMB)
 	STA decno%
 	STA decno%+1
+ENDIF
 	STA gddiskno%
 	STA gddiskno%+1
 IF _LARGEMMB
@@ -7557,11 +7560,10 @@ ENDIF
 	BNE gdx50
 	INC gddiskno%+1
 .gdx50
+\\ Don't maintain a shadow decimal version as it's inefficient and unnecessary
+\\ It also prevents GetDiskNext being used by DRECAT due to a ZP conflict
+IF NOT(_LARGEMMB)
 	\\ inc decno%
-IF _LARGEMMB
-	LDY #decno%
-	JSR bcd_inc16_zp_y
-ELSE
 	SED
 	CLC
 	LDA decno%
@@ -7644,10 +7646,68 @@ IF NOT(_MM32_)
 IF _INCLUDE_CMD_DRECAT_
 .CMD_DRECAT
 {
+
 IF _LARGEMMB
-	\\ Code space optimization only
-	JSR gdptr_init
-ELSE
+
+	LDX #&FF
+	JSR DiskStartX
+
+	\ set read16sec% to first disk
+	LDX #3
+.drc_loop1
+	LDA sec%,X
+	STA read16sec%,X
+	DEX
+	BPL drc_loop1
+
+	STX gdopt%			; GetDisk returns unformatted disks
+
+	JSR GetDiskFirstAll
+
+	\ is disk valid?
+.drc_loop2
+
+	\ read disc title
+	JSR MMC_ReadDiscTitle
+
+	\ read16sec% += 800
+	CLC
+	LDA read16sec%
+	ADC #&20
+	STA read16sec%
+	LDA read16sec%+1
+	ADC #&03
+	STA read16sec%+1
+	BCC drc_label3
+	INC read16sec%+2
+
+	\ copy title to table
+.drc_label3
+	LDY #&0B
+.drc_loop4
+	LDA read16str%,Y
+	STA (gdptr%),Y
+	DEY
+	BPL drc_loop4
+
+	\ Test if we are at the end
+	LDA gdptr%+1
+	CMP #MP+&0F
+	BCC skipsave
+	LDA gdptr%
+	CMP #&F0
+	BCC skipsave
+	JSR SaveDiskTable
+.skipsave
+	JSR CheckESCAPE
+	JSR GetDiskNext
+	BCC drc_loop2
+
+	\ Force a save at the end, in case we are part way through the last sector
+	JMP SaveDiskTable
+
+ELSE \\ _LARGEMMB
+
 	LDA #&80
 	STA gdsec%
 	JSR LoadDiskTable
@@ -7657,19 +7717,11 @@ ELSE
 	STA gdptr%
 	LDA #MP+&0E
 	STA gdptr%+1
-ENDIF
 
 	\ set read16sec% to first disk
-IF _LARGEMMB
-	LDX #&FF
-	JSR DiskStartX
-ELSE
-	\\ This is the only use of DiskStartA
-	\\ TODO: Depricate DiskStartA and replaxe with DiskStart0
 	LDA #0
 	CLC
 	JSR DiskStartA
-ENDIF
 	LDX #3
 .drc_loop1
 	LDA sec%,X
@@ -7708,10 +7760,6 @@ ENDIF
 	BPL drc_loop4
 
 	\ gdptr% += 16
-IF _LARGEMMB
-	\\ Code space optimization only
-	JSR gdptr_inc16
-ELSE
 	CLC
 	LDA gdptr%
 	ADC #16
@@ -7721,22 +7769,17 @@ ELSE
 	EOR #1
 	STA gdptr%+1
 	ROR A
-ENDIF
 	BCS drc_loop2
 
 	\ If gdptr% = 0
 	JSR SaveDiskTable
 	CLC
 	LDA gdsec%
-IF _LARGEMMB
-	ADC #1
-	CMP DISK_TABLE_SIZE
-ELSE
 	ADC #2
 	CMP #&A0			; (&80 OR 32)
-ENDIF
 	BEQ drc_label7			; if end of table
 	STA gdsec%
+
 	JSR CheckESCAPE
 
 	JSR LoadDiskTable
@@ -7754,6 +7797,9 @@ ENDIF
 
 .drc_label7
 	RTS
+
+ENDIF \\ _LARGEMMB
+
 }
 ENDIF
 
@@ -7869,6 +7915,10 @@ dmAmbig%=MA+&100E	; string terminated with *
 	JSR PrintChrA
 
 .pdcnospc
+IF _LARGEMMB
+	\\ Covert gddisk% to BCD in decno% for printing
+	JSR DecNo_BIN2BCD
+ENDIF
 	LDX #&20
 	JSR DecNo_Print
 	LDA #&20
@@ -8166,7 +8216,6 @@ IF _LARGEMMB
 	STX gdopt%			; GetDisk returns unformatted disk
 
 	JSR GetDiskFirstAll
-	BCS dffin
 .dfreelp
 	BPL dffmted
 	LDY #dfFree%
