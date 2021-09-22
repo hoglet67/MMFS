@@ -7490,17 +7490,17 @@ ENDIF
 	JMP gdfirst
 
 IF _LARGEMMB
-\\ 16-bit BCD increment on ZP,Y and ZP+1,Y
-.bcd_inc16_zp_y
+\\ 16-bit BCD increment on ZP,X and ZP+1,X
+.bcd_inc16_zp_x
 {
 	SED
 	CLC
-	LDA 0, Y
+	LDA 0, X
 	ADC #1
-	STA 0, Y
-	LDA 1, Y
+	STA 0, X
+	LDA 1, X
 	ADC #0
-	STA 1, Y
+	STA 1, X
 	CLD
 	RTS
 }
@@ -8116,8 +8116,8 @@ IF _INCLUDE_CMD_DCAT_
 	JSR PrintDCat
 
 IF _LARGEMMB
-	LDY #dcCount%
-	JSR bcd_inc16_zp_y
+	LDX #dcCount%
+	JSR bcd_inc16_zp_x
 .dcnxt
 ELSE
 	SED
@@ -8203,11 +8203,11 @@ IF _LARGEMMB
 	JSR GetDiskFirstAll
 .dfreelp
 	BPL dffmted
-	LDY #dfFree%
-	JSR bcd_inc16_zp_y
+	LDX #dfFree%
+	JSR bcd_inc16_zp_x
 .dffmted
-	LDY #dfTotal%
-	JSR bcd_inc16_zp_y
+	LDX #dfTotal%
+	JSR bcd_inc16_zp_x
 	JSR GetDiskNext
 	BCC dfreelp
 .dffin
