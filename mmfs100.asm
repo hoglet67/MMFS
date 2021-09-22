@@ -5099,6 +5099,13 @@ ENDIF
 	BEQ errSYNTAX			; branch if not null string
 	RTS
 
+IF _LARGEMMB
+.Param_SyntaxErrorIfNotNull
+	JSR GSINIT_A			; (if no params then syntax error)
+	BNE errSYNTAX			; branch if not null string
+	RTS
+ENDIF
+
 .errSYNTAX
 	JSR ReportError			; Print Syntax error
 	EQUB &DC
@@ -7601,6 +7608,9 @@ IF _INCLUDE_CMD_DRECAT_
 
 IF _LARGEMMB
 
+	\ error if any params are specified
+	JSR Param_SyntaxErrorIfNotNull
+
 	LDX #&FF
 	JSR DiskStartX
 
@@ -8147,8 +8157,10 @@ ENDIF
 dfFree%=&A8	; number of unformatted disks
 dfTotal%=&AA	; total number of disks
 
+IF NOT(_LARGEMMB)
 .dfSyntax
 	JMP errSYNTAX
+ENDIF
 
 IF _INCLUDE_CMD_DFREE_
 .CMD_DFREE
@@ -8156,8 +8168,8 @@ IF _INCLUDE_CMD_DFREE_
 
 IF _LARGEMMB
 
-	JSR GSINIT_A
-	BNE dfSyntax			; no parameters allowed
+	\ error if any params are specified
+	JSR Param_SyntaxErrorIfNotNull
 
 	LDX #0
 	STX dfFree%
