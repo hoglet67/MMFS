@@ -7495,6 +7495,9 @@ ENDIF
 
 	\\ Get next disk
 .GetDiskNext
+IF _LARGEMMB
+	JSR CheckESCAPE
+ENDIF
 	CLC
 	LDA gdptr%
 	ADC #16
@@ -7661,7 +7664,6 @@ IF _LARGEMMB
 	BCC skipsave
 	JSR SaveDiskTable
 .skipsave
-	JSR CheckESCAPE
 	JSR GetDiskNext
 	BCC drc_loop2
 
@@ -8097,6 +8099,7 @@ IF _INCLUDE_CMD_DCAT_
 IF _LARGEMMB
 	LDY #dcCount%
 	JSR bcd_inc16_zp_y
+.dcnxt
 ELSE
 	SED
 	CLC
@@ -8107,10 +8110,10 @@ ELSE
 	ADC #0
 	STA dcCount%+1
 	CLD
-ENDIF
-
 .dcnxt
 	JSR CheckESCAPE
+ENDIF
+
 
 .dcdonxt
 	JSR GetDiskNext
