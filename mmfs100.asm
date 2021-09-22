@@ -2788,10 +2788,26 @@ ENDIF
 	EQUS "E.!BOOT",13
 
 .AUTOBOOT
+IF _LARGEMMB
+	\\ Code space optimization only
+	LDX #0
+.bootprloop
+	LDA title, X
+	BEQ bootprexit
+	JSR OSWRCH
+	INX
+	BNE bootprloop
+.bootprexit
+	JSR OSNEWL
+	JSR OSNEWL
+	LDA &B3				; ?&B3=value of Y on call 3
+	JMP initMMFS
+ELSE
 	LDA &B3				; ?&B3=value of Y on call 3
 	JSR PrintString
-    BOOT_NAME
+	BOOT_NAME
 	BCC initMMFS
+ENDIF
 
 .CMD_DISC
 IF NOT(_MASTER_)
