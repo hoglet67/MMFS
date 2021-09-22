@@ -7455,18 +7455,17 @@ IF NOT(_LARGEMMB)
 ENDIF
 	STA gddiskno%
 	STA gddiskno%+1
-IF _LARGEMMB
-	\\ Code space optimization only
-	JSR gdptr_init
-ELSE
 	LDA #&10
 	STA gdptr%
 	LDA #MP+&0E
 	STA gdptr%+1
+IF _LARGEMMB
+	LDA #&00
+ELSE
 	LDA #&80
+ENDIF
 	STA gdsec%
 	JSR CheckDiskTable
-ENDIF
 	JMP gdfirst
 
 IF _LARGEMMB
@@ -7484,39 +7483,6 @@ IF _LARGEMMB
 	CLD
 	RTS
 }
-
-\\ Add 16 to disk table index pointer (&E00-&FF0)
-\\ Exit with C=0 when MSB flips back from &F to &E
-
-.gdptr_init
-{
-	LDA #&00
-	STA gdsec%
-	JSR CheckDiskTable
-	LDA #&10
-	STA gdptr%
-	LDA #MP+&0E
-	STA gdptr%+1
-	RTS
-}
-
-.gdptr_inc16
-{
-	CLC
-	LDA gdptr%
-	ADC #16
-	STA gdptr%
-	BNE exitc1
-	LDA gdptr%+1
-	EOR #1
-	STA gdptr%+1
-	ROR A
-	RTS
-.exitc1
-	SEC
-	RTS
-}
-
 ENDIF
 
 .gdnextloop
@@ -7527,11 +7493,6 @@ ENDIF
 
 	\\ Get next disk
 .GetDiskNext
-
-IF _LARGEMMB
-	\\ Code space optimization only
-	JSR gdptr_inc16
-ELSE
 	CLC
 	LDA gdptr%
 	ADC #16
@@ -7541,7 +7502,6 @@ ELSE
 	EOR #1
 	STA gdptr%+1
 	ROR A
-ENDIF
 	BCS gdx1
 IF _LARGEMMB
 	LDA gdsec%
@@ -7640,9 +7600,6 @@ IF NOT(_MM32_)
 	\\ Refresh disk table with disc titles
 
 	\ load first sector of disk table
-
-	\\ TODO: Rewrite using GetDiskFirstAll / GetDiskNext to save a fair bir of space
-
 IF _INCLUDE_CMD_DRECAT_
 .CMD_DRECAT
 {
