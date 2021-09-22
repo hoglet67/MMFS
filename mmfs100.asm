@@ -7389,6 +7389,25 @@ ENDIF
 
 IF _LARGEMMB
 
+\\ Enter with Y = the ZP address of the disk count
+.print_pluralized_disks
+	TYA
+	PHA
+	LDX #0
+	JSR DecNo_Print_zp_y
+	JSR PrintString
+	EQUS " disc"
+	NOP
+	PLA
+	TAX
+	LDA 1, X
+	BNE NotOne
+	DEC 0, X
+	BEQ ldtloaded
+.NotOne
+	LDA #&73			; ASC("s")
+	JMP PrintChrA
+
 .CheckDiskTable
 	\\ 10xxxxxx in CurrentCat indicates DiskTableIndex valid
 	BIT CurrentCat
@@ -8128,9 +8147,8 @@ ENDIF
 .dcEven
 IF _LARGEMMB
 	\\ Code space optimization only
-	LDX #0
 	LDY #dcCount%
-	JSR DecNo_Print_zp_y
+	JSR print_pluralized_disks
 ELSE
 	LDA dcCount%+1
 	LDX #0
@@ -8138,7 +8156,6 @@ ELSE
 	JSR PrintDec
 	LDA dcCount%
 	JSR PrintDec
-ENDIF
 	JSR PrintString
 	EQUS " disc"
 	LDA dcCount%+1
@@ -8149,6 +8166,7 @@ ENDIF
 	LDA #&73			; ASC("s")
 	JSR PrintChrA
 .dcOne
+ENDIF
 	JSR PrintString
 	EQUS " found"
 	NOP
@@ -8198,20 +8216,8 @@ IF _LARGEMMB
 	JSR DecNo_Print_zp_y
 	JSR PrintString
 	EQUS " of "
-	LDX #0
 	LDY #dfTotal%
-	JSR DecNo_Print_zp_y
-	JSR PrintString
-	EQUS " disc"
-	LDA dfTotal%+1
-	BNE dfNotOne
-	LDA dfTotal%
-	CMP #1
-	BEQ dfOne
-.dfNotOne
-	LDA #&73			; ASC("s")
-	JSR PrintChrA
-.dfOne
+	JSR print_pluralized_disks
 	JSR PrintString
 	EQUS " free (unformatted)"
 	NOP
