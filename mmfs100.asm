@@ -8474,6 +8474,15 @@ IF _INCLUDE_CMD_DOP_
 	LDA #&FF
 	STA gdopt%			; GetDisk returns unformatted disk
 	JSR GetDiskFirstAll
+IF _LARGEMMB
+	\\ Code space optimization only
+.fdkloop
+	BCS fdknotfound
+	CMP #&F0			; Is it formatted?
+	BEQ fdkfound			; No!
+	JSR GetDiskNext
+	JMP fdkloop
+ELSE
 	BCS fdknotfound
 	CMP #&F0			; Is it formatted?
 	BEQ fdkfound			; No!
@@ -8482,6 +8491,7 @@ IF _INCLUDE_CMD_DOP_
 	BCS fdknotfound
 	CMP #&F0
 	BNE fdkloop
+ENDIF
 .fdkfound
 	CLC
 .fdknotfound
