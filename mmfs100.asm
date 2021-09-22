@@ -8495,6 +8495,46 @@ IF _INCLUDE_CMD_DOP_
 	JSR GSINIT_A
 	BEQ opterr
 
+IF _LARGEMMB
+	\\ Code space optimization only
+	AND #&DF
+	LDX #(dopexhi-dop)
+.optloop
+	CMP dop,X
+	BEQ optok
+	DEX
+	BPL optloop
+
+.opterr
+	JMP errBADOPTION
+
+.optok
+	LDA dopexhi,X
+	PHA
+	LDA dopexlo,X
+	PHA
+	INY
+	JMP Param_OptionalDriveNo
+
+.dop
+	EQUS "RKNUP"
+
+.dopexhi
+	EQUB HI(dop_Restore-1)
+	EQUB HI(dop_Kill-1)
+	EQUB HI(dop_New-1)
+	EQUB HI(dop_Unprotect-1)
+	EQUB HI(dop_Protect-1)
+
+.dopexlo
+	EQUB LO(dop_Restore-1)
+	EQUB LO(dop_Kill-1)
+	EQUB LO(dop_New-1)
+	EQUB LO(dop_Unprotect-1)
+	EQUB LO(dop_Protect-1)
+
+ELSE
+
 	LDX #(dopex-dop)
 .optloop
 	CMP dop,X
@@ -8523,6 +8563,8 @@ IF _INCLUDE_CMD_DOP_
 	EQUW dop_New-1
 	EQUW dop_Unprotect-1
 	EQUW dop_Protect-1
+ENDIF
+
 }
 ENDIF
 
