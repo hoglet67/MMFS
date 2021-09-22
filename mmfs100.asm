@@ -8148,10 +8148,61 @@ dfTotal%=&AA	; total number of disks
 .dfSyntax
 	JMP errSYNTAX
 
-	\\ TODO: Rewrite using GetDiskFirstAll / GetDiskNext to save a fair bir of space
 IF _INCLUDE_CMD_DFREE_
 .CMD_DFREE
 {
+
+IF _LARGEMMB
+
+	JSR GSINIT_A
+	BNE dfSyntax			; no parameters allowed
+
+	LDX #0
+	STX dfFree%
+	STX dfFree%+1
+	STX dfTotal%
+	STX dfTotal%+1
+	DEX
+	STX gdopt%			; GetDisk returns unformatted disk
+
+	JSR GetDiskFirstAll
+	BCS dffin
+.dfreelp
+	BPL dffmted
+	LDY #dfFree%
+	JSR bcd_inc16_zp_y
+.dffmted
+	LDY #dfTotal%
+	JSR bcd_inc16_zp_y
+	JSR GetDiskNext
+	BCC dfreelp
+.dffin
+	LDX #0
+	LDY #dfFree%
+	JSR DecNo_Print_zp_y
+	JSR PrintString
+	EQUS " of "
+	LDX #0
+	LDY #dfTotal%
+	JSR DecNo_Print_zp_y
+	JSR PrintString
+	EQUS " disc"
+	LDA dfTotal%+1
+	BNE dfNotOne
+	LDA dfTotal%
+	CMP #1
+	BEQ dfOne
+.dfNotOne
+	LDA #&73			; ASC("s")
+	JSR PrintChrA
+.dfOne
+	JSR PrintString
+	EQUS " free (unformatted)"
+	NOP
+	JMP PrintNewLine
+
+ELSE \\ _LARGEMMB
+
 	JSR GSINIT_A
 	BNE dfSyntax			; no parameters allowed
 
@@ -8161,17 +8212,12 @@ IF _INCLUDE_CMD_DFREE_
 	STX dfTotal%
 	STX dfTotal%+1
 
-IF _LARGEMMB
-	\\ Code space optimization only
-	JSR gdptr_init
-ELSE
 	LDA #&80
 	JSR CheckDiskTable
 	LDA #&10
 	STA gdptr%
 	LDA #MP+&0E
 	STA gdptr%+1
-ENDIF
 
 .dfreelp
 	LDY #15
@@ -8179,15 +8225,6 @@ ENDIF
 	CMP #&FF
 	BEQ dffin
 
-IF _LARGEMMB
-	TAY
-	BPL dffmted
-	LDY #dfFree%
-	JSR bcd_inc16_zp_y
-.dffmted
-	LDY #dfTotal%
-	JSR bcd_inc16_zp_y
-ELSE
 	SED
 	TAY
 	BPL dffmted
@@ -8206,12 +8243,7 @@ ELSE
 	INC dfTotal%+1
 .dfnotval
 	CLD
-ENDIF
 
-IF _LARGEMMB
-	\\ Code space optimization only
-	JSR gdptr_inc16
-ELSE
 	CLC
 	LDA gdptr%
 	ADC #16
@@ -8221,50 +8253,29 @@ ELSE
 	EOR #1
 	STA gdptr%+1
 	ROR A
-ENDIF
 	BCS dfreelp
-IF _LARGEMMB
-	LDA DiskTableIndex
-	ADC #1
-	CMP DISK_TABLE_SIZE
-ELSE
 	LDA CurrentCat
 	ADC #2
 	CMP #(&80+32)
-ENDIF
 	BEQ dffin
 	JSR CheckDiskTable
 	JMP dfreelp
 
 .dffin
-IF _LARGEMMB
-	\\ Code space optimization only
-	LDX #0
-	LDY #dfFree%
-	JSR DecNo_Print_zp_y
-ELSE
 	LDY #4
 	LDX #0
 	LDA dfFree%+1
 	JSR PrintDec
 	LDA dfFree%
 	JSR PrintDec
-ENDIF
 	JSR PrintString
 	EQUS " of "
-IF _LARGEMMB
-	\\ Code space optimization only
-	LDX #0
-	LDY #dfTotal%
-	JSR DecNo_Print_zp_y
-ELSE
 	LDX #0
 	LDY #4
 	LDA dfTotal%+1
 	JSR PrintDec
 	LDA dfTotal%
 	JSR PrintDec
-ENDIF
 	JSR PrintString
 	EQUS " disc"
 	LDA dfTotal%+1
@@ -8280,8 +8291,11 @@ ENDIF
 	EQUS " free (unformatted)"
 	NOP
 	JMP PrintNewLine
+ENDIF \\ LARGEMMB
+
 }
 ENDIF
+
 
 IF _INCLUDE_CMD_DONBOOT_
 	\\ 32 byte, including the command table
