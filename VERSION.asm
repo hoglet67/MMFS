@@ -16,11 +16,14 @@ IF NOT(_DFS_EMUL)
 ENDIF
 ENDMACRO
 
-\\ This macro is not used in the _LARGEMMB builds
+\\ This macro is not used in the _LARGEMMB_ builds
 MACRO BOOT_NAME
     BASE_NAME
     DEVICE_NAME
     DFS_EMUL_NAME
+IF _LARGEMMB_
+    EQUS " L"
+ENDIF
     EQUB 13, 13
 ENDMACRO
 
@@ -28,7 +31,7 @@ MACRO BUILD_NAME
     BASE_NAME
     DEVICE_NAME
     DFS_EMUL_NAME
-IF _LARGEMMB
+IF _LARGEMMB_
     EQUS " L"
 ENDIF
     EQUB 0

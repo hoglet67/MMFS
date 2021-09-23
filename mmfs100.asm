@@ -8,7 +8,33 @@
 \ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port, P=Beeb Printer Port
 INCLUDE "DEVICE.asm"
 
-_LARGEMMB=NOT(_MM32_)
+\\ Temporary flags to make sure we can still rebuild the original 1.49 version
+_CHECK149_= FALSE
+
+\\ Include *DONBOOT and code to load the default drives on startup
+_DONBOOT_=NOT(_CHECK149_) AND NOT(_MM32_) AND TRUE
+
+\\ Enable support for large (>512 disk) MMB files
+_LARGEMMB_=NOT(_CHECK149_) AND NOT(_MM32_) AND TRUE
+
+\\ Space several saving optimizations
+_SAVESPACE_=NOT(_CHECK149_) AND NOT(_MM32_) AND TRUE
+
+\\ M/SWMMFS
+\\ bytes
+\\ free    DONBOOT LARGEMMB SPACESAVE
+\\ 120 	   0	   0	    0	<<<< Matches old 149
+\\ 282	   0	   0	    1   <<<< Works, sees first 511 disks, tested DCAT, DRECAT, DFREE
+\\  22	   0	   1	    0   <<<< Works, sees  all 8191 disks, tested DCAT, DRECAT, DFREE
+\\ 193	   0	   1	    1   <<<< Works, sees  all 8191 disks, tested DCAT, DRECAT, DFREE
+\\  75	   1	   0	    0   <<<< Just adds *DONBOOT to 149
+\\ 237	   1	   0	    1   <<<< Works, sees first 511 disks, tested DCAT, DRECAT, DFREE
+\\ -23	   1	   1	    0	<<<< Doesn't fit
+\\ 148	   1	   1	    1	<<<< Planned version to release
+
+\\ DONBOOT   costs  45 bytes, independant of the other features
+\\ LARGEMMB  costs  98 bytes (SPACESAVE=0) or 89 bytes (SPACESAVE=1)
+\\ SPACESAVE saves 162 bytes (LARGEMMB=0) or 171 bytes (LARGEMMB=1)
 
 ;; At the moment, we either include or exclude all the optional commands
 
@@ -30,11 +56,7 @@ _INCLUDE_CMD_WIPE_=_COMMANDS_
 _INCLUDE_CMD_DCAT_=_COMMANDS_
 _INCLUDE_CMD_DDRIVE_=_COMMANDS_
 _INCLUDE_CMD_DFREE_=_COMMANDS_
-IF _LARGEMMB
-_INCLUDE_CMD_DONBOOT_=_COMMANDS_
-ELSE
-_INCLUDE_CMD_DONBOOT_=FALSE
-ENDIF
+_INCLUDE_CMD_DONBOOT_=_COMMANDS_ AND _DONBOOT_
 _INCLUDE_CMD_DOP_=_COMMANDS_
 _INCLUDE_CMD_DRECAT_=_COMMANDS_
 _INCLUDE_CMD_DABOUT_=_COMMANDS_
@@ -88,12 +110,12 @@ ForceReset=MA+&10D3
 TubePresentIf0=MA+&10D6
 CardSort=MA+&10DE
 
-IF _LARGEMMB
+IF _LARGEMMB_
 DiskTableIndex=MA+&10D4
 ENDIF
 
 MACRO MASK_DISKNO
-IF _LARGEMMB
+IF _LARGEMMB_
 	AND DISKNO_MASK
 ELSE
 	AND #&01
@@ -112,7 +134,7 @@ IF _MM32_
 	MMC_CIDCRC=VID2+&E			; 2 bytes
 	CHECK_CRC7=VID2+&10			; 1 byte
 ELSE
-IF _LARGEMMB
+IF _LARGEMMB_
 	VID=MA+&10DF				; VID
 	DISK_TABLE_SIZE=VID+&E    		; 1 byte
 	DISKNO_MASK=VID+&F    			; 1 byte
@@ -977,7 +999,7 @@ ENDIF
 
 
 IF NOT(_MM32_)
-IF _LARGEMMB
+IF _LARGEMMB_
 	\ ** Convert 12 bit binary in word &B8/9 to
 	\ ** 4 digit BCD in word &B5/6 (decno%)
 decno%=&B5
@@ -991,7 +1013,7 @@ decno%=&B5
 ;	STA decno%+2
 	LDX #16		; The number of source bits
 .loop
-   ROL &B8		; Shift out one bit
+	ROL &B8		; Shift out one bit
 	ROL &B9
 	PHP
 	LDA decno%+0	; And add into result
@@ -1006,7 +1028,7 @@ decno%=&B5
 	PLP
 	DEX		; And repeat for next bit
 	BNE loop
-   ROL &B8		; Restore the original value
+	ROL &B8		; Restore the original value
 	ROL &B9
 	CLD		; Back to binary
 	RTS
@@ -1196,7 +1218,7 @@ rn%=&B0
 	TXA
 	ADC #0
 	STA rn%+1
-IF _LARGEMMB
+IF _LARGEMMB_
 	CMP DISKNO_MASK
 	BEQ rnskip
 	BCS rnnotval
@@ -1212,7 +1234,7 @@ ENDIF
 .rnexit
 	LDX rn%
 	LDA rn%+1
-IF _LARGEMMB
+IF _LARGEMMB_
 	CMP DISKNO_MASK
 	BNE rnok
 ELSE
@@ -2788,7 +2810,7 @@ ENDIF
 	EQUS "E.!BOOT",13
 
 .AUTOBOOT
-IF _LARGEMMB
+IF _SAVESPACE_
 	\\ Code space optimization only
 	LDX #0
 .bootprloop
@@ -5115,7 +5137,7 @@ ENDIF
 	BEQ errSYNTAX			; branch if not null string
 	RTS
 
-IF _LARGEMMB
+IF _SAVESPACE_
 .Param_SyntaxErrorIfNotNull
 	JSR GSINIT_A			; (if no params then syntax error)
 	BNE errSYNTAX			; branch if not null string
@@ -6366,7 +6388,7 @@ IF NOT(_MM32_)
 	LDA #&FF
 	STA MMC_SECTOR_VALID
 
-IF _LARGEMMB
+IF _LARGEMMB_
 	\\ Read the 8th byte of the disk table which now  indicates it's size:
 	\\ 	8th byte	DISKNO_MASK	DISK_TABLE_SIZE
 	\\	0xA0		0x01  		0x10		(511 disks)
@@ -6455,7 +6477,7 @@ ENDIF
 	LDX CurrentDrv
 	LDA DRIVE_INDEX4,X
 	BPL errNoDisk			; Bit 7 clear = no disk
-IF _LARGEMMB
+IF _LARGEMMB_
 	AND #&20			; Bit 5 set = unformatted
 ELSE
 	AND #&08			; Bit 3 set = unformatted
@@ -6496,7 +6518,7 @@ ENDIF
 .DiskStart
 	JSR CheckCurDrvFormatted	; X=drive
 .DiskStartX
-IF _LARGEMMB
+IF _LARGEMMB_
 {
 	TYA
 	PHA
@@ -7090,7 +7112,7 @@ IF NOT(_MM32_)
 }
 
 
-IF _LARGEMMB
+IF _LARGEMMB_
 	\\ **** Calc disk table sec & offset ****
 	\\ Entry: D = Disk no (B8/B9)
 	\\ Exit: (B0) = &E00 + (D + 1) x 16
@@ -7264,7 +7286,7 @@ ENDIF
 	BPL ldiskrw			; 0F = read/write
 	\CMP #&F0			; F0 = unformatted
 	\BNE [.notvaliderr]		; Disk number not valid
-IF _LARGEMMB
+IF _LARGEMMB_
 	\\ b7 = loaded, b6 = writeprot, b5=unformatted
 	LDA #&E0
 ELSE
@@ -7292,7 +7314,7 @@ ENDIF
 
 	\\ **** Calculate disk table sector ****
 .DiskTableSec
-IF _LARGEMMB
+IF _LARGEMMB_
 	\\ DiskTableIndex = sector code
 	\\
 	\\ Disk Table Index is in units of 2x 256b sectors
@@ -7403,27 +7425,7 @@ ENDIF
 .ldtloaded
 	RTS
 
-IF _LARGEMMB
-
-\\ Enter with Y = the ZP address of the disk count
-.print_pluralized_disks
-	TYA
-	PHA
-	LDX #0
-	JSR DecNo_Print_zp_y
-	JSR PrintString
-	EQUS " disc"
-	NOP
-	PLA
-	TAX
-	LDA 1, X
-	BNE NotOne
-	DEC 0, X
-	BEQ ldtloaded
-.NotOne
-	LDA #&73			; ASC("s")
-	JMP PrintChrA
-
+IF _LARGEMMB_
 .CheckDiskTable
 	\\ 10xxxxxx in CurrentCat indicates DiskTableIndex valid
 	BIT CurrentCat
@@ -7475,7 +7477,7 @@ ENDIF
 	\\ If ?&B7=0, skip unformatted disks
 
 .GetDiskFirst
-IF NOT(_LARGEMMB)
+IF NOT(_SAVESPACE_)
 	JSR DecNo_BIN2BCD
 ENDIF
 	JSR GetIndex
@@ -7486,7 +7488,7 @@ ENDIF
 	\\ Return ALL disks
 .GetDiskFirstAll
 	LDA #0
-IF NOT(_LARGEMMB)
+IF NOT(_SAVESPACE_)
 	STA decno%
 	STA decno%+1
 ENDIF
@@ -7496,7 +7498,7 @@ ENDIF
 	STA gdptr%
 	LDA #MP+&0E
 	STA gdptr%+1
-IF _LARGEMMB
+IF _LARGEMMB_
 	LDA #&00
 ELSE
 	LDA #&80
@@ -7505,7 +7507,7 @@ ENDIF
 	JSR CheckDiskTable
 	JMP gdfirst
 
-IF _LARGEMMB
+IF _SAVESPACE_
 \\ 16-bit BCD increment on ZP,X and ZP+1,X
 .bcd_inc16_zp_x
 {
@@ -7520,6 +7522,26 @@ IF _LARGEMMB
 	CLD
 	RTS
 }
+
+\\ Enter with Y = the ZP address of the disk count
+.print_pluralized_disks
+	TYA
+	PHA
+	LDX #0
+	JSR DecNo_Print_zp_y
+	JSR PrintString
+	EQUS " disc"
+	NOP
+	PLA
+	TAX
+	LDA 1, X
+	BNE NotOne
+	DEC 0, X
+	BEQ ldtloaded
+.NotOne
+	LDA #&73			; ASC("s")
+	JMP PrintChrA
+
 ENDIF
 
 .gdnextloop
@@ -7530,7 +7552,7 @@ ENDIF
 
 	\\ Get next disk
 .GetDiskNext
-IF _LARGEMMB
+IF _SAVESPACE_
 	JSR CheckESCAPE
 ENDIF
 	CLC
@@ -7543,7 +7565,7 @@ ENDIF
 	STA gdptr%+1
 	ROR A
 	BCS gdx1
-IF _LARGEMMB
+IF _LARGEMMB_
 	LDA gdsec%
 	ADC #1
 	CMP DISK_TABLE_SIZE
@@ -7562,15 +7584,21 @@ ENDIF
 .gdx50
 \\ Don't maintain a shadow decimal version as it's inefficient and unnecessary
 \\ It also prevents GetDiskNext being used by DRECAT due to a ZP conflict
-IF NOT(_LARGEMMB)
+IF NOT(_SAVESPACE_)
 	\\ inc decno%
 	SED
 	CLC
 	LDA decno%
 	ADC #1
 	STA decno%
+IF _LARGEMMB_
+	LDA decno%+1
+	ADC #0
+	STA decno%+1
+ELSE
 	BCC gddec
 	INC decno%+1
+ENDIF
 .gddec
 	CLD
 ENDIF
@@ -7644,7 +7672,7 @@ IF _INCLUDE_CMD_DRECAT_
 .CMD_DRECAT
 {
 
-IF _LARGEMMB
+IF _SAVESPACE_
 
 	\ error if any params are specified
 	JSR Param_SyntaxErrorIfNotNull
@@ -7705,9 +7733,13 @@ IF _LARGEMMB
 	\ Force a save at the end, in case we are part way through the last sector
 	JMP SaveDiskTable
 
-ELSE \\ _LARGEMMB
+ELSE \\ _SAVESPACE_
 
+IF _LARGEMMB_
+	LDA #&00
+ELSE
 	LDA #&80
+ENDIF
 	STA gdsec%
 	JSR LoadDiskTable
 
@@ -7718,9 +7750,14 @@ ELSE \\ _LARGEMMB
 	STA gdptr%+1
 
 	\ set read16sec% to first disk
+IF _LARGEMMB_
+	LDX #&FF
+	JSR DiskStartX
+ELSE
 	LDA #0
 	CLC
 	JSR DiskStartA
+ENDIF
 	LDX #3
 .drc_loop1
 	LDA sec%,X
@@ -7774,8 +7811,13 @@ ELSE \\ _LARGEMMB
 	JSR SaveDiskTable
 	CLC
 	LDA gdsec%
+IF _LARGEMMB_
+	ADC #1
+	CMP DISK_TABLE_SIZE
+ELSE
 	ADC #2
 	CMP #&A0			; (&80 OR 32)
+ENDIF
 	BEQ drc_label7			; if end of table
 	STA gdsec%
 
@@ -7797,7 +7839,7 @@ ELSE \\ _LARGEMMB
 .drc_label7
 	RTS
 
-ENDIF \\ _LARGEMMB
+ENDIF \\ _SAVESPACE_
 
 }
 ENDIF
@@ -7914,7 +7956,7 @@ dmAmbig%=MA+&100E	; string terminated with *
 	JSR PrintChrA
 
 .pdcnospc
-IF _LARGEMMB
+IF _SAVESPACE_
 	\\ Covert gddisk% to BCD in decno% for printing
 	JSR DecNo_BIN2BCD
 ENDIF
@@ -7969,7 +8011,7 @@ ENDIF
 	JSR DecNo_BIN2BCD
 	LDX #0
 
-IF _LARGEMMB
+IF _SAVESPACE_
 .DecNo_Print
 	LDY #decno%
 .DecNo_Print_zp_y
@@ -8131,7 +8173,7 @@ IF _INCLUDE_CMD_DCAT_
 	BCS dcnxt
 	JSR PrintDCat
 
-IF _LARGEMMB
+IF _SAVESPACE_
 	LDX #dcCount%
 	JSR bcd_inc16_zp_x
 .dcnxt
@@ -8161,7 +8203,7 @@ ENDIF
 	BEQ dcEven
 	JSR PrintNewLine
 .dcEven
-IF _LARGEMMB
+IF _SAVESPACE_
 	\\ Code space optimization only
 	LDY #dcCount%
 	JSR print_pluralized_disks
@@ -8194,7 +8236,7 @@ ENDIF
 dfFree%=&A8	; number of unformatted disks
 dfTotal%=&AA	; total number of disks
 
-IF NOT(_LARGEMMB)
+IF NOT(_SAVESPACE_)
 .dfSyntax
 	JMP errSYNTAX
 ENDIF
@@ -8203,7 +8245,7 @@ IF _INCLUDE_CMD_DFREE_
 .CMD_DFREE
 {
 
-IF _LARGEMMB
+IF _SAVESPACE_
 
 	\ error if any params are specified
 	JSR Param_SyntaxErrorIfNotNull
@@ -8239,7 +8281,7 @@ IF _LARGEMMB
 	NOP
 	JMP PrintNewLine
 
-ELSE \\ _LARGEMMB
+ELSE \\ _SAVESPACE_
 
 	JSR GSINIT_A
 	BNE dfSyntax			; no parameters allowed
@@ -8250,7 +8292,11 @@ ELSE \\ _LARGEMMB
 	STX dfTotal%
 	STX dfTotal%+1
 
+IF _LARGEMMB_
+	LDA #&00
+ELSE
 	LDA #&80
+ENDIF
 	JSR CheckDiskTable
 	LDA #&10
 	STA gdptr%
@@ -8270,15 +8316,27 @@ ELSE \\ _LARGEMMB
 	LDA dfFree%
 	ADC #1
 	STA dfFree%
+IF _LARGEMMB_
+	LDA dfFree%+1
+	ADC #0
+	STA dfFree%+1
+ELSE
 	BCC dffmted
 	INC dfFree%+1
+ENDIF
 .dffmted
 	CLC
 	LDA dfTotal%
 	ADC #1
 	STA dfTotal%
+IF _LARGEMMB_
+	LDA dfTotal%+1
+	ADC #0
+	STA dfTotal%+1
+ELSE
 	BCC dfnotval
 	INC dfTotal%+1
+ENDIF
 .dfnotval
 	CLD
 
@@ -8292,9 +8350,15 @@ ELSE \\ _LARGEMMB
 	STA gdptr%+1
 	ROR A
 	BCS dfreelp
+IF _LARGEMMB_
+	LDA DiskTableIndex
+	ADC #1
+	CMP DISK_TABLE_SIZE
+ELSE
 	LDA CurrentCat
 	ADC #2
 	CMP #(&80+32)
+ENDIF
 	BEQ dffin
 	JSR CheckDiskTable
 	JMP dfreelp
@@ -8329,7 +8393,7 @@ ELSE \\ _LARGEMMB
 	EQUS " free (unformatted)"
 	NOP
 	JMP PrintNewLine
-ENDIF \\ LARGEMMB
+ENDIF \\ _SAVESPACE_
 
 }
 ENDIF
@@ -8526,7 +8590,7 @@ IF _INCLUDE_CMD_DOP_
 	LDA #&FF
 	STA gdopt%			; GetDisk returns unformatted disk
 	JSR GetDiskFirstAll
-IF _LARGEMMB
+IF _SAVESPACE_
 	\\ Code space optimization only
 .fdkloop
 	BCS fdknotfound
@@ -8557,7 +8621,7 @@ ENDIF
 	JSR GSINIT_A
 	BEQ opterr
 
-IF _LARGEMMB
+IF _SAVESPACE_
 	\\ Code space optimization only
 	AND #&DF
 	LDX #(dopexhi-dop)

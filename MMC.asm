@@ -742,7 +742,7 @@ IF NOT(_MM32_)
 	\\ Reset Discs in Drives
 .MMC_LoadDisks
 {
-IF _LARGEMMB
+IF _DONBOOT_
 	LDX #&03
 .loop
 	\\ Load the first sector of the disk table
