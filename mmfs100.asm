@@ -8438,9 +8438,8 @@ IF _INCLUDE_CMD_DDRIVE_
 	\\ print drive no
 	LDA #&3A			; ASC(":")
 	JSR OSWRCH
-	CLC
 	TXA
-	ADC #&30
+	ORA #&30
 	JSR OSWRCH
 
 	LDA DRIVE_INDEX4,X
@@ -8453,7 +8452,10 @@ IF _INCLUDE_CMD_DDRIVE_
 	JSR GetDiskFirst
 	CMP #&FF
 	BEQ ddcont
+	\\ C=0 at this point
+IF NOT(_LARGEMMB_)
 	SEC
+ENDIF
 	JSR PrintDCat
 
 .ddcont
@@ -8532,7 +8534,12 @@ IF _INCLUDE_CMD_DOP_
 	JSR PrintString
 	EQUS "Kill"
 	NOP
+IF _LARGEMMB_
+	\\ Force an extra space before the drive number
+	CLC
+ELSE
 	SEC
+ENDIF
 	JSR PrintDCat
 	JSR PrintString
 	EQUS " : "
