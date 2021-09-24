@@ -1208,6 +1208,7 @@ rn%=&B0
 	TXA
 	ADC #0
 	STA rn%+1
+	\\ TODO: _LARGEMMB2_ need to limit diskno to N * 511
 IF _LARGEMMB_
 	CMP DISKNO_MASK
 	BEQ rnskip
@@ -1220,6 +1221,7 @@ ENDIF
 	JSR GSREAD
 	BCC rnloop
 
+	\\ TODO: _LARGEMMB2_ need to limit diskno to N * 511
 	\\ <>511?
 .rnexit
 	LDX rn%
@@ -6382,6 +6384,8 @@ IF NOT(_MM32_)
 	STA MMC_SECTOR_VALID
 
 IF _LARGEMMB_
+	\\ TODO: _LARGEMMB2_ this may need to change
+
 	\\ Read the 8th byte of the disk table which now  indicates it's size:
 	\\ 	8th byte	DISKNO_MASK	DISK_TABLE_SIZE
 	\\	0xA0		0x01  		0x10		(511 disks)
@@ -6503,9 +6507,67 @@ ENDIF
 	EQUB &C7
 	EQUS "already formatted",0
 
+IF _LARGEMMB_
+\\ TODO: CHANGE THIS
+dmret%=&80
+.calculate_div_mod_511_zp_y
+{
+	\\ Calculate:
+	\\    DD = D DIV 511
+	\\    DM = D MOD 511
+	\\
+	\\ By repeated subtraction of 0x1FF (511)
+	\\    DD = 0
+	\\    DM = D
+	\\    while (DM >= 0x1FF) {
+	\\       DM -= 0x1FF
+	\\       DD ++
+	\\    }
+	LDA 0, Y
+	STA dmret%
+	LDA 1, Y
+	STA dmret%+1
+	LDY #0
+.rloop	LDA dmret%
+	SEC
+	SBC #&FF
+	PHA
+	LDA dmret%+1
+	SBC #&01
+	BCC rexit
+	STA dmret%+1
+	PLA
+	STA dmret%
+	INY
+	BNE rloop	; always
+.rexit
+	PLA
+	RTS
+}
+ENDIF
+
+
+
+
 	\\ **** Calc first MMC sector of disk ****
 	\\ sec% = MMC_SECTOR + 32 + drvidx * 800
 	\\ Call after MMC_BEGIN
+
+
+	\\ TODO: _LARGEMMB2_
+	\\
+	\\ calculate_chunk_start(drvno):
+	\\    sec = MMC_SECTOR
+	\\    i = 0
+	\\    while drvno >= 0x1FF {
+ 	\\       sec   += 0x63D00          // 511 * 800 + 32
+	\\       drvno -= 0x1FF
+	\\       i++
+	\\    }
+	\\    return i
+	\\
+	\\ JSR calculate_chunk_start
+	\\ sec% += 32 + drvno * 800
 
 	\\ Current drive
 .DiskStart
@@ -6517,24 +6579,39 @@ IF _LARGEMMB_
 	PHA
 
 	\\ Start at sector 0
-	LDA #0
-	STA sec%
-	STA sec%+1
-	STA sec%+2
+	LDY #0
+	STY sec%
+	STY sec%+1
+	STY sec%+2
 
 	\\ If X < 0 the calculate the address of disk 0; this is just used by DRECAT
 	TXA
 	BMI dsaddoffset
+
+	\\ Set sec% to the drive number in the drive table
+	LDA DRIVE_INDEX0,X
+	STA sec%
+	LDA DRIVE_INDEX4,X
+	MASK_DISKNO
+	STA sec%+1
+
+	\\ Calculate:
+	\\     Y      = DrvNo (sec%) DIV 511
+	\\     dmret% = DrvNo (sec%) MOD 511
+	LDY #sec%
+	JSR calculate_div_mod_511_zp_y
+
+	TYA	; y = chunk
+	PHA
 
 	\\ Multiply drive index by 800
 	\\ Note: these are 256b sectors
 	\\ 800 = 32 + 256 + 256 + 256
 
 	\\ sec% = drvindx
-	LDA DRIVE_INDEX4,X
-	MASK_DISKNO
+	LDA dmret%+1
 	STA sec%+1
-	LDA DRIVE_INDEX0,X
+	LDA dmret%
 	\\ Loop1: sec% *= 32
 	LDY #5
 .dsxloop1
@@ -6547,18 +6624,25 @@ IF _LARGEMMB_
 	\\ Loop2: sec% += 3 * 256 * drvidx
 	LDY #3
 .dsxloop2
-	LDA DRIVE_INDEX0,X
+	LDA dmret%
 	CLC \\ Don't thing this is needed, as sec% cannot overflow
 	ADC sec%+1
 	STA sec%+1
-	LDA DRIVE_INDEX4,X
-	MASK_DISKNO
+	LDA dmret%+1
 	ADC sec%+2
 	STA sec%+2
 	DEY
 	BNE dsxloop2
 
+	PLA
+	TAY	; y = chunk
+
 .dsaddoffset
+	\\ sec% += MMC_SECTOR + Y * 0x63D00
+	\\ uses only A and Y, and no zp
+	JSR add_chunk_sector
+
+	\\ Add 32
 	LDA #&20
 	CLC
 	ADC sec%
@@ -6567,13 +6651,15 @@ IF _LARGEMMB_
 	INC sec%+1
 	BNE done
 	INC sec%+2
-
 .done
+
 	PLA
 	TAY
-
-	JMP add_mmc_sector
+	RTS
 }
+
+
+
 
 ELSE
 
@@ -7114,51 +7200,57 @@ IF _LARGEMMB_
 	\\
 	\\ Sector Code is in 512b units = 32 disks
 	\\
-	\\ A  =  (D+1) >> 5
-	\\ B0 = ((D+1) AND &0F) << 4
-	\\ B1 = &E + ((D+1) AND &10) ? 1 : 0
-	\\ (39 bytes)
+	\\    DD  = (D DIV 511)	     (4 bits)
+	\\    DM  = (D MOD 511)       (9 bits)
+	\\    DM' = DM+1
+	\\    A   = (DD << 4) | (DM' >> 5)
+	\\    B1  = (DM' AND &10) ? &0F : &0E
+	\\    B0  = (DM' AND &0F) << 4
+	\\
+	\\ Needs to preserve B8/9
 
 .GetIndex
 {
-	\\ Calculate (D+1)
-	LDA &B8
-	CLC
-	ADC #1
-	PHA		; push LSB of (D+1) for later
-	LDY &B9
-	BCC skip
-	INY
-.skip
-	STY &B1		; B1 = MSB of (D+1), A = LSB of (D+1)
 
-	\\ Shift (D+1) right by 5 places
-	LDY #5
-.loop
-	LSR &B1
-	ROR A
-	DEY
-	BNE loop
+	LDY #&B8
+	JSR calculate_div_mod_511_zp_y
 
-	\\ Save (D+1) >> 5 in Y
-	TAY
+	\\ Calculate DD << 4 into tmp (B0)
+	TYA  		;  0 :  0  0  0  0 D3 D3 D1 D0
+	ASL A           ;  0 :  0  0  0 D3 D2 D1 D0  0
+	ASL A 		;  0 :  0  0 D3 D2 D1 D0  0  0
+	ASL A		;  0 :  0 D3 D2 D1 D0  0  0  0
+	ASL A		;  0 : D3 D2 D1 D0  0  0  0  0
 
-	\\ B0 = ((D+1) AND &0F) << 4
-	PLA	  	; LSB of (D+1)
-	ASL A
-	ASL A
-	ASL A
-	ASL A		; C = (D+1) & 10, used for B1 below
-	AND #&F0
-	STA &B0
-
-	\\ B1 = &E + ((D+1) AND &10) ? 1 : 0
-	LDA #MP+&0E
-	ADC #0
-	STA &B1
-
-	\\ Restore (D+1) >> 5 from Y to A
+	\\ Calculate DM' = DM + 1 (9 bits) into C and A
+	LDY dmret%		;
+	INY             ;
+	STA &B0		;      D3 D2 D1 D0  0  0  0  0 ==> tmp
+	LDA dmret%+1    ;
+	ROR A		; C = MSN (DM)
+	TYA             ;
+	BNE skip
+	SEC
+.skip			; M8 : M7 M6 M5 M4 M3 M2 M1 M0
+	\\ A =  (DD << 4) | (DM' >> 5)
+	ROL A           ; M7 : M6 M5 M4 M3 M2 M1 M0 M8
+	ROL A           ; M6 : M5 M4 M3 M2 M1 M0 M8 M7
+	ROL A           ; M5 : M4 M3 M2 M1 M0 M8 M7 M6
+	ROL A           ; M4 : M3 M2 M1 M0 M8 M7 M6 M5
+	PHA 		; M4 : M3 M2 M1 M0 M8 M7 M6 M5
+	AND #&0F	; M4 :  0  0  0  0 M8 M7 M6 M5
+	ORA &B0         ; M4 : D3 D3 D1 D0 M8 M7 M6 M5 <== tmp
+	TAY		; M4 : D3 D3 D1 D0 M8 M7 M6 M5 ==> Final A (saved in Y)
+	PLA             ; M4 : M3 M2 M1 M0 M8 M7 M6 M5
+	AND #&F0        ; M4 : M3 M2 M1 M0  0  0  0  0
+	STA &B0         ; M4 : M3 M2 M1 M0  0  0  0  0 ==> Final B0
+	LDA #&00        ; M4 :  0  0  0  0  0  0  0  0
+	ADC #MP+&0E     ;  0 :  0  0  0  0  1  1  1 M4
+	STA &B1		;  0 :  0  0  0  0  1  1  1 M4 ==> Final B1
   	TYA
+	\\ A  = (DD << 4) | (DM' >> 5)
+	\\ B1 = (DM' AND &10) ? &0F : 0E
+	\\ B0 = (DM' AND &0F) << 4
 	RTS
 }
 ELSE
@@ -7308,80 +7400,50 @@ ENDIF
 	\\ **** Calculate disk table sector ****
 .DiskTableSec
 IF _LARGEMMB_
-	\\ DiskTableIndex = sector code
+	\\ DiskTableIndex (di) is a 8-bit value
 	\\
-	\\ Disk Table Index is in units of 2x 256b sectors
 	\\
-	\\  512 disks: disk table is  32 sectors
-	\\ 1024 disks: disk table is  64 sectors
-	\\ 2048 disks: disk table is 128 sectors
-	\\ 4096 disks: disk table is 256 sectors
-	\\ 8192 disks: disk table is 512 sectors
-	\\
-	\\ For 512 disk MMB files, the disk table fits in the 8K space
-	\\ before the disk images.
-	\\
-	\\ For larger MMB sizes the disk table is split into two physical
-	\\ chunks with seperated by the disk images. This retains
-	\\ compatibility with the original format.
-	\\
-	\\ The split is handled by adding a correction factor in certain
-	\\ cases.
-	\\ 1. When the DiskTableIndex being accessed is >= 0x10
-	\\ 2. When the MMB file is larger the 512 disks,
-	\\
-	\\ Theoretically, checking (1) is sufficient, as we should never be
-	\\ asked to read beyond the end of the disk table, given the
-	\\ current disk size. But for now we check (1) and (2).
-	\\
-	\\ Correction Factors:
-	\\ 0x10  512 disks - No correction
-	\\ 0x20 1024 disks - Add 0x0C8000 sectors
-	\\ 0x40 2048 disks - Add 0x190000 sectors
-	\\ 0x80 4096 disks - Add 0x320000 sectors
-	\\ 0x00 8192 disks - Add 0x640000 sectors
+	\\ sec% = MMC_SECTOR + (di >> 4) * 0x63D00 + (di & 0x0F) * 2
 
-	\\ Zero the sector
+	\\ A = (di & 0x0F)
+	\\ Y = (di >> 4)
+
+	LDA DiskTableIndex
+	PHA
+	LSR A
+	LSR A
+	LSR A
+	LSR A
+	TAY
+	PLA
+	AND #&0F
+	ASL A
+
+	\\ sec% = (di & 0x0F) * 2
+	STA sec%+0
 	LDA #0
 	STA sec%+1
 	STA sec%+2
+	\\ Fall through to...
 
-	\\ Is the MMB size = 512 disks (i.e. the original format)
-	LDA DISK_TABLE_SIZE
-	CMP #&10
-	BEQ add_disk_table_index ; yes, then no need to correct
-
-	\\ Is the disk table index < 0x10
-	LDA DiskTableIndex
-	CMP #&10
-	BCC add_disk_table_index ; yes, then no need to correct
-
-	\\ Start with sec% = 0x064000 as the initial correction factor
-	LDA #&40
+.add_chunk_sector
+{
+	TYA
+	BEQ done
+	\\ sec% += chunk * 0x63D00 by repeated addition
+.loop
+	LDA #&3D
+	CLC
+	ADC sec%+1
 	STA sec%+1
 	LDA #&06
+	ADC sec%+2
 	STA sec%+2
-	\\ Disk Table Size 0x20: sec <<= 1 which gives 0x0C8000 (== 1024 disks)
-	\\ Disk Table Size 0x40: sec <<= 2 which gives 0x190000 (== 2048 disks)
-	\\ Disk Table Size 0x80: sec <<= 4 which gives 0x320000 (== 4096 disks)
-	\\ Disk Table Size 0x00: sec <<= 8 which gives 0x640000 (== 8192 disks)
-	LDA DISK_TABLE_SIZE	; A = 20, 40, 80, 00
-	SBC #&01		; A = 1F, 3F, 7F, FF (carry was set earlier by CMP)
-.loop
-	ASL sec%+1		; sec <<= 1
-	ROL sec%+2
-	LSR A			; A >>= 1 (i.e. FF->7F->3F->1F->0F)
-	CMP #&10
-	BCS loop
-	\\ At this point, sec% = correction Factor
-
-	\\ sec% += DiskTableIndex * 2
-.add_disk_table_index
-	LDA DiskTableIndex
-	ASL A
-	STA sec%
-	BCC add_mmc_sector
-	INC sec%+1
+	DEY
+	BNE loop
+.done
+	\\ Fall through to...
+}
 
 	\\ sec% += MMC_SECTOR
 .add_mmc_sector
