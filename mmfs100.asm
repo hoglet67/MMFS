@@ -127,7 +127,7 @@ ELSE
 IF _LARGEMMB_
 	VID=MA+&10DF				; VID
 	DISK_TABLE_SIZE=VID+&E    		; 1 byte
-	DISKNO_MASK=VID+&F    			; 1 byte
+	NUM_CHUNKS=VID+&F    			; 1 byte
 	CHECK_CRC7=VID+&10			; 1 byte
 ELSE
 	VID=MA+&10E0				; VID
@@ -1208,34 +1208,37 @@ rn%=&B0
 	TXA
 	ADC #0
 	STA rn%+1
-	\\ TODO: _LARGEMMB2_ need to limit diskno to N * 511
 IF _LARGEMMB_
-	CMP DISKNO_MASK
-	BEQ rnskip
-	BCS rnnotval
-.rnskip
+	\\ Limit to 8192 so final check doesn't overflow
+	CMP #&20
 ELSE
-	CMP #2
-	BCS rnnotval
+	CMP #&02
 ENDIF
+	BCS rnnotval
+
 	JSR GSREAD
 	BCC rnloop
 
-	\\ TODO: _LARGEMMB2_ need to limit diskno to N * 511
+IF _LARGEMMB_
+	\\ TODO: possible ZP clash with calculate_div_mod_511_zp_y using &B1/0
+	STY &82
+	LDY #rn%
+	JSR calculate_div_mod_511_zp_y
+	\\ returns with Y=chunk number
+	CPY NUM_CHUNKS
+	LDY &82
+	BCS rnnotval
+ELSE
 	\\ <>511?
 .rnexit
 	LDX rn%
 	LDA rn%+1
-IF _LARGEMMB_
-	CMP DISKNO_MASK
-	BNE rnok
-ELSE
 	BEQ rnok
-ENDIF
 	INX
 	BEQ rnnotval
 	DEX
 .rnok
+ENDIF
 	PLA 				;\ 1 - ignore Y
 	LDA rn%+1
 	CLC
@@ -6384,15 +6387,14 @@ IF NOT(_MM32_)
 	STA MMC_SECTOR_VALID
 
 IF _LARGEMMB_
-	\\ TODO: _LARGEMMB2_ this may need to change
-
 	\\ Read the 8th byte of the disk table which now  indicates it's size:
-	\\ 	8th byte	DISKNO_MASK	DISK_TABLE_SIZE
-	\\	0xA0		0x01  		0x10		(511 disks)
-	\\	0xA1		0x03  		0x20		(1023 disks)
-	\\	0xA2		0x07 		0x40		(2047 disks)
-	\\	0xA3		0x0F  		0x80		(4095 disks)
-	\\	0xA4		0x1F  		0x00		(8191 disks)
+	\\ 	8th byte	DISK_TABLE_SIZE
+	\\	0x00	     	0x10	(0x01FF disks) (original value of 511)
+	\\	0x01		0x20	(0x03FE disks)
+	\\	0x02		0x30	(0x05FD disks)
+	\\      ...
+	\\      0x0E		0xF0	(0x1DF1 disks)
+	\\      0x0F		0x00	(0x1FF0 disks)
 	\\ Any other value default to 511
 	\\
 	\\ Load the first sector of the disk table
@@ -6402,22 +6404,19 @@ IF _LARGEMMB_
 	LDA #&10
 	STA DISK_TABLE_SIZE
 	LDA #&01
-	STA DISKNO_MASK
+	STA NUM_CHUNKS
 	LDA MA+&0E08
-	EOR #&A0
-	BEQ dtdone
-	CMP #&05
+	CMP #&10
 	BCS dtdone
-	TAX
-.dtloop
-	ASL DISK_TABLE_SIZE
-	SEC
-	ROL DISKNO_MASK
-	DEX
-	BNE dtloop
+	ADC #&01
+	STA NUM_CHUNKS
+	ASL A
+	ASL A
+	ASL A
+	ASL A
+	STA DISK_TABLE_SIZE
 .dtdone
 ENDIF
-
 	JMP ResetCRC7
 
 .fileerr
