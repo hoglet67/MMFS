@@ -7620,6 +7620,11 @@ ENDIF
 	BEQ gdfin
 	STA gdsec%
 	JSR CheckDiskTable
+	LDA gdsec%			; Have we moved to a new chunk?
+	AND #&0F
+	BNE gdx1			; No
+	LDA #&10
+	STA gdptr%			; Skip the blank entry
 .gdx1
 	INC gddiskno%
 	BNE gdx50
@@ -7714,25 +7719,12 @@ IF _INCLUDE_CMD_DRECAT_
 
 	JSR GetDiskFirstAll
 
-	\ is disk valid?
 .drc_loop2
 
 	\ read disc title
 	JSR MMC_ReadDiscTitle
 
-	\ read16sec% += 800
-	CLC
-	LDA read16sec%
-	ADC #&20
-	STA read16sec%
-	LDA read16sec%+1
-	ADC #&03
-	STA read16sec%+1
-	BCC drc_label3
-	INC read16sec%+2
-
 	\ copy title to table
-.drc_label3
 	LDY #&0B
 .drc_loop4
 	LDA read16str%,Y
@@ -7740,7 +7732,7 @@ IF _INCLUDE_CMD_DRECAT_
 	DEY
 	BPL drc_loop4
 
-	\ Test if we are at the end
+	\ Test if we are at the end of the disk table sector
 	LDA gdptr%+1
 	CMP #MP+&0F
 	BCC skipsave
@@ -7748,7 +7740,27 @@ IF _INCLUDE_CMD_DRECAT_
 	CMP #&F0
 	BCC skipsave
 	JSR SaveDiskTable
+
+	\ Test if we are at the end of the disk table chunk
+	LDA gdsec%
+	AND #&0F			; Are we at the end of a chunk?
+	CMP #&0F
+	BNE skipsave			; No
+	LDA #&40			; Add 340 rather than 320 sectors
+	EQUB &2C			; skip the next 2-byte instruction (BIT abs)
 .skipsave
+	\ read16sec% += 0x320 or 0x340 depending on if we are at a chunk boundary
+	LDA #&20
+	CLC
+	ADC read16sec%
+	STA read16sec%
+	LDA #&03
+	ADC read16sec%+1
+	STA read16sec%+1
+	BCC drc_label3
+	INC read16sec%+2
+.drc_label3
+
 	JSR GetDiskNext
 	BCC drc_loop2
 
@@ -7756,7 +7768,6 @@ IF _INCLUDE_CMD_DRECAT_
 	JMP SaveDiskTable
 }
 ENDIF
-
 
 	\\ *** Set up the string to be compared ***
 	\\ The match string is at (txtptr%)+Y
