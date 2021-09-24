@@ -1220,14 +1220,12 @@ ENDIF
 	BCC rnloop
 
 IF _LARGEMMB_
-	\\ TODO: possible ZP clash with calculate_div_mod_511_zp_y using &B1/0
-	STY &82
-	LDY #rn%
-	JSR calculate_div_mod_511_zp_y
-	\\ returns with Y=chunk number
-	CPY NUM_CHUNKS
-	LDY &82
+	\\ TODO: possible ZP clash with calculate_div_mod_511_zp_x using &B1/0
+	LDX #rn%
+	JSR calculate_div_mod_511_zp_x
+	CPX NUM_CHUNKS
 	BCS rnnotval
+	LDX rn%
 ELSE
 	\\ <>511?
 .rnexit
@@ -6509,7 +6507,7 @@ ENDIF
 IF _LARGEMMB_
 \\ TODO: CHANGE THIS
 dmret%=&80
-.calculate_div_mod_511_zp_y
+.calculate_div_mod_511_zp_x
 {
 	\\ Calculate:
 	\\    DD = D DIV 511
@@ -6522,11 +6520,11 @@ dmret%=&80
 	\\       DM -= 0x1FF
 	\\       DD ++
 	\\    }
-	LDA 0, Y
+	LDA 0, X
 	STA dmret%
-	LDA 1, Y
+	LDA 1, X
 	STA dmret%+1
-	LDY #0
+	LDX #0
 .rloop	LDA dmret%
 	SEC
 	SBC #&FF
@@ -6537,7 +6535,7 @@ dmret%=&80
 	STA dmret%+1
 	PLA
 	STA dmret%
-	INY
+	INX
 	BNE rloop	; always
 .rexit
 	PLA
@@ -6597,10 +6595,10 @@ IF _LARGEMMB_
 	\\ Calculate:
 	\\     Y      = DrvNo (sec%) DIV 511
 	\\     dmret% = DrvNo (sec%) MOD 511
-	LDY #sec%
-	JSR calculate_div_mod_511_zp_y
+	LDX #sec%
+	JSR calculate_div_mod_511_zp_x
 
-	TYA	; y = chunk
+	TXA	; x = chunk
 	PHA
 
 	\\ Multiply drive index by 800
@@ -7211,11 +7209,11 @@ IF _LARGEMMB_
 .GetIndex
 {
 
-	LDY #&B8
-	JSR calculate_div_mod_511_zp_y
+	LDX #&B8
+	JSR calculate_div_mod_511_zp_x
 
 	\\ Calculate DD << 4 into tmp (B0)
-	TYA  		;  0 :  0  0  0  0 D3 D3 D1 D0
+	TXA  		;  0 :  0  0  0  0 D3 D3 D1 D0
 	ASL A           ;  0 :  0  0  0 D3 D2 D1 D0  0
 	ASL A 		;  0 :  0  0 D3 D2 D1 D0  0  0
 	ASL A		;  0 :  0 D3 D2 D1 D0  0  0  0
