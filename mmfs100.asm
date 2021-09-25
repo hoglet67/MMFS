@@ -7399,9 +7399,10 @@ IF _LARGEMMB_
 	TYA
 	BEQ done
 	\\ sec% += chunk * 0x63D00 by repeated addition
-.loop
-	LDA #&3D
 	CLC
+.loop
+	\\ Loop can never overflow, so do CLC out side of loop
+	LDA #&3D
 	ADC sec%+1
 	STA sec%+1
 	LDA #&06
