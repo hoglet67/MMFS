@@ -7590,19 +7590,20 @@ IF _LARGEMMB_
 	BEQ gdfin
 	INC gdsec%
 	LDA gdsec%
-ELSE
-	LDA gdsec%
-	ADC #2
-	CMP #&A0			; (&80 OR 32)
-	BEQ gdfin
-	STA gdsec%
-ENDIF
 	JSR CheckDiskTable
 	LDA gdsec%			; Have we moved to a new chunk?
 	AND #&0F
 	BNE gdx1			; No
 	LDA #&10
 	STA gdptr%			; Skip the blank entry
+ELSE
+	LDA gdsec%
+	ADC #2
+	CMP #&A0			; (&80 OR 32)
+	BEQ gdfin
+	STA gdsec%
+	JSR CheckDiskTable
+ENDIF
 .gdx1
 	INC gddiskno%
 	BNE gdx50
@@ -7719,6 +7720,7 @@ IF _INCLUDE_CMD_DRECAT_
 	BCC skipsave
 	JSR SaveDiskTable
 
+IF _LARGEMMB_
 	\ Test if we are at the end of the disk table chunk
 	LDA gdsec%
 	AND #&0F			; Are we at the end of a chunk?
@@ -7726,6 +7728,7 @@ IF _INCLUDE_CMD_DRECAT_
 	BNE skipsave			; No
 	LDA #&40			; Add 340 rather than 320 sectors
 	EQUB &2C			; skip the next 2-byte instruction (BIT abs)
+ENDIF
 .skipsave
 	\ read16sec% += 0x320 or 0x340 depending on if we are at a chunk boundary
 	LDA #&20
