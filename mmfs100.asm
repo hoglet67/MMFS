@@ -17,13 +17,13 @@ _LARGEMMB_=NOT(_MM32_)
 \\ M/SWMMFS
 \\ bytes
 \\ free    DONBOOT LARGEMMB
-\\ 282	   0	   0
-\\ 193	   0	   1
-\\ 237	   1	   0
-\\ 148	   1	   1
+\\ 284	   0	   0
+\\ 166	   0	   1
+\\ 239	   1	   0
+\\ 121	   1	   1
 
-\\ DONBOOT   costs  45 bytes
-\\ LARGEMMB  costs  89 bytes
+\\ DONBOOT  costs  45 bytes
+\\ LARGEMMB costs 118 bytes
 
 ;; At the moment, we either include or exclude all the optional commands
 
