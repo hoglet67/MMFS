@@ -1220,7 +1220,7 @@ IF _LARGEMMB_
 	\\ Limit to 8192 so final check doesn't overflow
 	CMP #&20
 ELSE
-	CMP #&02
+	CMP #2
 ENDIF
 	BCS rnnotval
 
@@ -6548,7 +6548,7 @@ ENDIF
 	\\ **** Calc first MMC sector of disk ****
 	\\ sec% = MMC_SECTOR + 32 + drvidx * 800
 	\\ Call after MMC_BEGIN
-	\\
+
 	\\ Current drive
 .DiskStart
 	JSR CheckCurDrvFormatted	; X=drive
@@ -7229,11 +7229,10 @@ IF _LARGEMMB_
 }
 ELSE
 	\\ **** Calc disk table sec & offset ****
-	\\ Entry: D = Disk no (B8/B9)
+	\\ Entry: D = Disk no (B8)
 	\\ Exit: (B0) = &E00 + (D + 1) x 16
 	\\     : A=Table Sector Code
 	\\ Note; D = 511 not valid
-	\\ (38 bytes)
 .GetIndex
 {
 	LDA &B9
