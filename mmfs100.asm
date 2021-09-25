@@ -317,7 +317,9 @@ ENDIF
 	LDA (&AE),Y
 	BMI prtstr_return1		; If end
 	JSR PrintChrA
-	JMP prtstr_loop
+	\\ PrintChrA uses RememberAXY, so the final instruction is PLA
+	\\ which means it's safe to BPL
+	BPL prtstr_loop	      		; always
 .prtstr_return1
 	PLA 				; Restore A & Y
 	TAY
