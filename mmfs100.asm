@@ -8300,8 +8300,19 @@ ENDIF
 
 	\\ Find first unformatted disk and load in drive
 .dop_New
-	JSR FreeDisk
+{
+	LDA #&FF
+	STA gdopt%			; GetDisk returns unformatted disk
+	JSR GetDiskFirstAll
+.fdkloop
 	BCS ErrNoFreeDisks		; no free disks
+	CMP #&F0			; Is it formatted?
+	BEQ fdkfound			; No!
+	JSR GetDiskNext
+	JMP fdkloop
+.fdkfound
+	\ Covert gddisk% to BCD in decno% for printing
+	JSR DecNo_BIN2BCD
 	\ load unformatted disk
 	JSR LoadDrive
 	\ message: disk# in drv#:
@@ -8321,25 +8332,6 @@ ENDIF
 	JSR ReportError
 	EQUB &FF
 	EQUS "No free discs",0
-
-	\\**** Find first free disk ****
-	\\ On exit: Word &B8=disk number
-	\\ C=0=Found / C=1=Not Found
-.FreeDisk
-{
-	LDA #&FF
-	STA gdopt%			; GetDisk returns unformatted disk
-	JSR GetDiskFirstAll
-.fdkloop
-	BCS fdknotfound
-	CMP #&F0			; Is it formatted?
-	BEQ fdkfound			; No!
-	JSR GetDiskNext
-	JMP fdkloop
-.fdkfound
-	CLC
-.fdknotfound
-	RTS
 }
 
 	\\ *DOP (P/U/N/K/R) (<drive>)
