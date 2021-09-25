@@ -1228,7 +1228,6 @@ ENDIF
 	BCC rnloop
 
 IF _LARGEMMB_
-	\\ TODO: possible ZP clash with calculate_div_mod_511_zp_x using &B1/0
 	LDX #rn%
 	JSR calculate_div_mod_511_zp_x
 	CPX NUM_CHUNKS
@@ -6507,8 +6506,7 @@ ENDIF
 	EQUS "already formatted",0
 
 IF _LARGEMMB_
-\\ TODO: CHANGE THIS
-dmret%=&80
+dmret%=&B2
 .calculate_div_mod_511_zp_x
 {
 	\\ Calculate:
