@@ -6546,6 +6546,9 @@ ENDIF
 	\\ **** Calc first MMC sector of disk ****
 	\\ sec% = MMC_SECTOR + 32 + drvidx * 800
 	\\ Call after MMC_BEGIN
+	\\
+	\\ On Exit
+	\\    A, X, Y corrupted
 
 	\\ Current drive
 .DiskStart
@@ -6553,9 +6556,6 @@ ENDIF
 .DiskStartX
 IF _LARGEMMB_
 {
-	TYA
-	PHA
-
 	\\ Start at sector 0
 	LDY #0
 	STY sec%
@@ -6630,9 +6630,6 @@ IF _LARGEMMB_
 	BNE done
 	INC sec%+2
 .done
-
-	PLA
-	TAY
 	RTS
 }
 
