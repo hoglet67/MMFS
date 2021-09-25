@@ -100,17 +100,25 @@ TubePresentIf0=MA+&10D6
 CardSort=MA+&10DE
 
 IF _LARGEMMB_
-DiskTableIndex=MA+&10D4
-ENDIF
-
-MACRO MASK_DISKNO
-IF _LARGEMMB_
-	\\ AND DISKNO_MASK
-	AND #&1F
+	DiskTableIndex=MA+&10D4
+	MACRO DO_ASLA_X4
+	IF _SWRAM_
+		JSR A_rolx4	; actually 4x ASL A
+	ELSE
+		ASL A
+		ASL A
+		ASL A
+		ASL A
+	ENDIF
+	ENDMACRO
+	MACRO MASK_DISKNO
+		AND #&1F
+	ENDMACRO
 ELSE
-	AND #&01
+	MACRO MASK_DISKNO
+		AND #&01
+	ENDMACRO
 ENDIF
-ENDMACRO
 
 buf%=MA+&E00
 cat%=MA+&E00
@@ -126,7 +134,7 @@ IF _MM32_
 ELSE
 IF _LARGEMMB_
 	VID=MA+&10DF				; VID
-	DISK_TABLE_SIZE=VID+&E    		; 1 byte
+	SPARE=VID+&E				; 1 byte
 	NUM_CHUNKS=VID+&F    			; 1 byte
 	CHECK_CRC7=VID+&10			; 1 byte
 ELSE
@@ -6399,21 +6407,15 @@ IF _LARGEMMB_
 	LDA #&00
 	JSR LoadDiskTable
 	\\ Default values for legacy MMB (512 disks)
-	LDA #&10
-	STA DISK_TABLE_SIZE
-	LDA #&01
-	STA NUM_CHUNKS
-	LDA MA+&0E08
-	CMP #&10
-	BCS dtdone
-	ADC #&01
-	STA NUM_CHUNKS
-	ASL A
-	ASL A
-	ASL A
-	ASL A
-	STA DISK_TABLE_SIZE
-.dtdone
+	LDX #&00
+	LDA MA+&0E08		; new MMB size byte A0..AF
+	EOR #&A0		; 00..0F
+	CMP #&10		; support upto 16x 511 disks
+	BCS skip		; skip TAX if out of range
+	TAX
+.skip
+	INX			; 01..10
+	STX NUM_CHUNKS		; save in CRC protected area
 ENDIF
 	JMP ResetCRC7
 
@@ -6543,29 +6545,10 @@ dmret%=&80
 }
 ENDIF
 
-
-
-
 	\\ **** Calc first MMC sector of disk ****
 	\\ sec% = MMC_SECTOR + 32 + drvidx * 800
 	\\ Call after MMC_BEGIN
-
-
-	\\ TODO: _LARGEMMB2_
 	\\
-	\\ calculate_chunk_start(drvno):
-	\\    sec = MMC_SECTOR
-	\\    i = 0
-	\\    while drvno >= 0x1FF {
- 	\\       sec   += 0x63D00          // 511 * 800 + 32
-	\\       drvno -= 0x1FF
-	\\       i++
-	\\    }
-	\\    return i
-	\\
-	\\ JSR calculate_chunk_start
-	\\ sec% += 32 + drvno * 800
-
 	\\ Current drive
 .DiskStart
 	JSR CheckCurDrvFormatted	; X=drive
@@ -6654,9 +6637,6 @@ IF _LARGEMMB_
 	TAY
 	RTS
 }
-
-
-
 
 ELSE
 
@@ -7214,10 +7194,7 @@ IF _LARGEMMB_
 
 	\\ Calculate DD << 4 into tmp (B0)
 	TXA  		;  0 :  0  0  0  0 D3 D3 D1 D0
-	ASL A           ;  0 :  0  0  0 D3 D2 D1 D0  0
-	ASL A 		;  0 :  0  0 D3 D2 D1 D0  0  0
-	ASL A		;  0 :  0 D3 D2 D1 D0  0  0  0
-	ASL A		;  0 : D3 D2 D1 D0  0  0  0  0
+	DO_ASLA_X4	;  0 : D3 D2 D1 D0  0  0  0  0
 
 	\\ Calculate DM' = DM + 1 (9 bits) into C and A
 	LDY dmret%		;
@@ -7606,16 +7583,21 @@ ENDIF
 	ROR A
 	BCS gdx1
 IF _LARGEMMB_
+	\\ Compare gdsec against num_chunks<<4 - 1
+	LDA NUM_CHUNKS	 	 	; 01,02,...,0F,10
+	DO_ASLA_X4			; 10,20,...,F0,00
+	CLC
+	SBC gdsec%			; subtract gdsec+1
+	BEQ gdfin
+	INC gdsec%
 	LDA gdsec%
-	ADC #1
-	CMP DISK_TABLE_SIZE
 ELSE
 	LDA gdsec%
 	ADC #2
 	CMP #&A0			; (&80 OR 32)
-ENDIF
 	BEQ gdfin
 	STA gdsec%
+ENDIF
 	JSR CheckDiskTable
 	LDA gdsec%			; Have we moved to a new chunk?
 	AND #&0F
