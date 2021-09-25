@@ -6520,13 +6520,13 @@ dmret%=&B2
 	\\       DM -= 0x1FF
 	\\       DD ++
 	\\    }
-	LDA 0, X
-	STA dmret%
 	LDA 1, X
 	STA dmret%+1
+	LDA 0, X
+	STA dmret%
 	LDX #0
-.rloop	LDA dmret%
 	SEC
+.rloop
 	SBC #&FF
 	PHA
 	LDA dmret%+1
@@ -6574,7 +6574,7 @@ IF _LARGEMMB_
 	STA sec%+1
 
 	\\ Calculate:
-	\\     Y      = DrvNo (sec%) DIV 511
+	\\     X      = DrvNo (sec%) DIV 511
 	\\     dmret% = DrvNo (sec%) MOD 511
 	LDX #sec%
 	JSR calculate_div_mod_511_zp_x
