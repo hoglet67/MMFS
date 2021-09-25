@@ -1899,10 +1899,10 @@ IF _INCLUDE_CMD_WIPE_
 	JSR getcatentry_fspTxtP
 .wipeloop
 	LDA MA+&0E0F,Y
-	BMI wipelocked			; Ignore locked files
+	BMI wipenext			; Ignore locked files
 	JSR prt_filename_Yoffset
 	JSR ConfirmYNcolon		; Confirm Y/N
-	BNE wipeno
+	BNE wipenext
 	LDX &B6
 	JSR CheckForDiskChange
 	STX &B6
@@ -1911,9 +1911,7 @@ IF _INCLUDE_CMD_WIPE_
 	JSR SaveCatToDisk
 	LDA &AB
 	STA &B6
-.wipeno
-	JSR PrintNewLine
-.wipelocked
+.wipenext
 	JSR get_cat_nextentry
 	BCS wipeloop
 	RTS
@@ -1948,9 +1946,7 @@ IF _INCLUDE_CMD_DESTROY_
 	JSR get_cat_nextentry
 	BCS destroyloop1
 	JSR GoYN			; Confirm Y/N
-	BEQ destroyyes
-	JMP PrintNewLine
-.destroyyes
+	BNE Y_rts
 	JSR CheckForDiskChange
 	JSR get_cat_firstentry80
 .destroyloop2
@@ -1963,7 +1959,7 @@ IF _INCLUDE_CMD_DESTROY_
 	JSR SaveCatToDisk
 .msgDELETED
 	JSR PrintString
-	EQUS 13,"Deleted",13
+	EQUS "Deleted",13
 }
 ENDIF
 
@@ -1977,6 +1973,7 @@ ENDIF
 	INY
 	INY
 	INY
+.Y_rts
 	RTS
 
 IF _INCLUDE_CMD_DESTROY_ OR _INCLUDE_CMD_WIPE_
@@ -5375,7 +5372,7 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_DESTROY_ OR _INCLUDE_CMD_FORM_VERIFY_ OR
 	PLA 				; don't return to sub
 	PLA
 .isgo
-	JMP PrintNewLine
+	RTS
 }
 ENDIF
 
@@ -5432,6 +5429,7 @@ ENDIF
 	LDA #&4E			; "N"
 .confYN
 	JSR PrintChrA
+	JSR PrintNewLine
 	PLP
 	RTS
 }
@@ -8278,13 +8276,10 @@ ENDIF
 	EQUS " : "
 	NOP
 	JSR ConfirmYN
-	PHP
-	JSR PrintNewLine
-	PLP
 	BNE dkcancel
 	LDA #&F0			; Unformatted disk
 	PHA
-	JMP dkconfirmed
+	BNE dkconfirmed
 .dkcancel
 	RTS
 }
