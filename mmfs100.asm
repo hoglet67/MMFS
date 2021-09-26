@@ -7197,8 +7197,7 @@ IF _LARGEMMB_
 	LDY dmret%		;
 	INY             ;
 	STA &B0		;      D3 D2 D1 D0  0  0  0  0 ==> tmp
-	LDA dmret%+1    ;
-	ROR A		; C = MSN (DM)
+	ROR dmret%+1    ; C = MSN (DM)
 	TYA             ;
 	BNE skip
 	SEC
