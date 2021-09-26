@@ -4756,30 +4756,9 @@ ENDIF
 	SEC
 	JSR ChannelBufferRW_Yintch_C1read	; Load buffer
 .bg_samesector1
-	LDA MA+&1110,Y			; Seq.Ptr low byte
-	STA &BA
-	LDA MA+&1113,Y			; Buffer address
-	STA &BB
-	LDY #&00
-	LDA (&BA),Y			; Byte from buffer
-	PHA
-	LDY MA+&10C2			; Y=intch
-	LDX &BA
-	INX
-	TXA
-	STA MA+&1110,Y			; Seq.Ptr+=1
-	BNE bg_samesector2
+	JSR load_then_incSeqPtr_Yintch	; load buffer ptr into BA/BB then increments Seq Ptr
+	LDA (&BA, X)			; Byte from buffer
 	CLC
-	LDA MA+&1111,Y
-	ADC #&01
-	STA MA+&1111,Y
-	LDA MA+&1112,Y
-	ADC #&00
-	STA MA+&1112,Y
-	JSR ChannelFlags_ClearBit7	; PTR in new sector!
-.bg_samesector2
-	CLC
-	PLA
 	RTS				; C=0=NOT EOF
 }
 
@@ -4937,28 +4916,11 @@ ENDIF
 	SEC 				; Load buffer
 	JSR ChannelBufferRW_Yintch_C1read
 .bp_savebyte
-	LDA MA+&1110,Y			; Seq.Ptr
-	STA &BA
-	LDA MA+&1113,Y			; Buffer page
-	STA &BB
-	PLA
-	LDY #&00
-	STA (&BA),Y			; Byte to buffer
-	LDY MA+&10C2
 	LDA #&40			; Bit 6 set = new data
 	JSR ChannelFlags_SetBits
-	INC &BA				; PTR=PTR+1
-	LDA &BA
-	STA MA+&1110,Y
-	BNE bp_samesecnextbyte
-	JSR ChannelFlags_ClearBit7	; PTR in next sector
-	LDA MA+&1111,Y
-	ADC #&01
-	STA MA+&1111,Y
-	LDA MA+&1112,Y
-	ADC #&00
-	STA MA+&1112,Y
-.bp_samesecnextbyte
+	JSR load_then_incSeqPtr_Yintch	; load buffer ptr into BA/BB then increments Seq Ptr
+	PLA
+	STA (&BA,X)			; Byte to buffer
 	TYA
 	JSR CmpPTR
 	BCC bp_exit			; If PTR<EXT
@@ -5053,6 +5015,27 @@ ENDIF
 	LDA MA+&1116,Y
 	SBC &02,X
 	RTS 				; C=p>=n
+
+\ DMB: Factor out some common code from BPUT/BGET
+
+.load_then_incSeqPtr_Yintch
+{
+	LDA MA+&1110,Y			; Seq.Ptr
+	STA &BA
+	LDA MA+&1113,Y			; Buffer page
+	STA &BB
+	TYA
+	TAX
+	INC MA+&1110,X			; Seq.Ptr+=1
+	BNE samesector
+	JSR ChannelFlags_ClearBit7	; PTR in new sector!
+	INC MA+&1111,X
+	BNE samesector
+	INC MA+&1112,X
+.samesector
+	LDX #&00
+	RTS
+}
 
 	\ *HELP MMFS
 .CMD_MMFS
