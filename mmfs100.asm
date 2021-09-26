@@ -7722,14 +7722,14 @@ IF _LARGEMMB_
 	LDA gdsec%
 	AND #&0F			; Are we at the end of a chunk?
 	CMP #&0F
-	BNE skipsave			; No
-	LDA #&40			; Add 340 rather than 320 sectors
+	BCC skipsave			; No
+	\ C=1, so add 3F
+	LDA #&3F			; Add 340 rather than 320 sectors
 	EQUB &2C			; skip the next 2-byte instruction (BIT abs)
 ENDIF
 .skipsave
 	\ read16sec% += 0x320 or 0x340 depending on if we are at a chunk boundary
 	LDA #&20
-	CLC
 	ADC read16sec%
 	STA read16sec%
 	LDA #&03
