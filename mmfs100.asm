@@ -1226,7 +1226,11 @@ IF _LARGEMMB_
 	JSR calculate_div_mod_511_zp_x
 	CPX NUM_CHUNKS
 	BCS rnnotval
+	\ C=0
 	LDX rn%
+	PLA 				;\ 1 - ignore Y
+	LDA rn%+1
+	RTS
 ELSE
 	\\ <>511?
 .rnexit
@@ -1237,11 +1241,11 @@ ELSE
 	BEQ rnnotval
 	DEX
 .rnok
-ENDIF
 	PLA 				;\ 1 - ignore Y
 	LDA rn%+1
 	CLC
 	RTS
+ENDIF
 
 	\ Not a valid number, restore Y and set C
 .rnnotval
