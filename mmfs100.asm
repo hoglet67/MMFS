@@ -2584,8 +2584,9 @@ ENDIF
 	BCC errBADDRIVE
 	CMP #&04
 	BCS errBADDRIVE
-	JSR SetCurrentDrive_Adrive
-	CLC
+	\ C=0
+	JSR SetCurrentDrive_Adrive	; preserves C
+	\ exit with C=0
 	RTS
 
 .errBADDRIVE
