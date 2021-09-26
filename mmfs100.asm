@@ -1180,8 +1180,8 @@ rn%=&B0
 	JSR GSREAD
 	BCS rnnotval			; Should never happen!
 .rnloop
-	SEC
-	SBC #48
+	\ C=0
+	SBC #'0' - 1			; -1 as C=0 to save SED
 	BMI rnnotval
 	CMP #10
 	BCS rnnotval
