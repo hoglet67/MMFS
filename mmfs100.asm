@@ -8227,8 +8227,7 @@ IF _INCLUDE_CMD_DOP_
 	\\ Mark disk as read only
 .dop_Protect
 	LDA #&00
-	BEQ dlul
-
+	EQUB &2C			; skip the next 2-byte instruction (BIT abs)
 	\\ Mark disk as writable
 .dop_Unprotect
 	LDA #&0F
