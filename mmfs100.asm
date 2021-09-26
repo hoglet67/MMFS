@@ -290,14 +290,6 @@ ENDIF
 	JSR TUBE_RELEASE
 	JMP &0100
 
-	\ Print New Line
-.PrintNewLine
-	PHA
-	LDA #&0D
-	JSR PrintChrA
-	PLA
-	RTS
-
 	\ **** Print String ****
 	\ String terminated if bit 7 set
 	\ Exit: AXY preserved, C=0
@@ -6537,11 +6529,21 @@ dmret%=&B2
 	STA dmret%
 	INX
 	BNE rloop	; always
+}
+ENDIF
+
+ENDIF \\ NOT(_MM32_)
+
+	\ Print New Line
+.PrintNewLine
+	PHA
+	LDA #&0D
+	JSR PrintChrA
 .rexit
 	PLA
 	RTS
-}
-ENDIF
+
+IF NOT(_MM32_)
 
 	\\ **** Calc first MMC sector of disk ****
 	\\ sec% = MMC_SECTOR + 32 + drvidx * 800
