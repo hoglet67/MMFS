@@ -6382,12 +6382,12 @@ IF NOT(_MM32_)
 IF _LARGEMMB_
 	\\ Read the 8th byte of the disk table which now  indicates it's size:
 	\\ 	8th byte	DISK_TABLE_SIZE
-	\\	0x00	     	0x10	(0x01FF disks) (original value of 511)
-	\\	0x01		0x20	(0x03FE disks)
-	\\	0x02		0x30	(0x05FD disks)
+	\\	0xA0	     	0x10	(0x01FF disks) (original value of 511)
+	\\	0xA1		0x20	(0x03FE disks)
+	\\	0xA2		0x30	(0x05FD disks)
 	\\      ...
-	\\      0x0E		0xF0	(0x1DF1 disks)
-	\\      0x0F		0x00	(0x1FF0 disks)
+	\\      0xAE		0xF0	(0x1DF1 disks)
+	\\      0xAF		0x00	(0x1FF0 disks)
 	\\ Any other value default to 511
 	\\
 	\\ Load the first sector of the disk table
