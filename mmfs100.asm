@@ -290,6 +290,14 @@ ENDIF
 	JSR TUBE_RELEASE
 	JMP &0100
 
+	\ Print New Line
+.PrintNewLine
+	PHA
+	LDA #&0D
+	JSR PrintChrA
+	PLA
+	RTS
+
 	\ **** Print String ****
 	\ String terminated if bit 7 set
 	\ Exit: AXY preserved, C=0
@@ -1224,7 +1232,7 @@ ENDIF
 IF _LARGEMMB_
 	LDX #rn%
 	JSR calculate_div_mod_511_zp_x
-	CPX NUM_CHUNKS
+	CMP NUM_CHUNKS
 	BCS rnnotval
 	\ C=0
 	LDX rn%
@@ -6490,48 +6498,43 @@ dmret%=&B2
 .calculate_div_mod_511_zp_x
 {
 	\\ Calculate:
-	\\    DD = D DIV 511
-	\\    DM = D MOD 511
+	\\    DD = D DIV 511 (0x1FF)
+	\\    DM = D MOD 511 (0x1FF)
 	\\
-	\\ By repeated subtraction of 0x1FF (511)
-	\\    DD = 0
-	\\    DM = D
-	\\    while (DM >= 0x1FF) {
-	\\       DM -= 0x1FF
-	\\       DD ++
-	\\    }
-	LDA 1, X
-	STA dmret%+1
-	LDA 0, X
-	STA dmret%
-	LDX #0
-	SEC
-.rloop
-	SBC #&FF
-	PHA
-	LDA dmret%+1
-	SBC #&01
-	BCC rexit
-	STA dmret%+1
-	PLA
-	STA dmret%
-	INX
-	BNE rloop	; always
-}
+	\\ Algorithm (with thanks to Toby Lobster):
+	\\    DD = D DIV 512
+	\\    Correct DD by +1 in a small number of cases (0x1FF, 0x3FE-F, 0x5FD-F, 0x7FC-F, ...)
+	\\    DM = (D + DD) MOD 512
+	\\    See: https://stardot.org.uk/forums/viewtopic.php?p=336092#p336092
+	\\
+	\\ Implemenentation:
+	\\     26 bytes
+	\\     37/48 cycles
+	\\
+	\\ On Exit:
+	\\                  A = DD (the quotient)
+	\\    dmret%+1/dmret% = DM (the remainder)
+
+	LDA 1, X	; 3  3
+	LSR A		; 2  2	; approximate the quotient to D DIV 512
+	PHA 		; 3  3	; push the approximation
+	BCC done	; 3  2	; branch if approximation is accurate (D = xxx0 xxxx xxxx)
+	ADC 0, X	;    3	; after this add, C = 1 if correction is needed
+	PLA    		;    4	; pop the approximation
+	ADC #0		;    2	; correct the it by +1
+	PHA 		;    3	; push the approximation
+.done
+	ADC 0, X	; 3  3	; A = quotient, now calculate the remainder
+	STA dmret%	; 3  3
+	LDA 1, X	; 3  3
+	ADC #0 		; 2  2
+	AND #1		; 2  2
+	STA dmret%+1	; 3  3
+	PLA 		; 4  4
+	RTS		; 6  6
+			;-- --
+}			;37 48
 ENDIF
-
-ENDIF \\ NOT(_MM32_)
-
-	\ Print New Line
-.PrintNewLine
-	PHA
-	LDA #&0D
-	JSR PrintChrA
-.rexit
-	PLA
-	RTS
-
-IF NOT(_MM32_)
 
 	\\ **** Calc first MMC sector of disk ****
 	\\ sec% = MMC_SECTOR + 32 + drvidx * 800
@@ -6564,13 +6567,12 @@ IF _LARGEMMB_
 	STA sec%+1
 
 	\\ Calculate:
-	\\     X      = DrvNo (sec%) DIV 511
+	\\     A      = DrvNo (sec%) DIV 511
 	\\     dmret% = DrvNo (sec%) MOD 511
 	LDX #sec%
 	JSR calculate_div_mod_511_zp_x
 
-	TXA	; x = chunk
-	PHA
+	PHA	; A = chunk
 
 	\\ Multiply drive index by 800
 	\\ Note: these are 256b sectors
@@ -7178,7 +7180,7 @@ IF _LARGEMMB_
 	JSR calculate_div_mod_511_zp_x
 
 	\\ Calculate DD << 4 into tmp (B0)
-	TXA  		;  0 :  0  0  0  0 D3 D3 D1 D0
+	  		;  0 :  0  0  0  0 D3 D3 D1 D0
 	DO_ASLA_X4	;  0 : D3 D2 D1 D0  0  0  0  0
 
 	\\ Calculate DM' = DM + 1 (9 bits) into C and A
