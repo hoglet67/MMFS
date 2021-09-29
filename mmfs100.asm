@@ -14,6 +14,9 @@ _DONBOOT_=NOT(_MM32_)
 \\ Enable support for large (>512 disk) MMB files
 _LARGEMMB_=NOT(_MM32_)
 
+\\ Include *DBASE and code to add the disk base numbber on *DIN/DOUT
+_DBASE_=NOT(_MM32_)
+
 \\ M/SWMMFS
 \\ bytes
 \\ free    DONBOOT LARGEMMB
@@ -42,6 +45,7 @@ _INCLUDE_CMD_TITLE_=_COMMANDS_
 _INCLUDE_CMD_WIPE_=_COMMANDS_
 
 ;; DUTILS Commands
+_INCLUDE_CMD_DBASE_=_COMMANDS_ AND _DBASE_
 _INCLUDE_CMD_DCAT_=_COMMANDS_
 _INCLUDE_CMD_DDRIVE_=_COMMANDS_
 _INCLUDE_CMD_DFREE_=_COMMANDS_
@@ -134,7 +138,7 @@ IF _MM32_
 ELSE
 IF _LARGEMMB_
 	VID=MA+&10DF				; VID
-	SPARE=VID+&E				; 1 byte
+	CHUNK_BASE=VID+&E			; 1 byte
 	NUM_CHUNKS=VID+&F    			; 1 byte
 	CHECK_CRC7=VID+&10			; 1 byte
 ELSE
@@ -1232,7 +1236,6 @@ ENDIF
 IF _LARGEMMB_
 	LDX #rn%
 	JSR calculate_div_mod_511_zp_x
-	CMP NUM_CHUNKS
 	BCS rnnotval
 	\ C=0
 	LDX rn%
@@ -1620,6 +1623,10 @@ ENDIF
 	EQUS "OUT"
 	EQUB &80+&04
 ELSE
+IF _INCLUDE_CMD_DBASE_
+	EQUS "BASE"
+	EQUB &80+&07
+ENDIF
 	EQUS "BOOT"
 	EQUB &80+&07
 IF _INCLUDE_CMD_DCAT_
@@ -1760,6 +1767,9 @@ ENDIF
 	EQUW mm32_cmd_din-&8001
 	EQUW mm32_cmd_dout-&8001
 ELSE
+IF _INCLUDE_CMD_DBASE_
+	EQUW CMD_DBASE-&8001
+ENDIF
 	EQUW CMD_DBOOT-&8001
 IF _INCLUDE_CMD_DCAT_
 	EQUW CMD_DCAT-&8001
@@ -6393,16 +6403,26 @@ IF _LARGEMMB_
 	\\ Load the first sector of the disk table
 	LDA #&00
 	JSR LoadDiskTable
-	\\ Default values for legacy MMB (512 disks)
-	LDX #&00
+
+	\\ Process the new MMB length byte
+	LDX #&00       	        ; default NUM_CHUNKS for 511 disk MMB
 	LDA MA+&0E08		; new MMB size byte A0..AF
 	EOR #&A0		; 00..0F
 	CMP #&10		; support upto 16x 511 disks
 	BCS skip		; skip TAX if out of range
-	TAX
+	TAX 			; accept the value
 .skip
 	INX			; 01..10
 	STX NUM_CHUNKS		; save in CRC protected area
+
+	\\ Process the new MMB chunk base byte
+	LDX #&00
+	LDA MA+&0E09		; new MMB chunk base byte
+	CMP NUM_CHUNKS		; compare with the number of chunks
+	BCS skip2		; skip TAX if equal or greater
+	TAX 			; accept the value
+.skip2
+	STX CHUNK_BASE
 ENDIF
 	JMP ResetCRC7
 
@@ -6531,9 +6551,12 @@ dmret%=&B2
 	AND #1		; 2  2
 	STA dmret%+1	; 3  3
 	PLA 		; 4  4
+	CLC		; 2  2
+	ADC CHUNK_BASE	; 4  4
+	CMP NUM_CHUNKS	; 4  4
 	RTS		; 6  6
 			;-- --
-}			;37 48
+}			;47 58
 ENDIF
 
 	\\ **** Calc first MMC sector of disk ****
@@ -6557,7 +6580,7 @@ IF _LARGEMMB_
 
 	\\ If X < 0 the calculate the address of disk 0; this is just used by DRECAT
 	TXA
-	BMI dsaddoffset
+	BMI skip_drive
 
 	\\ Set sec% to the drive number in the drive table
 	LDA DRIVE_INDEX0,X
@@ -6565,6 +6588,8 @@ IF _LARGEMMB_
 	LDA DRIVE_INDEX4,X
 	MASK_DISKNO
 	STA sec%+1
+
+.skip_drive
 
 	\\ Calculate:
 	\\     A      = DrvNo (sec%) DIV 511
@@ -6607,7 +6632,6 @@ IF _LARGEMMB_
 	PLA
 	TAY	; y = chunk
 
-.dsaddoffset
 	\\ sec% += MMC_SECTOR + Y * 0x63D00
 	\\ uses only A and Y, and no zp
 	JSR add_chunk_sector
@@ -7491,26 +7515,14 @@ ENDIF
 	\\ Word &B8=first disk no
 	\\ If ?&B7=0, skip unformatted disks
 
-.GetDiskFirst
-	JSR GetIndex
-	STA gdsec%
-	JSR CheckDiskTable
-	JMP gdfirst
-
 	\\ Return ALL disks
 .GetDiskFirstAll
 	LDA #0
 	STA gddiskno%
 	STA gddiskno%+1
-	LDA #&10
-	STA gdptr%
-	LDA #MP+&0E
-	STA gdptr%+1
-IF _LARGEMMB_
-	LDA #&00
-ELSE
-	LDA #&80
-ENDIF
+
+.GetDiskFirst
+	JSR GetIndex
 	STA gdsec%
 	JSR CheckDiskTable
 	JMP gdfirst
@@ -7674,7 +7686,7 @@ IF _INCLUDE_CMD_DRECAT_
 	JSR DiskStartX
 
 	\ set read16sec% to first disk
-	LDX #3
+	LDX #2
 .drc_loop1
 	LDA sec%,X
 	STA read16sec%,X
@@ -7686,7 +7698,6 @@ IF _INCLUDE_CMD_DRECAT_
 	JSR GetDiskFirstAll
 
 .drc_loop2
-
 	\ read disc title
 	JSR MMC_ReadDiscTitle
 
@@ -7953,6 +7964,26 @@ ENDIF
 
 
 IF NOT(_MM32_)
+IF _INCLUDE_CMD_DBASE_
+	\\ *DBASE <dno>
+	\\ Takes effect on next Ctrl-BREAK
+.CMD_DBASE
+	JSR Param_SyntaxErrorIfNull
+	JSR Param_ReadNum
+	BNE invalid
+	CPX NUM_CHUNKS
+	BCS invalid
+	STX CHUNK_BASE
+	JSR ResetCRC7
+	LDA #0
+	JSR LoadDiskTable
+	LDA CHUNK_BASE
+	STA MA+&E09
+	JMP SaveDiskTable
+.invalid
+	JMP errBADOPTION
+ENDIF
+
 	\\ *DBOOT <dno>/<dsp>
 .CMD_DBOOT
 	JSR Param_SyntaxErrorIfNull

@@ -632,7 +632,7 @@ IF NOT(_MM32_)
 	\\ *** Read the disc title to read16str% ***
 	\\ *** read16sec% contains the address   ***
 	\\ *** of the first disc sector          ***
-read16sec%=&B3	; 3 byte sector value
+read16sec%=&B4	; 3 byte sector value
 read16str%=MA+&1000
 
 .MMC_ReadDiscTitle
