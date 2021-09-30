@@ -9,24 +9,16 @@
 INCLUDE "DEVICE.asm"
 
 \\ Include *DONBOOT and code to load the default drives on startup
+\\ (costs 45 bytes)
 _DONBOOT_=NOT(_MM32_)
 
 \\ Enable support for large (>512 disk) MMB files
+\\ (costs 128 bytes)
 _LARGEMMB_=NOT(_MM32_)
 
-\\ Include *DBASE and code to add the disk base numbber on *DIN/DOUT
+\\ Include *DBASE and code to load the default base on startup
+\\ (costs 95 bytes)
 _DBASE_=NOT(_MM32_)
-
-\\ M/SWMMFS
-\\ bytes
-\\ free    DONBOOT LARGEMMB
-\\ 284	   0	   0
-\\ 166	   0	   1
-\\ 239	   1	   0
-\\ 121	   1	   1
-
-\\ DONBOOT  costs  45 bytes
-\\ LARGEMMB costs 118 bytes
 
 ;; At the moment, we either include or exclude all the optional commands
 
@@ -1625,7 +1617,7 @@ ENDIF
 ELSE
 IF _INCLUDE_CMD_DBASE_
 	EQUS "BASE"
-	EQUB &80+&07
+	EQUB &80+&0B
 ENDIF
 	EQUS "BOOT"
 	EQUB &80+&07
@@ -5237,22 +5229,22 @@ ENDIF
 	EQUS '<' OR &80,"afsp>"				;2
 	EQUS '(' OR &80,"L)"				;3
 	EQUS '(' OR &80,"<drive>)"			;4
-	EQUS '(' OR &80,"<drive>)..."		;5
+	EQUS '(' OR &80,"<drive>)..."			;5
 	EQUS '(' OR &80,"<dir>)"			;6
 IF _MM32_
 	EQUS '<' OR &80,"dos name>"			;7
 ELSE
-	EQUS '<' OR &80,"dno>/<dsp>"		;7
+	EQUS '<' OR &80,"dno>/<dsp>"			;7
 ENDIF
 
 	EQUS '<' OR &80,"fsp>"				;8
 IF _MM32_
-	EQUS '(' OR &80,"<dos name>)"		;9
+	EQUS '(' OR &80,"<dos name>)"			;9
 ELSE
 	EQUS 'P' OR &80,"/U/N/K/R"			;9
 ENDIF
 	EQUS '<' OR &80,"title>"			;A
-	EQUS '(' OR &80,"<rom>)"			;B
+	EQUS '(' OR &80,"<num>)"			;B
 	EQUS '<' OR &80,"source> <dest.>"		;C
 	EQUS '<' OR &80,"old fsp> <new fsp>"		;D
 IF _MM32_
@@ -7968,8 +7960,10 @@ IF _INCLUDE_CMD_DBASE_
 	\\ *DBASE <dno>
 	\\ Takes effect on next Ctrl-BREAK
 .CMD_DBASE
-	JSR Param_SyntaxErrorIfNull
+	JSR GSINIT_A
+	BEQ info
 	JSR Param_ReadNum
+	BCS invalid
 	BNE invalid
 	CPX NUM_CHUNKS
 	BCS invalid
@@ -7980,6 +7974,20 @@ IF _INCLUDE_CMD_DBASE_
 	LDA CHUNK_BASE
 	STA MA+&E09
 	JMP SaveDiskTable
+.info
+	JSR PrintString
+	EQUS "MMB Base: "
+	LDA CHUNK_BASE
+	JSR printdec
+	JSR PrintString
+	EQUS "MMB Size: "
+	LDA NUM_CHUNKS
+.printdec
+	JSR BinaryToBCD
+	LDX #0
+	LDY #2
+	JSR PrintDec
+	JMP PrintNewLine
 .invalid
 	JMP errBADOPTION
 ENDIF
@@ -8349,7 +8357,6 @@ ENDIF
 	EQUB &FF
 	EQUS "No free discs",0
 }
-
 	\\ *DOP (P/U/N/K/R) (<drive>)
 	\\ Options: P=Protect, U=Unprotect, N=New, K=Kill, R=Restore
 .CMD_DOP
