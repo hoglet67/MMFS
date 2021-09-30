@@ -8,7 +8,7 @@
 IF _MASTER_
 mmc%=&FEDC
 ELSE
-mmc%=&FE18
+mmc%=&FE1C
 ENDIF
 
 	\\ RESET DEVICE
