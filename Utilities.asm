@@ -14,7 +14,7 @@ ELSE
 	STA &AD
 	INC &AD
 ENDIF
-	RTS 
+	RTS
 
 .CMD_TYPE
 	JSR Utils_FilenameAtXY
@@ -41,12 +41,12 @@ ENDIF
 	BCS list_eof			; EOF exit loop
 	CMP #&0A
 	BEQ list_loop			; ignore &0A
-	PLP 
+	PLP
 	BNE list_skiplineno		; If don't print line number
-	PHA 
+	PHA
 	JSR Utils_PrintLineNo
 	JSR PrintSpaceSPL
-	PLA 
+	PLA
 .list_skiplineno
 	JSR OSASCI
 	BIT &FF
@@ -91,9 +91,9 @@ ENDIF
 	JSR PrintSpaceSPL
 	DEC &AC
 	BNE dump_getbytes_loop
-	CLC 
+	CLC
 .dump_eof
-	PHP 
+	PHP
 	BCC dump_noteof			; If not eof
 .dump_padnum_loop
 	LDA #&2A			; Pad end of line with "** "
@@ -108,13 +108,13 @@ ENDIF
 	JSR dump_printchars
 	JSR OSNEWL
 	LDA #&08
-	CLC 
+	CLC
 	ADC &A8
 	STA &A8
 	BCC dump_inc
 	INC &A9
 .dump_inc
-	PLP 
+	PLP
 	BCS Utils_CloseFile_Yhandle
 	BCC dump_loop			; always
 .dump_printchars
@@ -149,7 +149,7 @@ ENDIF
 	LDY #&FF
 	STY &AE				; Max length = 256
 	STY &B0
-	INY 
+	INY
 	STY &AC				; So word AC=&1800 (normally)
 	LDA #&20
 	STA &AF				; min ASCII value accepted
@@ -168,7 +168,7 @@ ENDIF
 	LDA &AC
 	CMP &AA
 	BNE build_loop2
-	PLP 
+	PLP
 	BCS Utils_ESCAPE_CloseFileY	; Escape pressed so exit
 	LDA #&0D			; Carriage return
 	JSR OSBPUT
@@ -228,7 +228,7 @@ ENDIF
 	LDA &A9
 	ADC #&00
 	STA &A9				; hi byte
-	CLD 
+	CLD
 	JSR Utils_PrintHexByte
 	LDA &A8				; lo byte
 
