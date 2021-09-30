@@ -286,14 +286,6 @@ ENDIF
 	JSR TUBE_RELEASE
 	JMP &0100
 
-	\ Print New Line
-.PrintNewLine
-	PHA
-	LDA #&0D
-	JSR PrintChrA
-	PLA
-	RTS
-
 	\ **** Print String ****
 	\ String terminated if bit 7 set
 	\ Exit: AXY preserved, C=0
@@ -377,9 +369,12 @@ ENDIF
 	JSR OSASCI			; Output chr
 	JMP osbyte03_Xoutstream		; Restore previous setting
 
+IF _ROMS_
+	\ Currently only used in *ROMS so save 3bytes
 	\ Print BCD/Hex : A=number
 .PrintBCD
 	JSR BinaryToBCD
+ENDIF
 .PrintHex
 	PHA
 	JSR A_rorx4
@@ -850,7 +845,14 @@ ENDIF
 	JSR PrintNibble
 	LDA MA+&0F0F,Y			; First sector low byte
 	JSR PrintHex
-	JMP PrintNewLine
+
+	\ Print New Line
+.PrintNewLine
+	PHA
+	LDA #&0D
+	JSR PrintChrA
+	PLA
+	RTS
 
 .PrintHex3Byte
 {
@@ -8347,9 +8349,8 @@ ENDIF
 	JSR PrintString
 	EQUS " in :"
 	LDA CurrentDrv
-	LDX #0
-	LDY #2
-	JSR PrintDec
+	ORA #&30
+	JSR OSWRCH
 	JMP OSNEWL
 
 .ErrNoFreeDisks
