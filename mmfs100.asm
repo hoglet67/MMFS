@@ -7521,21 +7521,6 @@ ENDIF
 	JSR CheckDiskTable
 	JMP gdfirst
 
-\\ 16-bit BCD increment on ZP,X and ZP+1,X
-.bcd_inc16_zp_x
-{
-	SED
-	CLC
-	LDA 0, X
-	ADC #1
-	STA 0, X
-	LDA 1, X
-	ADC #0
-	STA 1, X
-	CLD
-	RTS
-}
-
 \\ Enter with Y = the ZP address of the disk count
 .print_pluralized_disks
 	TYA
@@ -7624,8 +7609,24 @@ ENDIF
 ENDIF ;NOT(_MM32_)
 
 
+IF _UTILS_ OR NOT(_MM32_)
+\\ 16-bit BCD increment on ZP,X and ZP+1,X
+.bcd_inc16_zp_x
+{
+	SED
+	CLC
+	LDA 0, X
+	ADC #1
+	STA 0, X
+	LDA 1, X
+	ADC #0
+	STA 1, X
+	CLD
+	RTS
+}
+ENDIF
 
-	\\ Include Low Level MMC Code here
+\\ Include Low Level MMC Code here
 
 IF _DEVICE_='U'
 	_TURBOMMC=FALSE

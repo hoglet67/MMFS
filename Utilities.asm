@@ -45,7 +45,7 @@ ENDIF
 	BNE list_skiplineno		; If don't print line number
 	PHA
 	JSR Utils_PrintLineNo
-	JSR PrintSpaceSPL
+	JSR PrintSpaceSPL		; exits with C=0
 	PLA
 .list_skiplineno
 	JSR OSASCI
@@ -76,10 +76,10 @@ ENDIF
 	BIT &FF				; Check escape
 	BMI Utils_ESCAPE_CloseFileY
 	LDA &A9				; word A8 is the offset counter
-	JSR Utils_PrintHexByte
+	JSR PrintHexSPL
 	LDA &A8
-	JSR Utils_PrintHexByte
-	JSR PrintSpaceSPL
+	JSR PrintHexSPL
+	JSR PrintSpaceSPL		; exits with C=0
 	LDA #&08
 	STA &AC
 	LDX #&00
@@ -87,11 +87,10 @@ ENDIF
 	JSR OSBGET
 	BCS dump_eof			; If eof
 	STA (&AC,X)			; save byte (usually &1800-&1807)
-	JSR Utils_PrintHexByte
-	JSR PrintSpaceSPL
+	JSR PrintHexSPL
+	JSR PrintSpaceSPL		; exits with C=0
 	DEC &AC
 	BNE dump_getbytes_loop
-	CLC
 .dump_eof
 	PHP
 	BCC dump_noteof			; If not eof
@@ -99,7 +98,7 @@ ENDIF
 	LDA #&2A			; Pad end of line with "** "
 	JSR OSASCI
 	JSR OSASCI
-	JSR PrintSpaceSPL
+	JSR PrintSpaceSPL		; exits with C=0
 	LDA #&00
 	STA (&AC,X)
 	DEC &AC
@@ -220,29 +219,10 @@ ENDIF
 	RTS
 
 .Utils_PrintLineNo
-	SED 				; Incremenet & print line no.
-	CLC 				; Word &A8=line no. in BCD
-	LDA &A8
-	ADC #&01
-	STA &A8
-	LDA &A9
-	ADC #&00
-	STA &A9				; hi byte
-	CLD
-	JSR Utils_PrintHexByte
-	LDA &A8				; lo byte
-
-.Utils_PrintHexByte
-{
-	PHA
-	JSR A_rorx4
-	JSR Utils_PrintHexLoNibble	; hi nibble
-	PLA 				; lo nibble
-.Utils_PrintHexLoNibble
-	JSR NibToASC
-	JSR OSASCI
-	SEC
-	RTS
-}
+	LDX #&A8
+	JSR bcd_inc16_zp_x		; A = hi byte
+	JSR PrintHexSPL
+	LDA &A8				; A = lo byte
+	JMP PrintHexSPL
 
 	\ ********** END OF UTILITIES **********
