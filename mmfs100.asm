@@ -8168,8 +8168,7 @@ IF _INCLUDE_CMD_DONBOOT_
 .CMD_DONBOOT
 	JSR Param_DriveAndDisk
 	\\ Exit: CurrentDrv=drive, Word &B8=disk no.
-	LDA #0
-	JSR LoadDiskTable
+	JSR LoadBaseSector
 	LDX CurrentDrv
 	LDA &B8
 	STA MA+&0E00, X

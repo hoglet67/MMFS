@@ -745,13 +745,7 @@ IF NOT(_MM32_)
 IF _DONBOOT_
 	LDX #&03
 .loop
-	\\ Load the first sector of the disk table
-	TXA
-	PHA
-	LDA #&00
-	JSR LoadDiskTable \\ Corrupts A, X, Y
-	PLA
-	TAX
+	JSR LoadBaseSector
 	\\ Copy the drive mapping from the disk table to &B8/B9
 	LDA MA+&0E00, X
 	STA &B8
@@ -760,6 +754,20 @@ IF _DONBOOT_
 	JSR LoadDriveX
 	DEX
 	BPL loop
+	RTS
+}
+	\\ Load the first sector of the disk table, taking account of chunk base
+.LoadBaseSector
+{
+	TXA
+	PHA
+	LDA CHUNK_BASE
+	DO_ASLA_X4
+	JSR LoadDiskTable \\ Corrupts A, X, Y
+	PLA
+	TAX
+	RTS
+}
 ELSE
 	LDA #0
 	STA &B9
@@ -769,9 +777,9 @@ ELSE
 	JSR LoadDriveX
 	DEX
 	BPL loop
-ENDIF
 	RTS
 }
+ENDIF
 ENDIF
 
 	\\ If sector 0 set, check it's the same card
