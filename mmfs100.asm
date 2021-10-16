@@ -3374,10 +3374,10 @@ ENDIF
 	CPY #&7D
 	BCC exit			; Y < &7D
 
-	JSR ReturnWithA0
-
 	JSR FSisMMFS			; MMFS current fs?
 	BNE exit
+
+	JSR ReturnWithA0
 
 	LDX &F0				; Osword X reg
 	STX &B0
@@ -3531,15 +3531,19 @@ IF _MASTER_
 }
 ENDIF	; End of MASTER ONLY service calls
 
-	\ Test if MMFS by checking first file handle
+	\ Test if MMFS by checking OSFILE vector.
 .FSisMMFS
 {
-	LDA #7
-	JSR fsc
-	CPX #filehndl%+1
+	LDA &213			; Check of the low OSFILE vector is pointing
+	CMP #&FF            ; to the corresponding extended vector.
+	BNE notMMFS
+	LDA &212
+	CMP #&1B
+	BNE notMMFS
+	LDA &0DBC			; Rom number in extended vector.
+	CMP &F4				; Is it our ROM?
+.notMMFS
 	RTS
-
-.fsc	JMP (FSCV)
 }
 
 
