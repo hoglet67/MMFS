@@ -50,7 +50,7 @@ fatclustsize%=&C3	; byte
    LDA cat%+&C
    CMP #&02
    BEQ nombr
-        
+
 .mbr
 	\\ sec = cat!&1C6 * 2
 	LDA cat%+&1C6
@@ -162,7 +162,7 @@ fatclustsize%=&C3	; byte
 	SEC				; return C=1 to indicate FAT
 	RTS
 }
-	
+
 
 	\\ **** SEARCH FOR FILE ****
 	\\ Entry: XY Point to filename
@@ -172,10 +172,10 @@ fatclustsize%=&C3	; byte
 fatfilename%=MA+&10F0
 {
 fatptr%=&C4		; word
-fatclust%=&C4		; word
+fatclust%=&C3		; 24-bits (3 bytes)
 
 	\\ Search dir (first 16 entries only)
-	
+
 	LDX #0
 	STX fatptr%
 	LDA #HI(cat%)
@@ -224,29 +224,49 @@ fatclust%=&C4		; word
 	INC sec%+2
 .skipinc1
 
+	LDX fatclustsize%
+
 	\\ cluster = file cluster - 2
+
+	\\ In FAT32 the file start cluster is 32 bits and is stored the directory entry
+	\\ offsets &15, &14, &1B, &1A (MSB .. LSB).
+	\\
+	\\ In FAT16, offset &15 and &14 are reserved and should be zero
+	\\
+	\\ MMFS only deals with 24-bit sector addresses so we ignore bits 31..24
+	\\ A 24-bit sector address allows for the file system to be upto 8GB
+	\\
+	\\ Note: Originally MMFS treated the file start cluster as a 16 bit value.
+	\\ With a cluster size of 8 (4KB) that cause problems if the file start
+	\\ was more that 128MB into the file system. This was fixed in MMFS 1.51.
+
+	LDY #&14
+	LDA (fatptr%),Y		; bits 23..16 of file start cluster in &14
+	PHA
 	LDY #&1B
-	LDA (fatptr%),Y			; file cluster
+	LDA (fatptr%),Y		; bits 15..8 of file start cluster in &1B
 	PHA
 	DEY
-	LDA (fatptr%),Y
+	LDA (fatptr%),Y		; bits 0..7 of file start cluster in &1A
 	SEC
 	SBC #2
 	STA fatclust%
 	PLA
 	SBC #0
 	STA fatclust%+1
-
+	PLA
+	SBC #0
+	STA fatclust%+2
+	ORA fatclust%+1
 	ORA fatclust%
 	BEQ exit			; if cluster = 0
 
 	\\ cluster = cluster * 2
 	ASL fatclust%
 	ROL fatclust%+1
+	ROL fatclust%+2
 
 	\\ sec = sec + cluster * size
-	LDX fatclustsize%
-
 .clustloop
 	CLC
 	LDA sec%
@@ -255,10 +275,9 @@ fatclust%=&C4		; word
 	LDA sec%+1
 	ADC fatclust%+1
 	STA sec%+1
-	BCC skipinc2
-	INC sec%+2
-.skipinc2
-
+	LDA sec%+2
+	ADC fatclust%+2
+	STA sec%+2
 	DEX
 	BNE clustloop
 
