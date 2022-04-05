@@ -40,6 +40,11 @@ ENDIF
 	\ so this must happen, even if the current drive is not set.
 	JSR MMC_BEGIN2
 
+	\ Get mmc addr of 1st sector into sec%, sec%+1, sec%+2
+	\ Do this early as DiskStartX uses &B3/&B4 as workspace
+	LDX CurrentDrv
+	JSR DiskStartX
+
 	LDY #5
 	LDA (owbptr%),Y			; no. of parameters
 	CLC
@@ -70,7 +75,14 @@ ENDIF
 	LDX CurrentDrv
 	LDA DRIVE_INDEX4,X
 	BPL owdrvnotrdy			; drive not loaded
+
+IF _LARGEMMB_
+	\\ b7 = loaded, b6 = writeprot, b5=unformatted
+	AND #&20
+ELSE
+	\\ b7 = loaded, b6 = writeprot, b3=unformatted
 	AND #&08
+ENDIF
 	BNE ownosector			; disc not formatted
 
 	INY
@@ -150,11 +162,6 @@ ENDIF
 	ADC (owbptr%),Y			; LENGTH + SECTOR
 	CMP #11
 	BCS ownosector
-
-	\\ Get mmc addr of 1st sector
-.owsk3
-	LDX CurrentDrv
-	JSR DiskStartX
 
 	CLC
 	LDA sec%
