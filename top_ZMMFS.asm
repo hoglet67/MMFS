@@ -20,6 +20,6 @@ ELIF _DEVICE_='M'
 ELSE
     ERROR "Illegal device"
 ENDIF
-.end        
-        
-SAVE "", &8000, &C000
+.end
+
+SAVE &8000, &C000

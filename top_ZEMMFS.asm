@@ -26,4 +26,4 @@ ENDIF
 
 \ Code will always end at C400 because we just include the entire ROM and chop the end off.
 \ As long as ROMs end before &C000-&400 = &BC00 they'll work fine here.
-SAVE "", &8000, &C000
+SAVE &8000, &C000
