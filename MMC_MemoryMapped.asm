@@ -59,9 +59,10 @@ ENDIF
 	INX				;\ 2
 	DEY				;\ 2
 	BNE dcmd1			;\ 2
-	STA mmc%			; assume A=&FF
+	LDX #&FF
 	\ Wait for response, Y=0
 .wR1mm
+	STX mmc%
 	JSR donothing			;\ 12
 	LDA mmc%
 	BPL dcmdex
