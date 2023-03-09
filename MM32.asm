@@ -2165,8 +2165,53 @@ Rfault=&FF
 	z_sector=&C3	; Start Sector
 	z_count=&C4		; (Sector Size +) Sector Count
 
+	LDA #&10		; Check for volume-level operation
 	BIT flags		; N=Block, V=verify|format
+	BNE l10			; Volume-level operation
 	BPL l0			; If not block command
+	BMI l11
+
+.l10
+	\ Volume-level operation - C2/C3/C4 define start sector, C5 number of sectors,
+	\ both measured in 512-byte sectors.
+	\
+	\ We set up the MMC operation here, then skip down to around l6 to do the
+	\ address/Tube handling and perform the actual read or write
+	\
+	\ Note that seccount%=&C4 so that overlaps some of the input data
+
+	\ We double the sector number and sector count to convert to 256-byte-relative
+	\ values for the lower level layer
+
+	\ Copy the sector number to sec%
+	LDA &C2
+	ASL A
+	STA sec%
+	LDA &C3
+	ROL A
+	STA sec%+1
+	LDA &C4
+	BMI ownosector
+	ROL A
+	STA sec%+2
+
+	\ Copy the sector count to seccount%.  This writes to &C4 so must come
+	\ after we've already copied the sector number out of there
+	LDA &C5
+	ASL A
+	STA seccount%
+	BCS ownosector   \ shouldn't carry, 128*512 bytes is more than total RAM
+	LDA #0
+IF _LARGEFILES
+	STA seccount%+1
+ENDIF
+	STA byteslastsec%
+
+	ROL flags
+
+	JMP l6
+
+.l11 \ Non-volume operation
 
 	\ Block commands data length is in bytes.
 
@@ -2325,12 +2370,17 @@ ENDIF
 }
 
 	\ Recognised 8271 commands
+	\
+	\ Extensions:
+	\   &4C = write MMC sector   4 params - 24-bit sector index, 8-bit count
+	\   &54 = read MMC sector    sector index and count are in 512-byte sectors
+	\                            drive is mostly ignored (e.g. pass 0)
 .owtable1
-	EQUB &7D, &4A, &4B, &4E, &4F, &52, &53, &56, &57, &5E, &5F, &63, &A5, &85
-	\ Flags: Bit 7 = Block, bit 6 = Verify/Format, bit 5=Write
+	EQUB &7D, &4A, &4B, &4C, &4E, &4F, &52, &53, &54, &56, &57, &5E, &5F, &63, &A5, &85
+	\ Flags: Bit 7 = Block, bit 6 = Verify/Format, bit 5=Write, bit 4 = whole-volume operation
 	\ Lower nibble = number of parameters
 .owtable2
-	EQUB &00, &23, &23, &23, &23, &03, &03, &03, &03, &45, &43, &65, &A5, &85
+	EQUB &00, &23, &23, &34, &23, &23, &03, &03, &14, &03, &03, &45, &43, &65, &A5, &85
 
 	owtableZ=owtable2-owtable1
 
