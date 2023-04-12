@@ -11,12 +11,12 @@ _TUBE_BASE=&FEE0        ; Base Address of Tube
 _LARGEFILES=TRUE        ; true = enable long (>64K) file support
 _DEBUG=FALSE            ; true = enable debugging of service calls, etc
 _DEBUG_MMC=FALSE        ; true = enable debugging of MMC initialization
-_DFS_EMUL=FALSE         ; true = use DFS filesystem number + handles
+_DFS_EMUL=TRUE          ; true = use DFS filesystem number + handles
 
 MACRO BASE_NAME
     EQUS "Model B "
     SYSTEM_NAME
-    EQUS " SWRAM (FE80)"
+    EQUS " SWRAM (FEA0)"
 ENDMACRO
 
 INCLUDE "mmfs100.asm"
