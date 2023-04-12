@@ -202,6 +202,7 @@ ENDIF
     BUILD_VERSION
 .copyright
     BUILD_COPYRIGHT
+.header_end
 
 .Go_FSCV
 	JMP (FSCV)
@@ -7941,14 +7942,21 @@ ENDIF ;NOT(_MM32_)
 
 
 IF _INCLUDE_CMD_DABOUT_
-	\\ *DABOUT -  PRINT INFO STRING
+	\\ *DABOUT -  PRINT INFO STRING from ROM header
 .CMD_DABOUT
-	JSR PrintString
-	EQUS "DUTILS by Martin Mather "
-.vstr
-	EQUS "(2011)",13
-	NOP
+{
+	LDX #&00
+.loop
+	LDA title, X
+	BNE print
+	LDA #&0D
+.print
+	JSR OSASCI
+	INX
+	CPX #header_end - title
+	BNE loop
 	RTS
+}
 ENDIF
 
 
