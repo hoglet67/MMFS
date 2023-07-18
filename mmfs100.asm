@@ -202,12 +202,7 @@ ENDIF
     BUILD_VERSION
 .copyright
     BUILD_COPYRIGHT
-	EQUB _DEVICE_
-IF _SWRAM_
-	EQUS "RAM"
-ELSE
-	EQUS "ROM"
-ENDIF
+.header_end
 
 .Go_FSCV
 	JMP (FSCV)
@@ -3379,10 +3374,10 @@ ENDIF
 	CPY #&7D
 	BCC exit			; Y < &7D
 
-	JSR ReturnWithA0
-
 	JSR FSisMMFS			; MMFS current fs?
 	BNE exit
+
+	JSR ReturnWithA0
 
 	LDX &F0				; Osword X reg
 	STX &B0
@@ -3536,15 +3531,19 @@ IF _MASTER_
 }
 ENDIF	; End of MASTER ONLY service calls
 
-	\ Test if MMFS by checking first file handle
+	\ Test if MMFS by checking OSFILE vector.
 .FSisMMFS
 {
-	LDA #7
-	JSR fsc
-	CPX #filehndl%+1
+	LDA &213			; Check of the low OSFILE vector is pointing
+	CMP #&FF            ; to the corresponding extended vector.
+	BNE notMMFS
+	LDA &212
+	CMP #&1B
+	BNE notMMFS
+	LDA &0DBC			; Rom number in extended vector.
+	CMP &F4				; Is it our ROM?
+.notMMFS
 	RTS
-
-.fsc	JMP (FSCV)
 }
 
 
@@ -7947,14 +7946,21 @@ ENDIF ;NOT(_MM32_)
 
 
 IF _INCLUDE_CMD_DABOUT_
-	\\ *DABOUT -  PRINT INFO STRING
+	\\ *DABOUT -  PRINT INFO STRING from ROM header
 .CMD_DABOUT
-	JSR PrintString
-	EQUS "DUTILS by Martin Mather "
-.vstr
-	EQUS "(2011)",13
-	NOP
+{
+	LDX #&00
+.loop
+	LDA title, X
+	BNE print
+	LDA #&0D
+.print
+	JSR OSASCI
+	INX
+	CPX #header_end - title
+	BNE loop
 	RTS
+}
 ENDIF
 
 
