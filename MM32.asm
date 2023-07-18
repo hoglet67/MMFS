@@ -702,8 +702,12 @@ ENDIF
 	JSR dir_match
 	BCS skip	; Didn't match
 
-	LDA &AA		; Command: 0 NOP, 1 Unlock, 2 lock
+	LDA &AA		; Command: 0 NOP, 1 Unlock, 2 lock, 3 rename
 	BEQ s1		; Cmd 0 -> Do nothing
+	CMP #3		; Cmd 3 -> Rename
+	BNE lock_or_unlock
+	JMP rename_fat_file
+.lock_or_unlock
 	CMP #2		; Cmd 2 -> Lock file
 	BEQ lock
 	JSR unlock_fat_file
@@ -786,6 +790,21 @@ ENDIF
 	RTS
 }
 
+\\ Rename a file
+.rename_fat_file
+{
+	; Copy the target name into the directory entry
+	LDX #33   ; name starts at mm32_str%+32 plus one to skip the mm32_hash
+	JSR copy_name_to_dir_entry
+
+	; Write the directory to the card
+	JSR MMC_WriteCatalogue
+
+	; End mm32_Scan_Dir
+	CLC
+	RTS
+}
+
 \\ Copy name from directory
 .copy_name
 {
@@ -820,6 +839,53 @@ ENDIF
 	STA str,X
 	LDA #0
 	STA str+1,X
+	RTS
+}
+
+\\ Copy filename from (mm32_str%+X) into the directory entry
+.copy_name_to_dir_entry
+{
+	z = mm32_zptr%
+	str = mm32_str%
+	endchar = &BA   ; dot or space
+	maxindex = &BB  ; 8 or 11
+
+	LDY #0
+
+	LDA #'.'
+	STA endchar
+	LDA #8
+	JSR copy_and_pad_with_spaces
+
+	LDA #mm32_hash
+	STA endchar
+	LDA #11
+
+	; Copy part of the name, up to A characters, pad with spaces,
+	; end at the char stored at 'endchar'
+.copy_and_pad_with_spaces
+	STA maxindex
+
+.loop
+	LDA str,X
+	INX
+	CMP endchar
+	BEQ pad
+	CPY maxindex
+	BEQ loop
+	STA (z),Y
+	INY
+	BNE loop   ; always
+
+	; Pad destination with spaces if necessary
+.padloop
+	LDA #' '
+	STA (z),Y
+	INY
+.pad
+	CPY maxindex
+	BNE padloop
+
 	RTS
 }
 
@@ -1233,6 +1299,27 @@ IF FALSE
 	jmp OSWRCH
 }
 ENDIF
+
+
+\\ Swap the string at mm32_str%+16 with the one at mm32_str%+32
+.mm32_swap_str_16_32
+{
+	LDX #16
+.loop
+	LDA mm32_str%+15,X
+	PHA
+
+	LDA mm32_str%+31,X
+	STA mm32_str%+15,X
+
+	PLA
+	STA mm32_str%+31,X
+
+	DEX
+	BNE loop
+
+	RTS
+}
 
 
 \\ *DCAT (<filter>)
@@ -1845,6 +1932,107 @@ ENDIF
 ENDIF
 
 
+\\ *DRENAME <old_dosname> <new_dosname>
+.mm32_cmd_drename
+{
+	LDA #&81     ; Two parameters required
+	JSR mm32_param_count_a
+
+	; Read first parameter
+	CLC
+	JSR mm32_param_filename
+
+	; Save it for later
+	JSR mm32_swap_str_16_32
+
+	; Read the second parameter
+	CLC
+	JSR mm32_param_filename
+
+	; Check the name is sensible
+	JSR mm32_check_filename
+	BCC badname
+
+	; See if it already exists
+	LDA #0
+	STA &AA      ; Scan_Dir "no-op" mode
+	JSR mm32_Scan_Dir
+	BCC destexists
+
+	; Swap the parameters back again
+	JSR mm32_swap_str_16_32
+
+	LDA #3
+	STA &AA      ; Scan_Dir 'rename' mode
+	JSR mm32_Scan_Dir
+	BCS notfound
+
+	RTS
+
+.badname
+	JMP errBadName
+
+.destexists
+	JSR ReportErrorCB
+	EQUB &C4
+	EQUS "Exists",0
+
+.notfound
+	JMP err_FILENOTFOUND
+
+}
+
+\\ Check that the filename at mm32_str%+16 is valid
+\\ This is for names of created files - "." and ".." are not valid
+.mm32_check_filename
+{
+	str = mm32_str%+16
+	numdots = &BA
+
+	LDA str
+	CMP #mm32_hash
+	BNE badname
+
+	; Check it's reasonable
+	LDA str+1
+	CMP #'.'
+	BEQ badname
+	
+	LDX #1
+	STX numdots   ; How many more dots we will allow
+
+.checknameloop
+	LDA str,X
+	INX
+	CPX #17
+	BEQ badname
+	CMP #mm32_hash
+	BEQ checknameend ; C=1
+
+	CMP #'.'
+	BNE notdot
+	DEC numdots
+	BMI badname
+.notdot
+
+	LDY #invalid_chars_end-invalid_chars
+.checkcharloop
+	CMP invalid_chars-1,Y
+	BEQ badname
+	DEY
+	BNE checkcharloop
+	BEQ checknameloop
+
+.badname
+	CLC
+.checknameend
+	RTS
+
+.invalid_chars
+	EQUB &22,&2A,&2B,&2C,&2F,&3A,&3B,&3C,&3D,&3E,&3F,&5B,&5C,&5D
+.invalid_chars_end
+}
+
 \\ Get LBA of disk sector for CurrentDrv
 \\ Entry: Y=Track, A=Sector
 \\ Exit :
@@ -2405,7 +2593,6 @@ IF FALSE
 }
 ENDIF
 }
-
 
 \\ MM32.asm
 \\ END OF FILE
