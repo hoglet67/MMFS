@@ -704,10 +704,12 @@ ENDIF
 
 	LDA &AA		; Command: 0 NOP, 1 Unlock, 2 lock, 3 rename
 	BEQ s1		; Cmd 0 -> Do nothing
+IF _MM32_DRENAME
 	CMP #3		; Cmd 3 -> Rename
 	BNE lock_or_unlock
 	JMP rename_fat_file
 .lock_or_unlock
+ENDIF
 	CMP #2		; Cmd 2 -> Lock file
 	BEQ lock
 	JSR unlock_fat_file
@@ -790,6 +792,7 @@ ENDIF
 	RTS
 }
 
+IF _MM32_DRENAME
 \\ Rename a file
 .rename_fat_file
 {
@@ -804,6 +807,7 @@ ENDIF
 	CLC
 	RTS
 }
+ENDIF
 
 \\ Copy name from directory
 .copy_name
@@ -842,6 +846,7 @@ ENDIF
 	RTS
 }
 
+IF _MM32_DRENAME
 \\ Copy filename from (mm32_str%+X) into the directory entry
 .copy_name_to_dir_entry
 {
@@ -888,6 +893,7 @@ ENDIF
 
 	RTS
 }
+ENDIF
 
 \\ Print directory entry
 \\ Note: Cannot be spooled
@@ -1300,7 +1306,7 @@ IF FALSE
 }
 ENDIF
 
-
+IF _MM32_DRENAME
 \\ Swap the string at mm32_str%+16 with the one at mm32_str%+32
 .mm32_swap_str_16_32
 {
@@ -1320,7 +1326,7 @@ ENDIF
 
 	RTS
 }
-
+ENDIF
 
 \\ *DCAT (<filter>)
 .mm32_cmd_dcat
@@ -1759,7 +1765,7 @@ ENDIF
 	BNE getparm
 .gotflag
 	STX &AA				; Same location used by *ACCESS
-	
+
 	JSR mm32_Scan_Dir
 
 	LDA #&86
@@ -1932,6 +1938,7 @@ ENDIF
 ENDIF
 
 
+IF _MM32_DRENAME
 \\ *DRENAME <old_dosname> <new_dosname>
 .mm32_cmd_drename
 {
@@ -1997,7 +2004,7 @@ ENDIF
 	LDA str+1
 	CMP #'.'
 	BEQ badname
-	
+
 	LDX #1
 	STX numdots   ; How many more dots we will allow
 
@@ -2032,6 +2039,8 @@ ENDIF
 	EQUB &22,&2A,&2B,&2C,&2F,&3A,&3B,&3C,&3D,&3E,&3F,&5B,&5C,&5D
 .invalid_chars_end
 }
+
+ENDIF
 
 \\ Get LBA of disk sector for CurrentDrv
 \\ Entry: Y=Track, A=Sector
