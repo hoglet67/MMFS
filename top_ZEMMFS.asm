@@ -1,4 +1,3 @@
-\ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port
 INCLUDE "DEVICE.asm"
 
 _ELECTRON_=TRUE

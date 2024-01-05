@@ -1,5 +1,5 @@
 MACRO DEVICE_NAME
-If _DEVICE_="T"
+If _DEVICE_="T" OR _DEVICE_="T2" OR _DEVICE_="T3"
     EQUS " Turbo"
 ELIF _DEVICE_="E"
     EQUS " EPP"

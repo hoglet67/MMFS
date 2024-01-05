@@ -60,9 +60,9 @@ do
 
     if [ $system == "MMFS2" ]
     then
-        DEVICES="U T E M P"
+        DEVICES="U U2 U3 T T2 T3 E M P"
     else
-        DEVICES="U T E M P G"
+        DEVICES="U U2 U3 T T2 T3 E M P G"
     fi
 
     for device in $DEVICES
@@ -133,18 +133,14 @@ do
                 exit
             fi
 
-            # To save space, exclude the DBG and Z builds from the .ssd image
-            if [[ $name != Z* ]] && ( [[ $name != *DB* ]] || ( [[ $device != U ]] && [[ $device != T ]] ) )
-            then
-                # Create the .inf file
-                echo -e "\$."${name}"\t8000\t8000" > ${build}/${name}.inf
+            # Create the .inf file
+            echo -e "\$."${name}"\t8000\t8000" > ${build}/${name}.inf
 
-                # Add into the SSD
-                tools/mmb_utils/putfile.pl ${ssd} ${build}/${name}
+            # Add into the SSD
+            tools/mmb_utils/putfile.pl ${ssd} ${build}/${name}
 
-                # Delete the .inf file
-                rm -f ${build}/${name}.inf
-            fi
+            # Delete the .inf file
+            rm -f ${build}/${name}.inf
 
             # Report end of code
             grep "code ends at" ${build}/${name}.log
@@ -174,6 +170,9 @@ do
     # It would be cleaner to build in the correct directory in the first place
     # but ZMMFS sources contain absolute build paths so this is simpler.
     mkdir -p build/${system}
-    mv build/[A-Z] build/${system}
+    for device in $DEVICES
+    do
+        mv build/${device} build/${system}
+    done
 
 done # for system in mmfs mmfs2

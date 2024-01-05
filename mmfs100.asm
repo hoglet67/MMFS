@@ -5,9 +5,6 @@
 
 \** MAIN CODE **\
 
-\ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port, P=Beeb Printer Port
-INCLUDE "DEVICE.asm"
-
 \\ Include *DONBOOT and code to load the default drives on startup
 \\ (costs 45 bytes)
 _DONBOOT_=NOT(_MM32_)
@@ -7639,15 +7636,34 @@ ENDIF
 
 IF _DEVICE_="U"
 	_TURBOMMC=FALSE
+   _VIA_BASE=?&FE60
+	INCLUDE "MMC_UserPort.asm"
+ELIF _DEVICE_="U2"
+	_TURBOMMC=FALSE
+   _VIA_BASE=?&FE80
+	INCLUDE "MMC_UserPort.asm"
+ELIF _DEVICE_="U3"
+	_TURBOMMC=FALSE
+   _VIA_BASE=?&FEA0
 	INCLUDE "MMC_UserPort.asm"
 ELIF _DEVICE_="T"
 	_TURBOMMC=TRUE
+   _VIA_BASE=?&FE60
+	INCLUDE "MMC_UserPort.asm"
+ELIF _DEVICE_="T2"
+	_TURBOMMC=TRUE
+   _VIA_BASE=?&FE80
+	INCLUDE "MMC_UserPort.asm"
+ELIF _DEVICE_="T3"
+	_TURBOMMC=TRUE
+   _VIA_BASE=?&FEA0
 	INCLUDE "MMC_UserPort.asm"
 ELIF _DEVICE_="M"
 	INCLUDE "MMC_MemoryMapped.asm"
 ELIF _DEVICE_="E"
 	INCLUDE "MMC_ElkPlus1.asm"
 ELIF _DEVICE_="P"
+   _VIA_BASE=&FE60
 	INCLUDE "MMC_BeebPrinter.asm"
 ELIF _DEVICE_="G"
     IF _USE_MGC_SHIFTREG

@@ -1,3 +1,5 @@
+INCLUDE "DEVICE.asm"
+
 _MASTER_=FALSE          ; Master version
 _ELECTRON_=TRUE         ; Electron version
 _SWRAM_=TRUE            ; Sideways RAM Version
