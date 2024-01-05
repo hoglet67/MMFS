@@ -7637,19 +7637,19 @@ ENDIF
 
 \\ Include Low Level MMC Code here
 
-IF _DEVICE_='U'
+IF _DEVICE_="U"
 	_TURBOMMC=FALSE
 	INCLUDE "MMC_UserPort.asm"
-ELIF _DEVICE_='T'
+ELIF _DEVICE_="T"
 	_TURBOMMC=TRUE
 	INCLUDE "MMC_UserPort.asm"
-ELIF _DEVICE_='M'
+ELIF _DEVICE_="M"
 	INCLUDE "MMC_MemoryMapped.asm"
-ELIF _DEVICE_='E'
+ELIF _DEVICE_="E"
 	INCLUDE "MMC_ElkPlus1.asm"
-ELIF _DEVICE_='P'
+ELIF _DEVICE_="P"
 	INCLUDE "MMC_BeebPrinter.asm"
-ELIF _DEVICE_='G'
+ELIF _DEVICE_="G"
     IF _USE_MGC_SHIFTREG
         INCLUDE "MMC_MGCII_ShiftReg.asm"
     ELSE
@@ -8524,7 +8524,7 @@ ENDIF
 
 PRINT "    code ends at",~P%," (",(guard_value - P%), "bytes free )"
 
-IF _DEVICE_='G'
+IF _DEVICE_="G"
 SAVE &8000, P%
 ELSE
 SAVE &8000, &C000

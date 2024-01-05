@@ -7,15 +7,15 @@ _TUBE_BASE=&FFE0
 INCLUDE "bootstrap.asm"
 
 .romst
-IF _DEVICE_='U'
+IF _DEVICE_="U"
     incbin  "build/U/SWMMFS.rom"
-ELIF _DEVICE_='T'
+ELIF _DEVICE_="T"
     incbin  "build/T/SWMMFS.rom"
-ELIF _DEVICE_='E'
+ELIF _DEVICE_="E"
     incbin  "build/E/SWMMFS.rom"
-ELIF _DEVICE_='P'
+ELIF _DEVICE_="P"
     incbin  "build/P/SWMMFS.rom"
-ELIF _DEVICE_='M'
+ELIF _DEVICE_="M"
     incbin  "build/M/SWMMFS.rom"
 ELSE
     ERROR "Illegal device"

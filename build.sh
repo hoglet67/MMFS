@@ -73,7 +73,7 @@ do
         rm -f ${ssd}
 
         # Configure the system/device to be assembled
-        echo "_DEVICE_ = '"$device"'"  > DEVICE.asm
+        echo "_DEVICE_ = \""$device"\""  > DEVICE.asm
         echo "MACRO SYSTEM_NAME"      >> DEVICE.asm
         echo "    EQUS \"${system}\"" >> DEVICE.asm
         echo "ENDMACRO"               >> DEVICE.asm
