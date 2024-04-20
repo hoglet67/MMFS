@@ -458,7 +458,7 @@ ENDIF
 	BCS errBadName			; IF end of string
 	STA MA+&1000
 	CMP #&2E			; C="."?
-	BNE rdafsp_notdot		; ignore leading …'s
+	BNE rdafsp_notdot		; ignore leading ...'s
 .rdafsp_setdrv
 	STX DirectoryParam		; Save directory (X)
 	BEQ rdafsp_entry		; always
@@ -4676,7 +4676,7 @@ ENDIF
 .conv_hndl18
 	JSR A_rolx5			; if Y<&10 or >&18
 	TAY 				; ch0=&00, ch1=&20, ch2=&40
-	PLA 				; ch3=&60…ch7=&E0
+	PLA 				; ch3=&60...ch7=&E0
 	RTS 				; c=1 if not valid
 }
 
@@ -5165,7 +5165,7 @@ ENDIF
 	JSR prtcmd_prtchr
 .prtcmdloop
 	INX	 			; If ?&B9=0 then print
-	LDA cmdtable1,X			; else it’s the &100 offset
+	LDA cmdtable1,X			; else it's the &100 offset
 	BMI prtcmdloop_exit		; If end of str
 	JSR prtcmd_prtchr
 	JMP prtcmdloop
@@ -5447,7 +5447,7 @@ IF _INCLUDE_CMD_BACKUP_
 	STA &C9
 	STA &C8
 	STA &C6
-	STA &A8				; Don’t' create file
+	STA &A8				; Don't create file
 
 	\ Source
 	LDA MA+&10D1
@@ -5644,7 +5644,7 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	LDA MA+&10D2
 	STA CurrentDrv
 	BIT &A8
-	BPL cd_skipwrcat		; Don’t create file
+	BPL cd_skipwrcat		; Don't create file
 	JSR cd_writedest_cat
 	LDA #&00
 	STA &A8				; File created!
@@ -7671,6 +7671,8 @@ ELIF _DEVICE_="G"
     ELSE
         INCLUDE "MMC_MGCII_BitBang.asm"
     ENDIF
+ELIF _DEVICE_="1"
+	INCLUDE "MMC_Pi1MHz.asm"
 ENDIF
 
 .errWrite2

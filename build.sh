@@ -57,12 +57,13 @@ do
     # M is MemoryMapped IO based (typically &FE18, for BeebEm)
     # P is Beeb Printer Port connected Interface (experimental)
     # G is Mega Games Cartridge MKII
+    # 1 Is Pi1MHz
 
     if [ $system == "MMFS2" ]
     then
-        DEVICES="U U2 U3 T T2 T3 E M P"
+        DEVICES="U U2 U3 T T2 T3 E M P 1"
     else
-        DEVICES="U U2 U3 T T2 T3 E M P G"
+        DEVICES="U U2 U3 T T2 T3 E M P G 1"
     fi
 
     for device in $DEVICES
@@ -164,7 +165,7 @@ do
 
         rm -f DEVICE.asm
 
-    done # for device in G U T E M P
+    done # for device in G U T E M P 1
 
     # Move the files in the build directory to the right system folder
     # It would be cleaner to build in the correct directory in the first place
