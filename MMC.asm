@@ -115,13 +115,11 @@ write_block=&58
 	JSR MMC_SetCommand
 	LDA #&40
 	STA cmdseq%+2
-	JSR MMC_DoCommand
-	CMP #&00
+	JSR MMC_DoCommand \\ DoCommand defines Z to be setup
 	BNE isdhc2
 	LDA #&7A
 	JSR MMC_SetCommand
-	JSR MMC_DoCommand
-	CMP #&00
+	JSR MMC_DoCommand  \\ DoCommand defines Z to be setup
 	BNE ifail
 	JSR MMC_GetByte
 	AND #&40
