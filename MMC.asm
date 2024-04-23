@@ -179,7 +179,45 @@ ENDIF
 	LDA #read_single_block
 .setuprw
 	JSR MMC_SetCommand
-	JMP setCommandAddress
+
+\\ Translate the sector number into a SPI Command Address
+\\ Sector number is in 256 bytes sectors
+\\ For SDHC cards this is in blocks (which are also sectors)
+\\ For SD cards this needs converting to bytes by multiplying by 512
+
+.setCommandAddress
+{
+\\ Skip multiply for SDHC cards (cardsort = 01)
+	LDA CardSort
+	CMP #2
+	BNE setCommandAddressSDHC
+\\ Convert to bytes by multiplying by 256
+	LDA sec%+2
+	STA cmdseq%+2
+	LDA sec%+1
+	STA cmdseq%+3
+	LDA sec%
+	STA cmdseq%+4
+	LDA #0
+	STA cmdseq%+5
+	RTS
+
+
+.setCommandAddressSDHC
+\\ Convert to 512b sectors by dividing by
+	LDA #0
+	STA cmdseq%+2
+	LDA sec%+2
+	LSR A
+	STA cmdseq%+3
+	LDA sec%+1
+	ROR A
+	STA cmdseq%+4
+	LDA sec%
+	ROR A
+	STA cmdseq%+5
+	RTS
+}
 
 	\ **** Begin Read Transaction ****
 .MMC_StartRead
@@ -824,44 +862,7 @@ ENDIF
 }
 
 
-\\ Translate the sector number into a SPI Command Address
-\\ Sector number is in 256 bytes sectors
-\\ For SDHC cards this is in blocks (which are also sectors)
-\\ For SD cards this needs converting to bytes by multiplying by 512
 
-.setCommandAddress
-{
-\\ Skip multiply for SDHC cards (cardsort = 01)
-	LDA CardSort
-	CMP #2
-	BNE setCommandAddressSDHC
-\\ Convert to bytes by multiplying by 256
-	LDA sec%+2
-	STA cmdseq%+2
-	LDA sec%+1
-	STA cmdseq%+3
-	LDA sec%
-	STA cmdseq%+4
-	LDA #0
-	STA cmdseq%+5
-	RTS
-
-
-.setCommandAddressSDHC
-\\ Convert to 512b sectors by dividing by
-	LDA #0
-	STA cmdseq%+2
-	LDA sec%+2
-	LSR A
-	STA cmdseq%+3
-	LDA sec%+1
-	ROR A
-	STA cmdseq%+4
-	LDA sec%
-	ROR A
-	STA cmdseq%+5
-	RTS
-}
 
 
 IF NOT(_MM32_)
