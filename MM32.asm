@@ -100,13 +100,7 @@ IF _MM32_DEBUG
 ENDIF
 
 
-\\ Convert block size to 256 bytes.
-\\ Exit: C=1 if overflow
-.mm32_lba_to_256
-	ASL sec%	; x 2
-	ROL sec%+1
-	ROL sec%+2
-	RTS
+
 
 
 \\ Read 512 byte sector into catalogue area
@@ -602,9 +596,16 @@ ENDIF
 
 	INC sec%+2
 
-.l5	JMP mm32_lba_to_256
+.l5 ; fall into mm32_lba_to_256	JMP mm32_lba_to_256
 }
 
+\\ Convert block size to 256 bytes.
+\\ Exit: C=1 if overflow
+.mm32_lba_to_256
+	ASL sec%	; x 2
+	ROL sec%+1
+	ROL sec%+2
+	RTS
 
 \\ Scan the current directory
 \\ On exit: C=0 if file/dir found
