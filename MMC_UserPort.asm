@@ -103,7 +103,26 @@ ENDIF
     INX
     DEY
     BNE dcmdu1
-    JSR waitresp_up
+
+    \\ wait for response bit
+    \\ ie for clear bit (User Port only)
+.waitresp_up
+{
+    LDX #(1 + msbits)
+    LDY #0
+.wrup
+    DEY
+    BEQ wrup_timeout
+    LDA #(3 + msbits)
+    STX iorb%
+    STA iorb%
+    LDA sr%
+    AND #1
+    BNE wrup
+.wrup_timeout
+    LDA #(3 + msbits)
+}
+
 IF _DEBUG_MMC
     JSR UP_ReadBits7
     PHP
@@ -148,25 +167,7 @@ ENDIF
     LDA sr%
     RTS
 
-    \\ wait for response bit
-    \\ ie for clear bit (User Port only)
-.waitresp_up
-{
-    LDX #(1 + msbits)
-    LDY #0
-.wrup
-    DEY
-    BEQ wrup_timeout
-    LDA #(3 + msbits)
-    STX iorb%
-    STA iorb%
-    LDA sr%
-    AND #1
-    BNE wrup
-.wrup_timeout
-    LDA #(3 + msbits)
-    RTS
-}
+
 
 
     \\ *** Wait for data token ***
