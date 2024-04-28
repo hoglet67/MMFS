@@ -1994,11 +1994,6 @@ ENDIF
 	STA DEFAULT_DRIVE
 	RTS
 
-.SetCurrentDrive_Adrive
-	AND #&03
-	STA CurrentDrv
-	RTS
-
 .osfileFF_loadfiletoaddr
 	JSR getcatentry_fspBA		; Get Load Addr etc.
 	JSR SetParamBlockPointerB0	; from catalogue
@@ -2327,8 +2322,7 @@ ENDIF
 
 .ReadDirDrvParameters2
 {
-	LDA DEFAULT_DRIVE
-	JSR SetCurrentDrive_Adrive
+	JSR Set_CurDrv_ToDefault
 .rdd_loop
 	JSR GSREAD_A
 	BCS errBADDIRECTORY		; If end of string
@@ -2686,8 +2680,10 @@ ENDIF
 
 .Set_CurDrv_ToDefault
 	LDA DEFAULT_DRIVE		; set working drive
-	JMP SetCurrentDrive_Adrive
-
+.SetCurrentDrive_Adrive
+	AND #&03
+	STA CurrentDrv
+	RTS
 	\ (<drive>)
 .Param_OptionalDriveNo
 	JSR GSINIT_A
