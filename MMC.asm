@@ -425,8 +425,7 @@ ENDIF
 
 	\\ increment MMC sector
 IF _MM32_
-    LDA #&FE
-    JSR dec_seccount
+    JSR dec_seccountby2
     BEQ rb1_exit
 
 	JSR mm32_disk_next_sector
@@ -442,8 +441,7 @@ IF _LARGEFILES
 IF _MM32_
     LDX seccount%
 ELSE
-	LDA #&FE
-	JSR dec_seccount
+	JSR dec_seccountby2
 	BEQ rb1_exit
 ENDIF
 
@@ -625,8 +623,7 @@ ENDIF
 	INC datptr%+1
 	JSR MMC_EndWrite
 IF _LARGEFILES
-	LDA #&FE
-	JSR dec_seccount
+	JSR dec_seccountby2
 ELSE
 	DEC seccount%
 	DEC seccount%
@@ -650,6 +647,8 @@ IF _LARGEFILES
 \\ On exit:
 \\ X = value of seccount%
 \\ Z flag if seccount%,seccount%+1 zero
+.dec_seccountby2
+	LDA #&FE
 .dec_seccount
 {
 	CLC
