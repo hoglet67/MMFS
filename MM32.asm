@@ -547,65 +547,7 @@ ENDIF
 }
 }
 
-\\ Calculate address of sector SECT_X in cluster CLUST_X.
-\\ Exit: C=1 if error (overflow)
-.mm32_SECT_X_Address
-{
-	LDX #2
 
-.loop1
-	LDA CLUST_X,X	; sec% = CLUST_X
-	STA sec%,X
-	DEX
-	BPL loop1
-
-	LDA CLUST_SIZE	; sec% *= CLUST_SIZE
-
-.loop2
-	LSR A
-	BCS l3
-
-	ASL sec%
-	ROL sec%+1
-	ROL sec%+2
-	BCC loop2
-
-	RTS				; Exit with C=1
-
-.l3	CLC				; sec% += LBA_DATA
-	LDA sec%
-	ADC LBA_DATA
-	STA sec%
-	LDA sec%+1
-	ADC LBA_DATA+1
-	STA sec%+1
-	BCC l4
-
-	INC sec%+2
-
-.l4	SEC				; sec% += (CLUST_SIZE - SECT_X)
-	LDA CLUST_SIZE
-	SBC SECT_X
-	CLC
-	ADC sec%
-	STA sec%
-	BCC l5
-
-	INC sec%+1
-	BNE l5
-
-	INC sec%+2
-
-.l5 ; fall into mm32_lba_to_256	JMP mm32_lba_to_256
-}
-
-\\ Convert block size to 256 bytes.
-\\ Exit: C=1 if overflow
-.mm32_lba_to_256
-	ASL sec%	; x 2
-	ROL sec%+1
-	ROL sec%+2
-	RTS
 
 \\ Scan the current directory
 \\ On exit: C=0 if file/dir found
@@ -1452,8 +1394,6 @@ ENDIF
 	RTS
 }
 
-
-
 \\ Update mm32_dsktbl when a file is mounted
 .mm32_upd_dsktbl
 {
@@ -2153,15 +2093,73 @@ ENDIF
 
 .loop1
 	JSR mm32_SECT_X_Next
-	BCS l2				; If end of cluster chain or error (C=1)
+	BCS l2rts				; If end of cluster chain or error (C=1)
 
 	DEY
 	BNE loop1
-
-	JMP mm32_SECT_X_Address
-
-.l2	RTS
 }
+\\ Calculate address of sector SECT_X in cluster CLUST_X.
+\\ Exit: C=1 if error (overflow)
+.mm32_SECT_X_Address
+{
+	LDX #2
+
+.loop1
+	LDA CLUST_X,X	; sec% = CLUST_X
+	STA sec%,X
+	DEX
+	BPL loop1
+
+	LDA CLUST_SIZE	; sec% *= CLUST_SIZE
+
+.loop2
+	LSR A
+	BCS l3
+
+	ASL sec%
+	ROL sec%+1
+	ROL sec%+2
+	BCC loop2
+
+	RTS				; Exit with C=1
+
+.l3	CLC				; sec% += LBA_DATA
+	LDA sec%
+	ADC LBA_DATA
+	STA sec%
+	LDA sec%+1
+	ADC LBA_DATA+1
+	STA sec%+1
+	BCC l4
+
+	INC sec%+2
+
+.l4	SEC				; sec% += (CLUST_SIZE - SECT_X)
+	LDA CLUST_SIZE
+	SBC SECT_X
+	CLC
+	ADC sec%
+	STA sec%
+	BCC l5
+
+	INC sec%+1
+	BNE l5
+
+	INC sec%+2
+
+.l5 ; fall into mm32_lba_to_256	JMP mm32_lba_to_256
+}
+
+\\ Convert block size to 256 bytes.
+\\ Exit: C=1 if overflow
+.mm32_lba_to_256
+	ASL sec%	; x 2
+	ROL sec%+1
+	ROL sec%+2
+
+.l2rts
+	RTS
+
 
 
 \\ ********************************************
