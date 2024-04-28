@@ -1452,19 +1452,7 @@ ENDIF
 	RTS
 }
 
-\\ Change extension .SSD to .DSD for filename at mm32_str+16
-.mm32_change_ext_dsd
-{
-	str = mm32_str%+16
-	LDY #1			; Skip initial mm32_hash
-.l0	LDA str,Y
-	INY
-	CMP #'.'
-	BNE l0
-.s1	LDA #'D'		; Change 'S' after period to 'D'
-	STA str,Y
-	RTS
-}
+
 
 \\ Update mm32_dsktbl when a file is mounted
 .mm32_upd_dsktbl
@@ -1543,7 +1531,21 @@ ENDIF
 	JSR mm32_add_ssd_ext
 	JSR mm32_Scan_Dir
 	BCC found
-	JSR mm32_change_ext_dsd
+
+\\ Change extension .SSD to .DSD for filename at mm32_str+16
+.mm32_change_ext_dsd
+{
+	str = mm32_str%+16
+	LDY #1			; Skip initial mm32_hash
+.l0	LDA str,Y
+	INY
+	CMP #'.'
+	BNE l0
+.s1	LDA #'D'		; Change 'S' after period to 'D'
+	STA str,Y
+
+}
+
 	JSR mm32_Scan_Dir
 	BCC found
 
