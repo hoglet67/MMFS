@@ -323,15 +323,9 @@ ENDIF
 	LDY #&00
 .pstr_loop
 	JSR inc_word_AE_and_load
-	BMI pstr_exloop
+	BMI prtstr_return1
 	JSR OSASCI
 	JMP pstr_loop
-.pstr_exloop
-	PLA
-	TAY
-	PLA
-	CLC
-	JMP (&00AE)			;Return
 }
 
 IF _MM32_
