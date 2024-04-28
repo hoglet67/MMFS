@@ -2035,8 +2035,124 @@ ENDIF
 
 	LDY &BA
 	JSR prt_InfoMsg_Yoffset		; pt. print file info
-	JMP LoadMemBlockEX
+	; Fall into  LoadMemBlockEX
 }
+
+	\\ **** Load block of memory ****
+.LoadMemBlockEX
+IF _SWRAM_
+IF _MM32_
+	JSR CheckForException
+ELSE
+	JSR MMC_BEGIN1
+	JSR CalcRWVars
+	JSR CheckForException
+	JMP readblock
+ENDIF
+ENDIF
+
+.LoadMemBlock
+IF _MM32_
+	LDA #&85
+	BNE exec_block_rw
+ELSE
+	JSR MMC_BEGIN1
+	JSR CalcRWVars
+.readblock
+	JSR MMC_ReadBlock
+
+.rwblkexit
+{
+	LDA TubeNoTransferIf0
+	BEQ rwblknottube
+	JSR TUBE_RELEASE_NoCheck
+.rwblknottube
+	JSR MMC_END
+	LDA #1
+	RTS
+}
+ENDIF
+
+	\\ **** Save block of memory ****
+.SaveMemBlock
+IF _MM32_
+	LDA #&A5
+	;BNE exec_block_rw
+ELSE
+	JSR MMC_BEGIN1
+	JSR CalcRWVars
+	JSR CheckWriteProtect
+;.writeblock
+	JSR MMC_WriteBlock
+	JMP rwblkexit
+ENDIF
+
+
+IF _MM32_
+\\ Block read/write
+\\ On entry A=FDC command
+.exec_block_rw
+{
+	\ Populate OSWORD control block
+	STA OWCtlBlock+6	; FDC Command
+	LDA #5
+	STA OWCtlBlock+5	; Param count
+	LDA CurrentDrv
+	STA OWCtlBlock		; Drive
+
+	\ Buffer address
+	LDX #2
+.loop0
+	LDA &BC-1,X
+	STA OWCtlBlock,X
+	LDA MA+&1074-1,X
+	STA OWCtlBlock+2,X
+	DEX
+	BNE loop0
+
+	\ Convert sector address to track & sector
+	LDA &C2
+	AND #3
+	TAX
+	LDA &C3		; X:A = sector address
+	LDY #&FF	; Y = track
+
+.loop1
+	SEC
+
+.loop2
+	INY
+	SBC #10
+	BCS loop2
+
+	DEX
+	BPL loop1
+
+	;C=0
+	ADC #10		; A = sector
+	STY OWCtlBlock+7
+	STA OWCtlBlock+8
+
+	\ Block size (bytes)
+	LDA &C1
+	STA OWCtlBlock+9
+	LDA &C2		; mixed byte
+	LSR A
+	LSR A
+	LSR A
+	LSR A
+	AND #3
+	STA OWCtlBlock+10
+	LDA &C0
+	STA OWCtlBlock+11
+
+	JSR OW7F_Execute
+	JSR ReportIfDiskFault
+
+	LDA #1
+	RTS
+}
+ENDIF
 
 .osfile0_savememblock
 	JSR CreateFile_FSP
@@ -6828,124 +6944,6 @@ ENDIF
 	EQUS "Not allowed",0
 }
 ENDIF
-
-	\\ **** Load block of memory ****
-.LoadMemBlockEX
-IF _SWRAM_
-IF _MM32_
-	JSR CheckForException
-ELSE
-	JSR MMC_BEGIN1
-	JSR CalcRWVars
-	JSR CheckForException
-	JMP readblock
-ENDIF
-ENDIF
-
-.LoadMemBlock
-IF _MM32_
-	LDA #&85
-	BNE exec_block_rw
-ELSE
-	JSR MMC_BEGIN1
-	JSR CalcRWVars
-.readblock
-	JSR MMC_ReadBlock
-
-.rwblkexit
-{
-	LDA TubeNoTransferIf0
-	BEQ rwblknottube
-	JSR TUBE_RELEASE_NoCheck
-.rwblknottube
-	JSR MMC_END
-	LDA #1
-	RTS
-}
-ENDIF
-
-	\\ **** Save block of memory ****
-.SaveMemBlock
-IF _MM32_
-	LDA #&A5
-	;BNE exec_block_rw
-ELSE
-	JSR MMC_BEGIN1
-	JSR CalcRWVars
-	JSR CheckWriteProtect
-;.writeblock
-	JSR MMC_WriteBlock
-	JMP rwblkexit
-ENDIF
-
-
-IF _MM32_
-\\ Block read/write
-\\ On entry A=FDC command
-.exec_block_rw
-{
-	\ Populate OSWORD control block
-	STA OWCtlBlock+6	; FDC Command
-	LDA #5
-	STA OWCtlBlock+5	; Param count
-	LDA CurrentDrv
-	STA OWCtlBlock		; Drive
-
-	\ Buffer address
-	LDX #2
-.loop0
-	LDA &BC-1,X
-	STA OWCtlBlock,X
-	LDA MA+&1074-1,X
-	STA OWCtlBlock+2,X
-	DEX
-	BNE loop0
-
-	\ Convert sector address to track & sector
-	LDA &C2
-	AND #3
-	TAX
-	LDA &C3		; X:A = sector address
-	LDY #&FF	; Y = track
-
-.loop1
-	SEC
-
-.loop2
-	INY
-	SBC #10
-	BCS loop2
-
-	DEX
-	BPL loop1
-
-	;C=0
-	ADC #10		; A = sector
-	STY OWCtlBlock+7
-	STA OWCtlBlock+8
-
-	\ Block size (bytes)
-	LDA &C1
-	STA OWCtlBlock+9
-	LDA &C2		; mixed byte
-	LSR A
-	LSR A
-	LSR A
-	LSR A
-	AND #3
-	STA OWCtlBlock+10
-	LDA &C0
-	STA OWCtlBlock+11
-
-	JSR OW7F_Execute
-	JSR ReportIfDiskFault
-
-	LDA #1
-	RTS
-}
-ENDIF
-
-
 
 	\\ **** Check if loaded catalogue is that
 	\\ of the current drive, if not load it ****
