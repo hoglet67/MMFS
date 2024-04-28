@@ -605,7 +605,8 @@ ENDIF
 .getcat_exit
 	RTS
 
-
+.Param_SyntaxErrorIfNull_getcatentry_fspTxtP
+	JSR Param_SyntaxErrorIfNull
 .getcatentry_fspTxtP
 	JSR read_fspTextPointer
 	BMI getcatentry			;always
@@ -648,8 +649,7 @@ ENDIF
 	STA &BF                            ; Param_SyntaxErrorIfNull to work
 .CMD_INFO
 	JSR parameter_afsp
-	JSR Param_SyntaxErrorIfNull
-	JSR getcatentry_fspTxtP
+	JSR Param_SyntaxErrorIfNull_getcatentry_fspTxtP
 .cmd_info_loop
 	JSR prt_InfoLine_Yoffset
 	JSR get_cat_nextentry
@@ -1902,8 +1902,7 @@ IF _INCLUDE_CMD_WIPE_
 .CMD_WIPE
 {
 	JSR parameter_afsp
-	JSR Param_SyntaxErrorIfNull
-	JSR getcatentry_fspTxtP
+	JSR Param_SyntaxErrorIfNull_getcatentry_fspTxtP
 .wipeloop
 	LDA MA+&0E0F,Y
 	BMI wipenext			; Ignore locked files
@@ -1929,8 +1928,7 @@ IF _INCLUDE_CMD_DELETE_
 .CMD_DELETE
 {
 	JSR parameter_fsp
-	JSR Param_SyntaxErrorIfNull
-	JSR getcatentry_fspTxtP
+	JSR Param_SyntaxErrorIfNull_getcatentry_fspTxtP
 	JSR prt_InfoMsg_Yoffset
 	JSR DeleteCatEntry_YFileOffset
 	JMP SaveCatToDisk
@@ -1942,8 +1940,7 @@ IF _INCLUDE_CMD_DESTROY_
 {
 	JSR IsEnabledOrGo		; If NO it returns to calling sub
 	JSR parameter_afsp
-	JSR Param_SyntaxErrorIfNull
-	JSR getcatentry_fspTxtP
+	JSR Param_SyntaxErrorIfNull_getcatentry_fspTxtP
 .destroyloop1
 	LDA MA+&0E0F,Y			; Print list of matching files
 	BMI destroylocked1		; IF file locked
