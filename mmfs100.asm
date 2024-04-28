@@ -3906,22 +3906,6 @@ ENDIF
 	PLA
 	RTS
 
-.gbpb_incDataPtr
-	JSR RememberAXY			; Increment data ptr
-	LDX #&01
-.gbpb_incdblword1060X
-{
-	LDY #&04			; Increment double word
-.gbpb_incdblword_loop
-	INC MA+&1060,X
-	BNE gbpb_incdblworkd_exit
-	INX
-	DEY
-	BNE gbpb_incdblword_loop
-.gbpb_incdblworkd_exit
-	RTS
-}
-
 .gbpb_bytesxferinvert
 {
 	LDX #&03			; Bytes to tranfer XOR &FFFF
@@ -3970,9 +3954,22 @@ ENDIF
 .gbpb_pb_fromhost
 	JSR gpbp_B8memptr
 	LDA (&B8,X)
-	JMP gbpb_incDataPtr
 
-
+.gbpb_incDataPtr
+	JSR RememberAXY			; Increment data ptr
+	LDX #&01
+.gbpb_incdblword1060X
+{
+	LDY #&04			; Increment double word
+.gbpb_incdblword_loop
+	INC MA+&1060,X
+	BNE gbpb_incdblworkd_exit
+	INX
+	DEY
+	BNE gbpb_incdblword_loop
+.gbpb_incdblworkd_exit
+	RTS
+}
 .fscv_osabouttoproccmd
 	BIT CMDEnabledIf1
 	BMI parameter_fsp
