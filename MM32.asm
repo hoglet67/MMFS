@@ -251,7 +251,7 @@ ENDIF
 	STA sec%+1
 	STA sec%+2
 
-	JSR mm32_readblock	; MBR?
+	; get MBR?
 	JSR isfat
 	BCC ifx			; FAT not recognised
 
@@ -291,10 +291,11 @@ ENDIF
 	STA sec%+2
 
 	JSR mm32_lba_to_256
-	JSR mm32_readblock	; VBR
+	; get VBR
 
 	\\ FAT signature word?
 .isfat
+	JSR mm32_readblock
 	LDA cat%+&1FE
 	CMP #&55
 	BNE bad

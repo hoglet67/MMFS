@@ -18,7 +18,7 @@ fatclustsize%=&C3	; byte
 	STA sec%
 	STA sec%+1
 	STA sec%+2
-	JSR MMC_ReadCatalogue		; MBR?
+	; get MBR?
 	JSR isfat
 	BEQ fat				; FAT not recognised Assume sector 0 is start of image
 	CLC				; return C=0 to indicate no FAT
@@ -26,6 +26,7 @@ fatclustsize%=&C3	; byte
 
 	\\ FAT signature word?
 .isfat
+	JSR MMC_ReadCatalogue
 	LDA cat%+&1FE
 	CMP #&55
 	BNE ifx
@@ -65,8 +66,7 @@ fatclustsize%=&C3	; byte
 	STA sec%+2
 	LDA cat%+&1C9
 	BNE faterr1
-	JSR MMC_ReadCatalogue		; VBR
-
+	; get VBR
 	JSR isfat
 	BEQ nombr
 
