@@ -2779,9 +2779,8 @@ gdopt%=&B7
 .gddfind
 {
 	JSR DMatchInit
-	LDA #0
-	STA gdopt%			; don't return unformatted disks
-	JSR GetDiskFirstAll
+	LDX #0			; don't return unformatted disks
+	JSR GetDiskFirstAllX
 	LDA dmLen%
 	BEQ jmpSYNTAX
 	LDA dmAmbig%
@@ -7507,6 +7506,8 @@ ENDIF
 	\\ If ?&B7=0, skip unformatted disks
 
 	\\ Return ALL disks
+.GetDiskFirstAllX
+	STX gdopt%
 .GetDiskFirstAll
 	LDA #0
 	STA gddiskno%
@@ -7706,9 +7707,8 @@ IF _INCLUDE_CMD_DRECAT_
 	DEX
 	BPL drc_loop1
 
-	STX gdopt%			; GetDisk returns unformatted disks
-
-	JSR GetDiskFirstAll
+	; GetDisk returns unformatted disks
+	JSR GetDiskFirstAllX
 
 .drc_loop2
 	\ read disc title
@@ -8160,9 +8160,9 @@ IF _INCLUDE_CMD_DFREE_
 	STX dfTotal%
 	STX dfTotal%+1
 	DEX
-	STX gdopt%			; GetDisk returns unformatted disk
 
-	JSR GetDiskFirstAll
+	; GetDisk returns unformatted disk
+	JSR GetDiskFirstAllX
 .dfreelp
 	BPL dffmted
 	LDX #dfFree%
@@ -8352,9 +8352,8 @@ ENDIF
 	\\ Find first unformatted disk and load in drive
 .dop_New
 {
-	LDA #&FF
-	STA gdopt%			; GetDisk returns unformatted disk
-	JSR GetDiskFirstAll
+	LDX #&FF			; GetDisk returns unformatted disk
+	JSR GetDiskFirstAllX
 .fdkloop
 	BCS ErrNoFreeDisks		; no free disks
 	CMP #&F0			; Is it formatted?
