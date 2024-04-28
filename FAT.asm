@@ -89,12 +89,9 @@ fatclustsize%=&C3	; byte
 	LDA cat%+&11
 	STA fatdirsize%
 	LDA cat%+&12
-	LSR A
-	ROR fatdirsize%
-	LSR A
-	ROR fatdirsize%
-	LSR A
-	ROR fatdirsize%
+	LSR A : ROR fatdirsize%
+	LSR A : ROR fatdirsize%
+	LSR A : ROR fatdirsize%
 	STA fatdirsize%+1
 
 	\\ cluster size
@@ -165,7 +162,6 @@ fatclustsize%=&C3	; byte
 
 
 	\\ **** SEARCH FOR FILE ****
-	\\ Entry: XY Point to filename
 	\\ Exit: C=0 = File found
 
 .FATSearchRootDirectory
@@ -175,7 +171,10 @@ fatptr%=&C4		; word
 fatclust%=&C3		; 24-bits (3 bytes)
 
 	\\ Search dir (first 16 entries only)
-
+	LDA sec%+2 :PHA
+	LDA sec%+1 :PHA
+	LDA sec%   :PHA
+.FATSearchRootDirectoryloop
 	LDX #0
 	STX fatptr%
 	LDA #HI(cat%)
@@ -190,8 +189,9 @@ fatclust%=&C3		; 24-bits (3 bytes)
 
 	DEY				; compare filenames
 .comploop
-	LDA fatfilename%,Y
-	CMP (fatptr%),Y
+	LDA (fatptr%),Y
+	BEQ filenotfound ;  end of FAT
+	CMP fatfilename%,Y
 	BNE nextfile			; no match
 	DEY
 	BPL comploop
@@ -207,22 +207,41 @@ fatclust%=&C3		; 24-bits (3 bytes)
 	DEX
 	BPL dirloop
 
+.incfatsector
+
+	LDA sec%
+	CLC
+	ADC #2
+	STA sec%
+	bcc readnextfatsector
+	inc sec%+1
+	BNE readnextfatsector
+	inc sec%+2
+.readnextfatsector
+	JSR MMC_ReadCatalogue
+	JMP FATSearchRootDirectoryloop
+
+.filenotfound
+	PLA
+	PLA
+	PLA
 	SEC
 	RTS
 
 	\\ file found
 .filefound
+
 	\\ sec = sec + max dir entries
 	CLC
-	LDA sec%
+	PLA
 	ADC fatdirsize%
 	STA sec%
-	LDA sec%+1
+	PLA
 	ADC fatdirsize%+1
 	STA sec%+1
-	BCC skipinc1
-	INC sec%+2
-.skipinc1
+	PLA
+	ADC #0
+	STA sec%+2
 
 	LDX fatclustsize%
 
