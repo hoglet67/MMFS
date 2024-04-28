@@ -2391,21 +2391,7 @@ ENDIF
 }
 ENDIF
 
-IF NOT(_MM32_) AND (_INCLUDE_CMD_TITLE_ OR _INCLUDE_CMD_BACKUP_)
-	\ Update title in disk table for disk in current drive
-	\ Title at titlestr%
-.UpdateDiskTableTitle
-{
-	JSR GetDriveStatus
-	LDY #&0B
-.loop
-	LDA titlestr%,Y
-	STA (&B0),Y
-	DEY
-	BPL loop
-	JMP SaveDiskTable
-}
-ENDIF
+
 
 IF _INCLUDE_CMD_ACCESS_
 .CMD_ACCESS
@@ -5596,10 +5582,27 @@ IF _INCLUDE_CMD_BACKUP_
 IF _MM32_
 	RTS
 ELSE
-	JMP UpdateDiskTableTitle
+	; Fall into  UpdateDiskTableTitle
 ENDIF
 }
 ENDIF
+
+IF NOT(_MM32_) AND (_INCLUDE_CMD_TITLE_ OR _INCLUDE_CMD_BACKUP_)
+	\ Update title in disk table for disk in current drive
+	\ Title at titlestr%
+.UpdateDiskTableTitle
+{
+	JSR GetDriveStatus
+	LDY #&0B
+.loop
+	LDA titlestr%,Y
+	STA (&B0),Y
+	DEY
+	BPL loop
+	JMP SaveDiskTable
+}
+ENDIF
+
 
 IF _INCLUDE_CMD_COPY_
 .CMD_COPY
