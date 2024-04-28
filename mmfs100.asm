@@ -605,6 +605,8 @@ ENDIF
 .getcat_exit
 	RTS
 
+.parameter_afsp_Param_SyntaxErrorIfNull_getcatentry_fspTxtP
+	JSR parameter_afsp
 .Param_SyntaxErrorIfNull_getcatentry_fspTxtP
 	JSR Param_SyntaxErrorIfNull
 .getcatentry_fspTxtP
@@ -648,8 +650,7 @@ ENDIF
 	LDA #info_cmd_index - cmdtable1-1  ; BF needs to point to the INFO command
 	STA &BF                            ; Param_SyntaxErrorIfNull to work
 .CMD_INFO
-	JSR parameter_afsp
-	JSR Param_SyntaxErrorIfNull_getcatentry_fspTxtP
+	JSR parameter_afsp_Param_SyntaxErrorIfNull_getcatentry_fspTxtP
 .cmd_info_loop
 	JSR prt_InfoLine_Yoffset
 	JSR get_cat_nextentry
@@ -1901,8 +1902,7 @@ cmdtab4= cmdtable4-cmdtable1
 IF _INCLUDE_CMD_WIPE_
 .CMD_WIPE
 {
-	JSR parameter_afsp
-	JSR Param_SyntaxErrorIfNull_getcatentry_fspTxtP
+	JSR parameter_afsp_Param_SyntaxErrorIfNull_getcatentry_fspTxtP
 .wipeloop
 	LDA MA+&0E0F,Y
 	BMI wipenext			; Ignore locked files
@@ -1939,8 +1939,7 @@ IF _INCLUDE_CMD_DESTROY_
 .CMD_DESTROY
 {
 	JSR IsEnabledOrGo		; If NO it returns to calling sub
-	JSR parameter_afsp
-	JSR Param_SyntaxErrorIfNull_getcatentry_fspTxtP
+	JSR parameter_afsp_Param_SyntaxErrorIfNull_getcatentry_fspTxtP
 .destroyloop1
 	LDA MA+&0E0F,Y			; Print list of matching files
 	BMI destroylocked1		; IF file locked
