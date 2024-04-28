@@ -1436,11 +1436,10 @@ ENDIF
 	str = mm32_str%+16
 	LDY #1			; Skip initial mm32_hash
 .l0	LDA str,Y
-	CMP #'.'		; Filenames guaranteed to have '.'
-	BEQ s1
 	INY
-	JMP l0
-.s1	INY
+	CMP #'.'		; Filenames guaranteed to have '.'
+	BNE l0
+.s1
 	LDA #'S'
 	STA str,Y
 	STA str+1,Y
@@ -1459,12 +1458,11 @@ ENDIF
 	str = mm32_str%+16
 	LDY #1			; Skip initial mm32_hash
 .l0	LDA str,Y
-	CMP #'.'
-	BEQ s1
 	INY
-	JMP l0
+	CMP #'.'
+	BNE l0
 .s1	LDA #'D'		; Change 'S' after period to 'D'
-	STA str+1,Y
+	STA str,Y
 	RTS
 }
 
