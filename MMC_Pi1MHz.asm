@@ -16,39 +16,33 @@ discaccess = &FCD6
     ; X = 255 on entry
 
     ; setup pointer to the command buffer
-    LDA #0   : STA discaccess
-    LDA #&F0 : STA discaccess+1
-    LDA #&FF : STA discaccess+2
+	JSR setupdiscaddress
 
     ; setup read
-    LDA #0
     STA discaccess+3
     STA discaccess+3
     STA discaccess+3
     STA discaccess+3
 
     ; setup buffer address we only need 512 bytes
-    STA discaccess+3
-    LDA #&E0 : STA discaccess+3
-    LDA #&FF : STA discaccess+3
-    LDA #0   : STA discaccess+3
+    		   STA discaccess+3
+    LDY #&E0 : STY discaccess+3
+    		 : STX discaccess+3
+             : STA discaccess+3
 
     ; setup start LBA
-    LDA #0
     STA discaccess+3
     STA discaccess+3
     STA discaccess+3
     STA discaccess+3
 
     ; setup number of sectors to read or write ( 1 )
-    LDA #1
-    STA discaccess+3
-    LDA #0
-    STA discaccess+3
+    LDY #1
+    STY discaccess+3
     STA discaccess+3
     STA discaccess+3
-
-    LDA #0
+    STA discaccess+3
+	; return A=0
 	RTS
 
     \\ only used during init sequence
@@ -83,6 +77,12 @@ discaccess = &FCD6
 
 }
 
+.setupdiscaddress
+    LDA #0   : STA discaccess
+	LDY #&F0 : STY discaccess+1
+    LDX #&FF : STX discaccess+2
+	RTS
+
 	\\ *** Send command to MMC ***
 	\\ On exit A=result, Z=result=0
 .MMC_DoCommand
@@ -91,9 +91,7 @@ discaccess = &FCD6
     CMP #read_single_block ; Read command
     BNE notareadcommand
     ; set up read sector
-    LDA #0   : STA discaccess
-	LDY #&F0 : STY discaccess+1
-    LDX #&FF : STX discaccess+2
+	JSR setupdiscaddress
 	; A= 0 ( read sector command)
 .setupLBA
 	STA discaccess+3 ; setup sector commmand
@@ -118,9 +116,7 @@ discaccess = &FCD6
 .notareadcommand
     CMP #write_block	; Write command
     BNE setup_commands
-    LDA #0   : STA discaccess
-	LDY #&F0 : STY discaccess+1
-    LDX #&FF : STX discaccess+2
+	JSR setupdiscaddress
     LDX #1    ; Write sector command
 	STX discaccess+3 ; setup sector commmand
     ; setup pointer to LBA in command buffer
@@ -229,10 +225,8 @@ ENDIF
 .rdl1
 	LDA discaccess+3
 	STA (datptr%),Y
-   ; JSR PrintHex
 	INY
 	BNE rdl1
-    ; JSR OSNEWL
 	RTS
 
 .rdlT20
@@ -276,12 +270,6 @@ ENDIF
 	RTS
 }
 
-	\\ **** Read 256 bytes to buffer ****
-	\\ Don't bother, we can simply skip the first page
-.MMC_ReadBuffer
-	LDA #&E1 : STA discaccess+1
-    RTS
-
 .donothing16cycles
 	NOP
 .donothing14cycles
@@ -318,6 +306,9 @@ ENDIF
 	RTS
 }
 
+	\\ **** Read 256 bytes to buffer ****
+	\\ Don't bother, we can simply skip the first page
+.MMC_ReadBuffer
 	\\ **** Write 256 bytes from buffer ****
 	\\ Like reading we can simply ignore the 256 bytes we would need to buffer in JIM RAM
 .MMC_WriteBuffer
