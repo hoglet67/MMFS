@@ -859,9 +859,7 @@ ENDIF
 	JMP PrintSpaceSPL
 }
 
-.LoadCurDrvCat2
-	JSR RememberAXY
-	JMP LoadCurDrvCat
+
 
 .ReadFileAttribsToB0_Yoffset
 {
@@ -6948,6 +6946,9 @@ ENDIF
 	CMP CurrentDrv
 	BNE LoadCurDrvCat
 	RTS
+
+.LoadCurDrvCat2
+	JSR RememberAXY
 
 	\\ **** Load catalogue of current drive ****
 .LoadCurDrvCat
