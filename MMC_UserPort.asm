@@ -123,31 +123,6 @@ ENDIF
     LDA #(3 + msbits)
 }
 
-IF _DEBUG_MMC
-    JSR UP_ReadBits7
-    PHP
-    PHA
-    LDY #0
-.dcmdu2
-    LDA cmdseq%,Y
-    JSR PrintHex
-    INY
-    CPY #7
-    BNE dcmdu2
-    LDA #':'
-    JSR OSWRCH
-    PLA
-    PHA
-    JSR PrintHex
-    JSR OSNEWL
-    PLA
-    PLP
-    RTS
-ELSE
-    \\ Fall through to UP_ReadBits7
-ENDIF
-}
-
     \\ This is always entered with X and A with the correct values
 .UP_ReadBits7
     STX iorb%           ;\1
@@ -165,10 +140,30 @@ ENDIF
     STX iorb%           ;\7
     STA iorb%
     LDA sr%
+
+IF _DEBUG_MMC
+    PHP
+    PHA
+    LDY #0
+.dcmdu2
+    LDA cmdseq%,Y
+    JSR PrintHex
+    INY
+    CPY #7
+    BNE dcmdu2
+    LDA #':'
+    JSR OSWRCH
+    PLA
+    PHA
+    JSR PrintHex
+    JSR OSNEWL
+    PLA
+    PLP
+ELSE
+
+ENDIF
     RTS
-
-
-
+}
 
     \\ *** Wait for data token ***
 .MMC_WaitForData
