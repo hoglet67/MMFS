@@ -57,7 +57,7 @@ do
     # M is MemoryMapped IO based (typically &FE18, for BeebEm)
     # P is Beeb Printer Port connected Interface (experimental)
     # G is Mega Games Cartridge MKII
-    # 1 Is Pi1MHz
+    # 1 is Pi1MHz
 
     if [ $system == "MMFS2" ]
     then
@@ -81,7 +81,7 @@ do
         if [ $system == "MMFS2" ]
         then
            echo "_MM32_      = TRUE"  >> DEVICE.asm
-           echo "_MM32_DEBUG = FALSE" >> DEVICE.asm
+           echo "_MM32_DEBUG = TRUE" >> DEVICE.asm
            echo "_MM32_DDUMP = FALSE" >> DEVICE.asm
         else
            echo "_MM32_      = FALSE" >> DEVICE.asm
