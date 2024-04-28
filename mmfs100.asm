@@ -2352,8 +2352,7 @@ IF _INCLUDE_CMD_TITLE_
 .CMD_TITLE
 {
 	JSR Param_SyntaxErrorIfNull
-	JSR Set_CurDirDrv_ToDefaults
-	JSR LoadCurDrvCat2		; load cat
+	JSR Set_CurDirDrv_ToDefaults_and_load	; load cat
 
 	LDX #&0B			; blank title
 	LDA #&00
@@ -3505,8 +3504,7 @@ ENDIF
 	RTS
 
 .notOSWORD7F
-	JSR Set_CurDirDrv_ToDefaults
-	JSR LoadCurDrvCat2		; Load catalogue
+	JSR Set_CurDirDrv_ToDefaults_and_load		; Load catalogue
 	INY
 	BMI OSWORD7E
 
@@ -6947,6 +6945,8 @@ ENDIF
 	BNE LoadCurDrvCat
 	RTS
 
+.Set_CurDirDrv_ToDefaults_and_load
+	JSR Set_CurDirDrv_ToDefaults
 .LoadCurDrvCat2
 	JSR RememberAXY
 
