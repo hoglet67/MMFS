@@ -267,14 +267,12 @@ ENDIF
 	STA &AF
 	\LDA &B3			; Restore A???
 	LDY #&00
-	JSR inc_word_AE
-	LDA (&AE),Y			; Get byte
+	JSR inc_word_AE_and_load
 	STA &0101			; Error number
 	DEX
 .errstr_loop
-	JSR inc_word_AE
+	JSR inc_word_AE_and_load
 	INX
-	LDA (&AE),Y
 	STA &0100,X
 	BMI prtstr_return2		; Bit 7 set, return
 	BNE errstr_loop
@@ -296,8 +294,7 @@ ENDIF
 	PHA
 	LDY #&00
 .prtstr_loop
-	JSR inc_word_AE
-	LDA (&AE),Y
+	JSR inc_word_AE_and_load
 	BMI prtstr_return1		; If end
 	JSR PrintChrA
 	\\ PrintChrA uses RememberAXY, so the final instruction is PLA
@@ -325,8 +322,7 @@ ENDIF
 	PHA
 	LDY #&00
 .pstr_loop
-	JSR inc_word_AE
-	LDA (&AE),Y
+	JSR inc_word_AE_and_load
 	BMI pstr_exloop
 	JSR OSASCI
 	JMP pstr_loop
@@ -928,12 +924,13 @@ ENDIF
 	RTS
 }
 
-.inc_word_AE
+.inc_word_AE_and_load
 {
 	INC &AE
 	BNE inc_word_AE_exit
 	INC &AF
 .inc_word_AE_exit
+	LDA (&AE),Y
 	RTS
 }
 
