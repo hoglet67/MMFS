@@ -458,7 +458,7 @@ ELSE
 ENDIF
 	CPX #3
 	BCS rb6_loop
-	JMP rb4_loop
+	BCC rb4_loop
 
 .rb9
 	JSR MMC_StartRead
@@ -860,10 +860,6 @@ ENDIF
 	BPL eloop0
 	RTS
 }
-
-
-
-
 
 IF NOT(_MM32_)
 .incCommandAddress
