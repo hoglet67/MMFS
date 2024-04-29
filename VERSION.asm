@@ -8,7 +8,7 @@ ELIF _DEVICE_="P"
 ELIF _DEVICE_="M"
     EQUS " MM"
 ELIF _DEVICE_="1"
-    EQUS " 1M"
+    EQUS " Pi1MHz"
 ENDIF
 ENDMACRO
 
