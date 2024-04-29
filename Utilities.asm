@@ -45,7 +45,6 @@ ENDIF
 	BNE list_skiplineno		; If don't print line number
 	PHA
 	JSR Utils_PrintLineNo
-	JSR PrintSpaceSPL		; exits with C=0
 	PLA
 .list_skiplineno
 	JSR OSASCI
@@ -142,7 +141,7 @@ ENDIF
 	STA &AB	;File handle
 .build_loop1
 	JSR Utils_PrintLineNo		; Line number prompt:
-	JSR PrintSpaceSPL		; Build Osword control block @ AC
+								; Build Osword control block @ AC
 	JSR Utils_SetBufPtr		; Normally ?AD=&18
 	LDX #&AC			; Osword ptr YX=&00AC
 	LDY #&FF
@@ -221,6 +220,7 @@ ENDIF
 	JSR bcd_inc16_zp_x		; A = hi byte
 	JSR PrintHexSPL
 	LDA &A8				; A = lo byte
-	JMP PrintHexSPL
+	JSR PrintHexSPL
+	JMP PrintSpaceSPL		; exits with C=0
 
 	\ ********** END OF UTILITIES **********
