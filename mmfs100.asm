@@ -279,6 +279,9 @@ ENDIF
 	JSR TUBE_RELEASE
 	JMP &0100
 
+\* print Nibble and fall into print string
+.PrintNibble_PrintString
+	JSR PrintNibble
 	\ **** Print String ****
 	\ String terminated if bit 7 set
 	\ Exit: AXY preserved, C=0
@@ -1292,8 +1295,8 @@ ENDIF
 	LDA MA+&0F06
 	JSR A_rorx4
 	PHA
-	JSR PrintNibble			; print option.no
-	JSR PrintString			; print " ("
+		; print option.no
+	JSR PrintNibble_PrintString			; print " ("
 	EQUS " ("
 	LDY #&03			; print option.name
 	PLA
@@ -5467,8 +5470,7 @@ ENDIF
 	JSR PrintString			; Copying from:
 	EQUS "Copying from :"
 	LDA MA+&10D1
-	JSR PrintNibble
-	JSR PrintString			; to :
+	JSR PrintNibble_PrintString			; to :
 	EQUS " to :"
 	LDA MA+&10D2
 	JSR PrintNibble
@@ -5905,8 +5907,7 @@ ENDIF
 	JSR PrintString
 	EQUS " drive "
 	LDA CurrentDrv
-	JSR PrintNibble
-	JSR PrintString
+	JSR PrintNibble_PrintString
 	EQUS " track   "
 	NOP
 IF _MM32_
