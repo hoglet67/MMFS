@@ -7512,6 +7512,7 @@ ENDIF
 
 \\ Enter with Y = the ZP address of the disk count
 .print_pluralized_disks
+{
 	TYA
 	PHA
 	LDX #0
@@ -7524,11 +7525,13 @@ ENDIF
 	LDA 1, X
 	BNE NotOne
 	DEC 0, X
-	BEQ ldtloaded
+	BEQ nos
 .NotOne
 	LDA #&73			; ASC("s")
-	JMP PrintChrA
-
+	JSR PrintChrA
+.nos
+	JMP PrintString
+}
 .gdnextloop
 	CMP #&FF
 	BEQ gdfin
@@ -8128,7 +8131,6 @@ IF _INCLUDE_CMD_DCAT_
 .dcEven
 	LDY #dcCount%
 	JSR print_pluralized_disks
-	JSR PrintString
 	EQUS " found"
 	NOP
 	JMP PrintNewLine
@@ -8171,7 +8173,6 @@ IF _INCLUDE_CMD_DFREE_
 	EQUS " of "
 	LDY #dfTotal%
 	JSR print_pluralized_disks
-	JSR PrintString
 	EQUS " free (unformatted)"
 	NOP
 	JMP PrintNewLine
