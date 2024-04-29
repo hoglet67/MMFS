@@ -178,7 +178,13 @@ ENDIF
 	TSX 				; Return A=0 to OS
 	LDA #&00
 	STA &0107,X
-	JSR Utils_SkipSpaces
+	DEY
+.utils_skipspcloop
+	INY 				; Skip spaces
+	LDA (TextPointer),Y
+	CMP #&20
+	BEQ utils_skipspcloop
+
 	CMP #&0D
 	BNE utils_notnullstr		; If not end of line
 	JMP errSYNTAX			; Syntax Error!
@@ -209,14 +215,6 @@ ENDIF
 ;;.utils_tpexit
 ;;	RTS
 ;;}
-
-.utils_skipspcloop
-	INY 				; Skip spaces
-.Utils_SkipSpaces
-	LDA (TextPointer),Y
-	CMP #&20
-	BEQ utils_skipspcloop
-	RTS
 
 .Utils_PrintLineNo
 	LDX #&A8
