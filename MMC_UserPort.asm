@@ -71,8 +71,9 @@ ELSE
         ORA #2
         STA iorb%
     NEXT
-ENDIF
     RTS
+ENDIF
+
 }
 
     \\ *** Send &FF to MMC Y times ***
