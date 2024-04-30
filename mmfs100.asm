@@ -271,8 +271,8 @@ ENDIF
 	STA &0101			; Error number
 	DEX
 .errstr_loop
-	JSR inc_word_AE_and_load
 	INX
+	JSR inc_word_AE_and_load
 	STA &0100,X
 	BMI prtstr_return2		; Bit 7 set, return
 	BNE errstr_loop
