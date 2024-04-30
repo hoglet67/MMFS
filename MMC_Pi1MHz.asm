@@ -16,7 +16,9 @@ discaccess = &FCA6
     ; X = 255 on entry
 
     ; setup pointer to the command buffer
-	JSR setupdiscaddress
+	LDA #0   : STA discaccess
+	LDY #&F0 : STY discaccess+1
+    LDX #&FF : STX discaccess+2
 
     ; setup read
     STA discaccess+3
@@ -48,11 +50,7 @@ discaccess = &FCA6
     \\ only used during init sequence
     \\ mainly for sdhc2 cards and for GetIDCRC so we can just return a constant
 .MMC_GetByte
-{
     LDA #&40 ; this fakes sdhc return type
-	RTS
-}
-
 	\\ 16 Clocks is used to skip CRC usually, we don't have CRC so we can ignore
 .MMC_16Clocks
 	\\ Slow clocks is only used during INIT so we can safely ignore this call as well
@@ -72,16 +70,17 @@ discaccess = &FCA6
 	RTS			; Don't need to do anything timing wise
 
 .skip_sector
+}
+	\\ **** Read 256 bytes to buffer ****
+	\\ Don't bother, we can simply skip the first page
+.MMC_ReadBuffer
+	\\ **** Write 256 bytes from buffer ****
+	\\ Like reading we can simply ignore the 256 bytes we would need to buffer in JIM RAM
+.MMC_WriteBuffer
     LDA #&E1 : STA discaccess+1
     RTS
 
-}
 
-.setupdiscaddress
-    LDA #0   : STA discaccess
-	LDY #&F0 : STY discaccess+1
-    LDX #&FF : STX discaccess+2
-	RTS
 
 	\\ *** Send command to MMC ***
 	\\ On exit A=result, Z=result=0
@@ -89,11 +88,16 @@ discaccess = &FCA6
 {
 	lda cmdseq%+1
     CMP #read_single_block ; Read command
-    BNE notareadcommand
-    ; set up read sector
-	JSR setupdiscaddress
-	; A= 0 ( read sector command)
-.setupLBA
+	BNE notareadcommand
+
+.setup_read_buffer
+	; C is set
+	LDA #0 ; set up read sector A= 0 ( read sector command)
+.setup_buffer
+    LDX #0   : STX discaccess
+	LDY #&F0 : STY discaccess+1
+    LDX #&FF : STX discaccess+2
+
 	STA discaccess+3 ; setup sector commmand
     ; setup pointer to LBA in command buffer
     LDX #8   : STX discaccess
@@ -103,66 +107,13 @@ discaccess = &FCA6
 	LDX cmdseq%+4 : STX discaccess+3
 	LDX cmdseq%+3 : STX discaccess+3
 	LDX cmdseq%+2 : STX discaccess+3  ; High Byte of sector
-
+	BCC skip
     STY discaccess+4 ; start read sector
+.skip
 
     ; setup pointer to buffer
 	LDX #&E0 : STX discaccess+1
-    		 : STA discaccess
-
-	; Return result
-    BNE MMC_return
-
-.notareadcommand
-    CMP #write_block	; Write command
-    BNE setup_commands
-	JSR setupdiscaddress
-    LDX #1    ; Write sector command
-	STX discaccess+3 ; setup sector commmand
-    ; setup pointer to LBA in command buffer
-    LDX #8   : STX discaccess
-
-	; Set sector address
-	LDX cmdseq%+5 : STX discaccess+3  ; Low byte of command sector address
-	LDX cmdseq%+4 : STX discaccess+3
-	LDX cmdseq%+3 : STX discaccess+3
-	LDX cmdseq%+2 : STX discaccess+3  ; High Byte of sector
-
-    ; setup pointer to buffer
-	LDX #&E0 : STX discaccess+1
-    	     : STA discaccess
-
-	; Return result
-    BNE MMC_return
-
-.setup_commands
-    ; These are only used during setup
-	CMP #go_idle_state	: BEQ MMC_go_idle 		; Go to Idle command
-	CMP #&48			: BEQ MMC_checksdhc		; Check card type
-	CMP #send_op_cond	: BEQ MMC_send_op		; Initialise command
-	CMP #set_blklen		: BEQ MMC_set_blk_size	; Set block length
-	CMP #send_cid		: BEQ MMC_send_cid		; Send CID ; Treat as NOP
-	; These command are used to check for sdhc
-	CMP #&77 : BEQ MMC_return
-	CMP #&69 : BEQ MMC_return
-	CMP #&7A : BEQ MMC_return
-
-	LDA #4	; Invalid command response
-	BNE dbgMmc
-
-	; Pretend that 95 command returned 1
-.MMC_go_idle
-	LDA #1
-	BNE dbgMmc  ; Potentially do debug output
-
-.MMC_checksdhc
-    LDA #0   : STA discaccess
-    LDY #&F0 : STY discaccess+1
-	LDA #20  : STA discaccess+3 ; SDCARD type command
-			 : STY discaccess+4 ; trigger command
-	LDA discaccess+4			; get data
-	RTS
-
+    LDA #&0  : STA discaccess
 .MMC_send_cid
 	; Pretend we are an SD card
 .MMC_send_op
@@ -195,6 +146,42 @@ IF _DEBUG_MMC
 ENDIF
 	; Done
 	RTS
+
+.notareadcommand
+    CMP #write_block	; Write command
+    BNE setup_commands
+	LDA #1
+	CLC
+    BCC setup_buffer
+
+.setup_commands
+    ; These are only used during setup
+	CMP #go_idle_state	: BEQ MMC_go_idle 		; Go to Idle command
+	CMP #&48			: BEQ MMC_checksdhc		; Check card type
+	CMP #send_op_cond	: BEQ MMC_send_op		; Initialise command
+	CMP #set_blklen		: BEQ MMC_set_blk_size	; Set block length
+	CMP #send_cid		: BEQ MMC_send_cid		; Send CID ; Treat as NOP
+	; These command are used to check for sdhc
+	CMP #&77 : BEQ MMC_return
+	CMP #&69 : BEQ MMC_return
+	CMP #&7A : BEQ MMC_return
+
+	LDA #4	; Invalid command response
+	BNE dbgMmc
+
+	; Pretend that 95 command returned 1
+.MMC_go_idle
+	LDA #1
+	BNE dbgMmc  ; Potentially do debug output
+
+.MMC_checksdhc
+    LDA #0   : STA discaccess
+    LDY #&F0 : STY discaccess+1
+	LDA #20  : STA discaccess+3 ; SDCARD type command
+			 : STY discaccess+4 ; trigger command
+	LDA discaccess+4			; get data
+	RTS
+
 }
 
 	\\ **** Complete Write Operation *****
@@ -305,12 +292,3 @@ ENDIF
 	BNE wrT2
 	RTS
 }
-
-	\\ **** Read 256 bytes to buffer ****
-	\\ Don't bother, we can simply skip the first page
-.MMC_ReadBuffer
-	\\ **** Write 256 bytes from buffer ****
-	\\ Like reading we can simply ignore the 256 bytes we would need to buffer in JIM RAM
-.MMC_WriteBuffer
-	LDA #&E1 : STA discaccess+1
-    RTS
