@@ -4,7 +4,7 @@
 
 \\ FRED RAM MMC DEVICE
 
-discaccess = &FCD6
+discaccess = &FCA6
 
 ; not used
 ;byteCounter% = MA+&10FF
