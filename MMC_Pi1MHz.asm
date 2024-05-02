@@ -59,9 +59,9 @@ discaccess = &FCA6
 
 	\\ MMC Clocks is used to skip bytes in sector reads so we need to handle this correctly
     \\ most of the time Y=0 ie 256 bytes
+	\\ entry Z flag is setup correctly based on Y
 .MMC_Clocks
 {
-    CPY #0
     BEQ skip_sector
 .count
     LDA discaccess+3
