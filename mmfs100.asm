@@ -2312,8 +2312,7 @@ ENDIF
 	JSR GSINIT_A
 	BNE ReadDirDrvParameters2	; If not null string
 	LDA #&00
-	JSR SetCurrentDrive_Adrive	; Drive 0!
-	BEQ rdd_exit1			; always
+	JMP SetCurrentDrive_Adrive_noand; Drive 0!
 
 .ReadDirDrvParameters2
 {
@@ -2337,11 +2336,11 @@ ENDIF
 	STA DirectoryParam
 	JSR GSREAD_A			; Check end of string
 	BCC errBADDIRECTORY		; If not end of string
-}
+
 .rdd_exit1
 	LDA CurrentDrv
 	RTS
-
+}
 
 titlestr%=MA+&1000
 
@@ -2662,6 +2661,7 @@ ENDIF
 	LDA DEFAULT_DRIVE		; set working drive
 .SetCurrentDrive_Adrive
 	AND #&03
+.SetCurrentDrive_Adrive_noand
 	STA CurrentDrv
 	RTS
 	\ (<drive>)
@@ -2682,11 +2682,8 @@ ENDIF
 	SBC #&30
 	BCC errBADDRIVE
 	CMP #&04
-	BCS errBADDRIVE
-	\ C=0
-	JSR SetCurrentDrive_Adrive	; preserves C
 	\ exit with C=0
-	RTS
+	BCC SetCurrentDrive_Adrive_noand
 
 .errBADDRIVE
 	JSR errBAD
@@ -2743,7 +2740,7 @@ IF NOT(_MM32_)
 	LDA rn%
 	CMP #4
 	BCS errBADDRIVE
-	JSR SetCurrentDrive_Adrive
+	STA CurrentDrv
 }
 
 
