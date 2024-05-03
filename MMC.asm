@@ -70,7 +70,7 @@ write_block=&58
 	CMP #1
 	BEQ isdhc
 
-	LDA #&02
+	LDA #0
 	STA CardSort
 
 .il1
@@ -98,7 +98,7 @@ write_block=&58
 	BNE il1
 
 	\\ Cardsort is already set up above
-	\\ LDA #&02
+	\\ LDA #0
 	\\ STA CardSort
 	BNE iok
 
@@ -129,7 +129,7 @@ write_block=&58
 	JSR MMC_GetByte
 	PLA
 	BNE iok
-	LDA #2
+	\\ A =0
 	STA CardSort
 
 	\\ Set blklen=512
@@ -189,17 +189,16 @@ ENDIF
 {
 \\ Skip multiply for SDHC cards (cardsort = 01)
 	LDA CardSort
-	CMP #2
 	BNE setCommandAddressSDHC
 \\ Convert to bytes by multiplying by 256
+	\\ A =0
+	STA cmdseq%+5
 	LDA sec%+2
 	STA cmdseq%+2
 	LDA sec%+1
 	STA cmdseq%+3
 	LDA sec%
 	STA cmdseq%+4
-	LDA #0
-	STA cmdseq%+5
 	RTS
 
 
@@ -864,7 +863,6 @@ IF NOT(_MM32_)
 .incCommandAddress
 {
 	LDA CardSort
-	CMP #2
 	BNE incCommandAddressSDHC
 \\ Add 512 to address (Sector always even)
 	INC cmdseq%+4
