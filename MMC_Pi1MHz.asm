@@ -169,15 +169,12 @@ ENDIF
 	LDA #4	; Invalid command response
 	BNE dbgMmc
 
+	; Fake sdhc
+.MMC_checksdhc
 	; Pretend that 95 command returned 1
 .MMC_go_idle
 	LDA #1
 	BNE dbgMmc  ; Potentially do debug output
-
-.MMC_checksdhc
-    LDA #1 ; Fake sdhc
-	RTS
-
 }
 
 	\\ **** Complete Write Operation *****
