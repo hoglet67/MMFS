@@ -121,7 +121,21 @@ ENDIF
 .dump_chr_loop
 	LDX #&00			; Print characters
 	LDA (&AC,X)
-	JSR ShowChrA			; Chr or "."
+
+	; Chr or "."
+
+{
+	AND #&7F			; If A<&20 OR >=&7F return "."
+	CMP #&7F			; Ignores bit 7
+	BEQ showchrdot
+	CMP #&20
+	BCS showchrexit
+.showchrdot
+	LDA #&2E			; "."
+.showchrexit
+
+}
+
 	JSR OSASCI
 	DEC &AC
 	BNE dump_chr_loop

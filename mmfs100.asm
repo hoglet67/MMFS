@@ -1087,20 +1087,6 @@ ENDIF
 	RTS 				; A=BCD
 }
 
-.ShowChrA
-{
-	AND #&7F			; If A<&20 OR >=&7F return "."
-	CMP #&7F			; Ignores bit 7
-	BEQ showchrdot
-	CMP #&20
-	BCS showchrexit
-.showchrdot
-	LDA #&2E			; "."
-.showchrexit
-	RTS
-}
-
-
 IF _MM32_
 	\ MM32 reverts to (modified) original DFS code.
 	\ Convert decimal to binary
