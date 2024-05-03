@@ -100,7 +100,7 @@ write_block=&58
 	\\ Cardsort is already set up above
 	\\ LDA #0
 	\\ STA CardSort
-	BNE iok
+	BEQ iok
 
 .isdhc
 	JSR MMC_GetByte
