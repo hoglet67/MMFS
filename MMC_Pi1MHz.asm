@@ -175,11 +175,7 @@ ENDIF
 	BNE dbgMmc  ; Potentially do debug output
 
 .MMC_checksdhc
-    LDA #0   : STA discaccess
-    LDY #&F0 : STY discaccess+1
-	LDA #20  : STA discaccess+3 ; SDCARD type command
-			 : STY discaccess+4 ; trigger command
-	LDA discaccess+4			; get data
+    LDA #1 ; Fake sdhc
 	RTS
 
 }
