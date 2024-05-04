@@ -6240,12 +6240,11 @@ IF _INCLUDE_CMD_FREE_MAP_
 	BNE Label_A97D
 	CPY #&2C
 	BEQ Label_A97D
-	LDA #&20
+	TYA
 	BNE Label_A982			; always
 .Label_A97D
 	LDY #&2C
-	CLC
-	ADC #&30
+	ORA #&30
 .Label_A982
 	JSR OSASCI
 	CPX #&03
