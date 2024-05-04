@@ -2020,7 +2020,6 @@ IF _SWRAM_
 IF _MM32_
 	JSR CheckForException
 ELSE
-	JSR MMC_BEGIN1
 	JSR CalcRWVars
 	JSR CheckForException
 	JMP readblock
@@ -2032,7 +2031,6 @@ IF _MM32_
 	LDA #&85
 	BNE exec_block_rw
 ELSE
-	JSR MMC_BEGIN1
 	JSR CalcRWVars
 .readblock
 	JSR MMC_ReadBlock
@@ -2055,7 +2053,6 @@ IF _MM32_
 	LDA #&A5
 	;BNE exec_block_rw
 ELSE
-	JSR MMC_BEGIN1
 	JSR CalcRWVars
 	JSR CheckWriteProtect
 ;.writeblock
@@ -6768,11 +6765,11 @@ ELSE
 ENDIF
 
 	\\ **** Initialise VARS for MMC R/W ****
-	\\ Call only after MMC_BEGIN
 	\\ Note: Values in BC-C5 copied to 1090-1099
 	\\ Also checks disk loaded/formatted
 .CalcRWVars
 {
+	JSR MMC_BEGIN1
 	JSR DiskStart
 
 	\\ add start sector on disk
