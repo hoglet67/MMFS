@@ -2498,7 +2498,7 @@ ENDIF
 	STA &C1
 	LDA MA+&107A
 	SBC MA+&1078
-	STA &C4				; C=B-A
+				; C=B-A
 	JSR CreateFile_2
 	LDA MA+&1079			; Load Address=Start Address
 	STA MA+&1075			; (4 bytes)
@@ -2513,6 +2513,7 @@ ENDIF
 
 .CreateFile_2
 {
+	STA &C4
 	LDA #&00			; NB Cat stored in
 	STA &C2				; desc start sec order
 	LDA #&02			; (file at 002 last)
@@ -5650,7 +5651,7 @@ ENDIF
 	JSR ExecAddrHi2
 	LDA &C2				; mixed byte
 	JSR A_rorx4and3
-	STA &C4
+
 	JSR CreateFile_2		; Saves cat
 	LDA &C2				; Remember sector
 	AND #&03
