@@ -2047,6 +2047,12 @@ ELSE
 }
 ENDIF
 
+.osfile0_savememblock
+	JSR CreateFile_FSP
+	JSR SetParamBlockPointerB0
+	JSR ReadFileAttribsToB0_Yoffset
+	; fall into SaveMemBlock
+
 	\\ **** Save block of memory ****
 .SaveMemBlock
 IF _MM32_
@@ -2126,11 +2132,6 @@ IF _MM32_
 }
 ENDIF
 
-.osfile0_savememblock
-	JSR CreateFile_FSP
-	JSR SetParamBlockPointerB0
-	JSR ReadFileAttribsToB0_Yoffset
-	JMP SaveMemBlock
 
 .fscv2_4_11_starRUN
 	JSR SetTextPointerYX		; ** RUN
