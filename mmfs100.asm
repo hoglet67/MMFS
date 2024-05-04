@@ -2610,19 +2610,19 @@ ENDIF
 
 
 .LoadAddrHi2
-{
 	LDA #&00
 	STA MA+&1075
 	LDA &C2
 	AND #&08
 	STA MA+&1074
 	BEQ ldadd_nothost
+.SetLoadAddrToHost
 	LDA #&FF
 	STA MA+&1075
 	STA MA+&1074
 .ldadd_nothost
 	RTS
-}
+
 
 .ExecAddrHi2
 {
@@ -5765,12 +5765,6 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	RTS
 }
 ENDIF
-
-.SetLoadAddrToHost
-	LDA #&FF			; Set load address high bytes
-	STA MA+&1074			; to FFFF (i.e. host)
-	STA MA+&1075
-	RTS
 
 IF _INCLUDE_CMD_FORM_VERIFY_
 .CMD_VERIFY
