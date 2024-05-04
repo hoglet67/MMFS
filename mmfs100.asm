@@ -6106,7 +6106,22 @@ IF _INCLUDE_CMD_FREE_MAP_
 	LDA &C1				; MAP only
 	ORA &C2
 	BEQ Label_A87A_free		; If wC1=0
-	JSR Map_AddressLength
+
+	LDA &BC				; Print address (3 dig hex)
+	JSR PrintNibbleSPL		; (*MAP only)
+	LDA &BB
+	JSR PrintHexSPL
+	JSR PrintStringSPL
+	EQUS "     :  "
+	LDA &C2				; Print length (3 dig hex)
+	JSR PrintNibbleSPL
+	LDA &C1
+	JSR PrintHexSPL
+	LDA #&0D
+	JSR OSASCI
+
+	JSR Sub_A8E2_nextblock
+
 .Label_A87A_free
 	LDA &C1
 	CLC
@@ -6143,21 +6158,6 @@ IF _INCLUDE_CMD_FREE_MAP_
 	RTS
 }
 
-.Map_AddressLength
-{
-	LDA &BC				; Print address (3 dig hex)
-	JSR PrintNibbleSPL		; (*MAP only)
-	LDA &BB
-	JSR PrintHexSPL
-	JSR PrintStringSPL
-	EQUS "     :  "
-	LDA &C2				; Print length (3 dig hex)
-	JSR PrintNibbleSPL
-	LDA &C1
-	JSR PrintHexSPL
-	LDA #&0D
-	JSR OSASCI
-}
 
 .Sub_A8E2_nextblock
 {
