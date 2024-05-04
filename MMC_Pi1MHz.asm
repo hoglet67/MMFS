@@ -32,11 +32,8 @@ discaccess = &FCA6
     		 : STX discaccess+3
              : STA discaccess+3
 
-    ; setup start LBA
-    STA discaccess+3
-    STA discaccess+3
-    STA discaccess+3
-    STA discaccess+3
+
+	LDY #12  : STY discaccess
 
     ; setup number of sectors to read or write ( 1 )
     LDY #1
@@ -49,12 +46,12 @@ discaccess = &FCA6
 
     \\ only used during init sequence
     \\ mainly for sdhc2 cards and for GetIDCRC so we can just return a constant
-.MMC_GetByte
-    LDA #&40 ; this fakes sdhc return type
+;.MMC_GetByte
+  ;  LDA #&40 ; this fakes sdhc return type
 	\\ 16 Clocks is used to skip CRC usually, we don't have CRC so we can ignore
 .MMC_16Clocks
 	\\ Slow clocks is only used during INIT so we can safely ignore this call as well
-.MMC_SlowClocks
+;.MMC_SlowClocks
 	RTS
 
 	\\ MMC Clocks is used to skip bytes in sector reads so we need to handle this correctly
@@ -148,33 +145,33 @@ ENDIF
 	RTS
 
 .notareadcommand
-    CMP #write_block	; Write command
-    BNE setup_commands
+;    CMP #write_block	; Write command
+;    BNE setup_commands
 	LDA #1
 	CLC
     BCC setup_buffer
 
-.setup_commands
+;.setup_commands
     ; These are only used during setup
-	CMP #go_idle_state	: BEQ MMC_go_idle 		; Go to Idle command
-	CMP #&48			: BEQ MMC_checksdhc		; Check card type
-	CMP #send_op_cond	: BEQ MMC_send_op		; Initialise command
-	CMP #set_blklen		: BEQ MMC_set_blk_size	; Set block length
-	CMP #send_cid		: BEQ MMC_send_cid		; Send CID ; Treat as NOP
+;	CMP #go_idle_state	: BEQ MMC_go_idle 		; Go to Idle command
+;	CMP #&48			: BEQ MMC_checksdhc		; Check card type
+;	CMP #send_op_cond	: BEQ MMC_send_op		; Initialise command
+;	CMP #set_blklen		: BEQ MMC_set_blk_size	; Set block length
+;	CMP #send_cid		: BEQ MMC_send_cid		; Send CID ; Treat as NOP
 	; These command are used to check for sdhc
-	CMP #&77 : BEQ MMC_return
-	CMP #&69 : BEQ MMC_return
-	CMP #&7A : BEQ MMC_return
+;	CMP #&77 : BEQ MMC_return
+;	CMP #&69 : BEQ MMC_return
+;	CMP #&7A : BEQ MMC_return
 
-	LDA #4	; Invalid command response
-	BNE dbgMmc
+;	LDA #4	; Invalid command response
+;	BNE dbgMmc
 
 	; Fake sdhc
-.MMC_checksdhc
+;.MMC_checksdhc
 	; Pretend that 95 command returned 1
-.MMC_go_idle
-	LDA #1
-	BNE dbgMmc  ; Potentially do debug output
+;.MMC_go_idle
+;	LDA #1
+;	BNE dbgMmc  ; Potentially do debug output
 }
 
 	\\ **** Complete Write Operation *****

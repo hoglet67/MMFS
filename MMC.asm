@@ -43,6 +43,7 @@ write_block=&58
 
 	\\ 80 Clocks
 .iloop
+IF _DEVICE_!="1"
 	LDY #10
 	JSR MMC_SlowClocks
 
@@ -103,6 +104,7 @@ write_block=&58
 	BEQ iok
 
 .isdhc
+
 	JSR MMC_GetByte
 	JSR MMC_GetByte
 	JSR MMC_GetByte
@@ -140,7 +142,10 @@ write_block=&58
 	STA par%+2
 	JSR MMC_DoCommand
 	BNE blkerr
-
+ELSE
+	LDA #1
+	STA CardSort
+ENDIF
 	\\ All OK!
 	LDA #&40
 	STA MMC_STATE
@@ -161,6 +166,7 @@ ENDIF
 
 	\\ Read CID and return CRC16 in YA
 .MMC_GetCIDCRC
+IF _DEVICE_!="1"
 	LDA #send_cid
 	JSR MMC_SetCommand
 	JSR MMC_StartRead
@@ -169,7 +175,9 @@ ENDIF
 	JSR MMC_GetByte
 	TAY
 	JMP MMC_GetByte
-
+ELSE
+	RTS
+ENDIF
 	\ **** Set-up MMC command sequence ****
 .MMC_SetupWrite
 	LDA #write_block
@@ -187,6 +195,7 @@ ENDIF
 
 .setCommandAddress
 {
+IF _DEVICE_!="1"
 \\ Skip multiply for SDHC cards (cardsort = 01)
 	LDA CardSort
 	BNE setCommandAddressSDHC
@@ -200,7 +209,7 @@ ENDIF
 	LDA sec%
 	STA cmdseq%+4
 	RTS
-
+ENDIF
 
 .setCommandAddressSDHC
 \\ Convert to 512b sectors by dividing by
