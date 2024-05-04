@@ -5340,7 +5340,7 @@ IF _INCLUDE_CMD_COMPACT_
 	JSR PrintNibble
 	JSR PrintNewLine
 	LDY #&00
-	JSR CloseFile_Yintch		; Close all files
+	JSR CloseFiles_Yhandle		; Close all files ; BUG fix
 	JSR CalcRAM
 	JSR LoadCurDrvCat2		; Load catalogue
 	LDY FilesX8
