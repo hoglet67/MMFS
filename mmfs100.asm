@@ -2179,14 +2179,13 @@ ENDIF
 	STA MA+&100E
 	LDA #&45
 	STA MA+&1000			; "E"
-	LDA #&2E			; "."
-	STA MA+&1001
 	LDA #&3A			; ":"
 	STA MA+&1002
 	LDA CurrentDrv
 	ORA #&30
 	STA MA+&1003			; Drive number X
 	LDA #&2E			; "."
+	STA MA+&1001
 	STA MA+&1004
 	STA MA+&1006
 	LDA DirectoryParam		; Directory D
