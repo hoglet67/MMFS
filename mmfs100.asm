@@ -5855,6 +5855,7 @@ ENDIF
 
 .vf1
 IF NOT(_MM32_)
+	SEC
 	JSR CheckCurDrvUnformatted
 	JSR ClearCatalogue
 ENDIF
@@ -6522,14 +6523,10 @@ ENDIF
 	STA &B9
 	RTS
 
-	\\ * Check drive loaded with unformatted disk *
-.CheckCurDrvUnformatted
-	SEC
-	BCS chkdrv1
-
 	\\ * Check drive loaded with formatted disk *
 .CheckCurDrvFormatted
 	CLC
+.CheckCurDrvUnformatted
 .chkdrv1
 {
 	LDX CurrentDrv
