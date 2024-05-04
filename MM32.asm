@@ -50,17 +50,14 @@ IF _MM32_DEBUG
 
 .l1	jsr PrintString
 	EQUS "FAT-LBA  "
-	nop
 	ldy #LBA_FAT-VID2
 	jsr phex2
 	jsr PrintString
 	EQUS "DATA-LBA "
-	nop
 	ldy #LBA_DATA-VID2
 	jsr phex2
 	jsr PrintString
 	EQUS "CLUST SZ "
-	nop
 	ldy #CLUST_SIZE-VID2
 	jsr phex1
 

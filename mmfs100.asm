@@ -3154,12 +3154,10 @@ IF _DEBUG
 	JSR PrintHex
 	JSR PrintString
 	EQUB ";X="
-	NOP
 	TXA
 	JSR PrintHex
 	JSR PrintString
 	EQUB ";Y="
-	NOP
 	TYA
 	JSR PrintHex
 	JSR PrintString
