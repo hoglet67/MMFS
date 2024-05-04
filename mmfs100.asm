@@ -2663,7 +2663,6 @@ ENDIF
 	BEQ Param_DriveNo_BadDrive
 	SEC
 	SBC #&30
-	BCC errBADDRIVE
 	CMP #&04
 	\ exit with C=0
 	BCC SetCurrentDrive_Adrive_noand
