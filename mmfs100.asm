@@ -2544,7 +2544,26 @@ ENDIF
 	BCS cfile_insertfileloop
 .cfile_atcatentry
 	LDX #&00
-	JSR CreateMixedByte
+
+	LDA MA+&1076			; Exec address b17,b16
+	AND #&03
+	ASL A
+	ASL A
+	EOR &C4				; Length
+	AND #&FC
+	EOR &C4
+	ASL A
+	ASL A
+	EOR MA+&1074			; Load address
+	AND #&FC
+	EOR MA+&1074
+	ASL A
+	ASL A
+	EOR &C2				; Sector
+	AND #&FC
+	EOR &C2
+	STA &C2				; C2=mixed byte
+
 .cfile_copyfnloop
 	LDA &C5,X			; Copy filename from &C5
 	STA MA+&0E08,Y
@@ -2574,27 +2593,6 @@ ENDIF
 	JSR ReportErrorCB
 	EQUB &BE
 	EQUS "Cat full",0
-
-.CreateMixedByte
-	LDA MA+&1076			; Exec address b17,b16
-	AND #&03
-	ASL A
-	ASL A
-	EOR &C4				; Length
-	AND #&FC
-	EOR &C4
-	ASL A
-	ASL A
-	EOR MA+&1074			; Load address
-	AND #&FC
-	EOR MA+&1074
-	ASL A
-	ASL A
-	EOR &C2				; Sector
-	AND #&FC
-	EOR &C2
-	STA &C2				; C2=mixed byte
-	RTS
 
 IF _INCLUDE_CMD_ENABLE_
 .CMD_ENABLE
