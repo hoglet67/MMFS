@@ -4223,7 +4223,7 @@ ENDIF
 	EQUB HI(fscv10_starINFO-1)
 	EQUB HI(fscv2_4_11_starRUN-1)
 
-	\ OSFIND tables
+	\ OSFILE tables
 .finv_tablelo
 	EQUB LO(osfileFF_loadfiletoaddr-1)
 	EQUB LO(osfile0_savememblock-1)
