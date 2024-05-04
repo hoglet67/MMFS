@@ -7230,9 +7230,6 @@ ENDIF
 	EQUS "number not valid",0
 }
 
-
-
-
 	\\ **** Load current drive with disk ****
 	\\ Word &B8 = Disc number
 .LoadDrive
