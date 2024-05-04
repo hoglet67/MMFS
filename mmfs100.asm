@@ -4326,6 +4326,7 @@ ENDIF
 	STA MA+&1086
 	TYA
 	BEQ CloseAllFiles_Osbyte77	; If y=0 Close all files
+.Check_Yhandle_exists_and_close
 	JSR CheckChannel_Yhndl_exYintch
 
 .CloseFile_Yintch
@@ -4606,7 +4607,7 @@ ENDIF
 .fop_exit
 	RTS 				; Exit: A=flag Y=intch
 
-
+;OSARGS A=&FF
 .ChannelBufferToDisk_Yhandle_A0
 	JSR ReturnWithA0
 .ChannelBufferToDisk_Yhandle
@@ -4620,7 +4621,7 @@ ENDIF
 	JSR CloseAllFiles
 	BEQ chbuf2			; always
 .chbuf1
-	JSR CloseFiles_Yhandle
+	JSR Check_Yhandle_exists_and_close ; Bug fix to only close file and not update catalogue
 .chbuf2
 	PLA 				; Restore
 	STA MA+&10C0
