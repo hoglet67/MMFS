@@ -6171,10 +6171,8 @@ IF _INCLUDE_CMD_FREE_MAP_
 	ADC &BC
 	STA &BC
 	LDA MA+&0F04,Y
-	BEQ Label_A8FA
-	LDA #&01
-.Label_A8FA
-	CLC
+	CMP #1		; carry C=0 if whole sector
+	LDA #0
 	ADC FilesX8,Y
 	BCC Label_A902
 	INC &BC
