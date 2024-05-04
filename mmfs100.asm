@@ -6623,6 +6623,7 @@ ENDIF
 
 	\\ Current drive
 .DiskStart
+	JSR MMC_BEGIN1
 	JSR CheckCurDrvFormatted	; X=drive
 .DiskStartX
 IF _LARGEMMB_
@@ -6769,7 +6770,6 @@ ENDIF
 	\\ Also checks disk loaded/formatted
 .CalcRWVars
 {
-	JSR MMC_BEGIN1
 	JSR DiskStart
 
 	\\ add start sector on disk
@@ -6910,7 +6910,6 @@ IF _MM32_
 	LDA #&53
 	BNE exec_cat_rw
 ELSE
-	JSR MMC_BEGIN1
 	JSR DiskStart
 	JSR MMC_ReadCatalogue
 
@@ -6933,7 +6932,6 @@ IF _MM32_
 	LDA #&4B
 	;BNE exec_cat_rw
 ELSE
-	JSR MMC_BEGIN1
 	JSR DiskStart
 	JSR CheckWriteProtect
 	JSR MMC_WriteCatalogue
