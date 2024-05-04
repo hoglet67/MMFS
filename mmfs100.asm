@@ -5016,7 +5016,14 @@ ENDIF
 	JSR CheckChannel_Yhndl_exYintch	; (new ptr @ 00+X)
 	LDY MA+&10C2
 .wsploop
-	JSR CmpNewPTRwithEXT
+
+	LDA MA+&1114,Y			; Compare ctl blk ptr
+	CMP &00,X			; to existing
+	LDA MA+&1115,Y			; Z=1 if same
+	SBC &01,X			; (ch.1=&1138)
+	LDA MA+&1116,Y
+	SBC &02,X
+	 				; C=p>=n
 	BCS SetSeqPointer_Yintch	; If EXT >= new PTR
 	LDA MA+&1114,Y			; else new PTR>EXT so pad with a 0
 	STA MA+&1110,Y
@@ -5078,15 +5085,6 @@ ENDIF
 	CMP MA+&1114,X
 .cmpPE_exit
 	RTS
-
-.CmpNewPTRwithEXT
-	LDA MA+&1114,Y			; Compare ctl blk ptr
-	CMP &00,X			; to existing
-	LDA MA+&1115,Y			; Z=1 if same
-	SBC &01,X			; (ch.1=&1138)
-	LDA MA+&1116,Y
-	SBC &02,X
-	RTS 				; C=p>=n
 
 \ DMB: Factor out some common code from BPUT/BGET
 
