@@ -1764,43 +1764,7 @@ IF _MM32_DDUMP
 	;jsr prt_trksec
 
 	JSR mm32_readblock
-	JSR dump
-
-	JSR mm32_disk_next_sector
-	BCC loop1 	; If not EOC/overflow
-
-.nosec
-	LDA #Rnosector
-	BNE report
-
-.empty
-	LDA #Rdrvnotrdy
-
-.report
-	JMP ReportIfDiskFault
-}
-
-IF FALSE
-.prt_trksec
-{
-	lda t
-	jsr PrintHex
-	lda #':'
-	jsr PrintChrA
-	lda t
-	BIT ATTRIB_X
-	BVC l1				; If SSD
-	lsr a
-.l1	jsr PrintHex
-	lda #'/'
-	jsr PrintChrA
-	lda s
-	jsr PrintHex
-	jmp PrintNewLine
-}
-ENDIF
-
-.dump
+; DUMP
 {
 	LDA #HI(buf%)
 	STA z+1
@@ -1867,8 +1831,42 @@ ENDIF
 	TYA
 	BNE loop1	;If Y<>0
 
-	RTS
 }
+
+	JSR mm32_disk_next_sector
+	BCC loop1 	; If not EOC/overflow
+
+.nosec
+	LDA #Rnosector
+	BNE report
+
+.empty
+	LDA #Rdrvnotrdy
+
+.report
+	JMP ReportIfDiskFault
+}
+
+IF FALSE
+.prt_trksec
+{
+	lda t
+	jsr PrintHex
+	lda #':'
+	jsr PrintChrA
+	lda t
+	BIT ATTRIB_X
+	BVC l1				; If SSD
+	lsr a
+.l1	jsr PrintHex
+	lda #'/'
+	jsr PrintChrA
+	lda s
+	jsr PrintHex
+	jmp PrintNewLine
+}
+ENDIF
+
 }
 ENDIF
 
