@@ -6413,8 +6413,11 @@ IF NOT(_MM32_)
 	\\ Default image: BEEB.MMB
 .MMC_Sector_Reset
 {
-	LDX #&A
-	JSR CopyDOSFilename
+	LDY #&A
+.loop	LDA filemmb,Y
+	STA fatfilename%,Y
+	DEY
+	BPL loop
 
 	\\ Search for Image File
 	\\ Name at file at fatfilename%
@@ -6482,18 +6485,6 @@ ENDIF
 	JSR ReportError
 	EQUB &FF
 	EQUS "Image not found!",0
-
-}
-
-	\\ Copy filename to search for to fatfilename%
-.CopyDOSFilename
-{
-	LDY #&A
-.loop	LDA filemmb,Y
-	STA fatfilename%,Y
-	DEY
-	BPL loop
-	RTS
 
 .filemmb
 	EQUS "BEEB    MMB"
