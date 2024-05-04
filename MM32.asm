@@ -739,8 +739,51 @@ IF _MM32_DRENAME
 {
 	; Copy the target name into the directory entry
 	LDX #33   ; name starts at mm32_str%+32 plus one to skip the mm32_hash
-	JSR copy_name_to_dir_entry
 
+\\ Copy filename from (mm32_str%+X) into the directory entry
+{
+	z = mm32_zptr%
+	str = mm32_str%
+	endchar = &BA   ; dot or space
+	maxindex = &BB  ; 8 or 11
+
+	LDY #0
+
+	LDA #'.'
+	STA endchar
+	LDA #8
+	JSR copy_and_pad_with_spaces
+
+	LDA #mm32_hash
+	STA endchar
+	LDA #11
+
+	; Copy part of the name, up to A characters, pad with spaces,
+	; end at the char stored at 'endchar'
+.copy_and_pad_with_spaces
+	STA maxindex
+
+.loop
+	LDA str,X
+	INX
+	CMP endchar
+	BEQ pad
+	CPY maxindex
+	BEQ loop
+	STA (z),Y
+	INY
+	BNE loop   ; always
+
+	; Pad destination with spaces if necessary
+.padloop
+	LDA #' '
+	STA (z),Y
+	INY
+.pad
+	CPY maxindex
+	BNE padloop
+
+}
 	; Write the directory to the card
 	JSR MMC_WriteCatalogue
 
@@ -787,54 +830,7 @@ ENDIF
 	RTS
 }
 
-IF _MM32_DRENAME
-\\ Copy filename from (mm32_str%+X) into the directory entry
-.copy_name_to_dir_entry
-{
-	z = mm32_zptr%
-	str = mm32_str%
-	endchar = &BA   ; dot or space
-	maxindex = &BB  ; 8 or 11
 
-	LDY #0
-
-	LDA #'.'
-	STA endchar
-	LDA #8
-	JSR copy_and_pad_with_spaces
-
-	LDA #mm32_hash
-	STA endchar
-	LDA #11
-
-	; Copy part of the name, up to A characters, pad with spaces,
-	; end at the char stored at 'endchar'
-.copy_and_pad_with_spaces
-	STA maxindex
-
-.loop
-	LDA str,X
-	INX
-	CMP endchar
-	BEQ pad
-	CPY maxindex
-	BEQ loop
-	STA (z),Y
-	INY
-	BNE loop   ; always
-
-	; Pad destination with spaces if necessary
-.padloop
-	LDA #' '
-	STA (z),Y
-	INY
-.pad
-	CPY maxindex
-	BNE padloop
-
-	RTS
-}
-ENDIF
 
 \\ Print directory entry
 \\ Note: Cannot be spooled
