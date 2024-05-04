@@ -7910,8 +7910,7 @@ dmAmbig%=MA+&100E	; string terminated with *
 	AND #&F
 	BEQ pdec2
 	LDX #&30
-	CLC
-	ADC #&30
+	ORA #&30
 	JMP PrintChrA
 .pdec2
 	DEY
