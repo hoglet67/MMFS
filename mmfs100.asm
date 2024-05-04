@@ -4705,16 +4705,14 @@ ENDIF
 	ROR A
 	DEY
 	BNE hndlinsue_loop
+	; Carry = 0
 	LDY MA+&10C2			; Y=intch
 	BIT MA+&10C0			; Test if open
 	BNE hndlinuse_used_C0
 .hndlinuse_notused_C1
-	PLA
 	SEC
-	RTS
 .hndlinuse_used_C0
 	PLA
-	CLC
 	RTS
 }
 
