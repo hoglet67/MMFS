@@ -7231,30 +7231,7 @@ ENDIF
 }
 
 
-	\\ **** If disk in any drive, unload it ****
-	\\ Word &B8=diskno (X,Y preserved)
-	\\ Doesn't check/update CRC7
-.UnloadDisk
-{
-	TXA
-	PHA
-	LDX #3
-.uldloop
-	LDA DRIVE_INDEX0,X
-	CMP &B8
-	BNE uldskip
-	LDA DRIVE_INDEX4,X
-	MASK_DISKNO
-	CMP &B9
-	BNE uldskip
-	STA DRIVE_INDEX4,X		; Reset bit 7
-.uldskip
-	DEX
-	BPL uldloop
-	PLA				; Restore X
-	TAX
-	RTS
-}
+
 
 	\\ **** Load current drive with disk ****
 	\\ Word &B8 = Disc number
@@ -7286,7 +7263,29 @@ ENDIF
 .ldiskro
 	JSR CheckCRC7
 	\ Make sure disk is not in another drive
-	JSR UnloadDisk
+	\\ **** If disk in any drive, unload it ****
+	\\ Word &B8=diskno (X,Y preserved)
+	\\ Doesn't check/update CRC7
+{
+	TXA
+	PHA
+	LDX #3
+.uldloop
+	LDA DRIVE_INDEX0,X
+	CMP &B8
+	BNE uldskip
+	LDA DRIVE_INDEX4,X
+	MASK_DISKNO
+	CMP &B9
+	BNE uldskip
+	STA DRIVE_INDEX4,X		; Reset bit 7
+.uldskip
+	DEX
+	BPL uldloop
+	PLA				; Restore X
+	TAX
+
+}
 	PLA
 	TAX
 	LDA &B8
