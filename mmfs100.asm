@@ -3701,7 +3701,7 @@ ENDIF
 	PHP 				; Save bit 1 (1=read/write seq ptr)
 	STA MA+&107F			; Save Tube operation
 	JSR gbpb_wordB4_word107D	; (B4) -> param blk
-	LDY #&0C
+
 .gbpb_ctlblk_loop
 	LDA (&B4),Y			; Copy param blk to 1060
 	STA MA+&1060,Y
@@ -3775,7 +3775,7 @@ ENDIF
 	JSR gbpb_bytesxferinvert	; bytes to txf XOR &FFFFFFFF
 	LDX #&05
 	JSR gbpb_incdblword1060X	; inc. bytes to txf
-	LDY #&0C	 		; Copy parameter back
+		 						; Copy parameter back
 	JSR gbpb_wordB4_word107D	; (B4) -> param blk
 .gbpb_restorectlblk_loop
 	LDA MA+&1060,Y
@@ -3900,6 +3900,7 @@ ENDIF
 }
 
 .gbpb_wordB4_word107D
+	LDY #&0C
 	LDA MA+&107D
 	STA &B4
 	LDA MA+&107E
