@@ -4774,9 +4774,7 @@ ENDIF
 	PHA
 	TXA
 	TAY
-	JSR CheckChannel_Yhndl_exYintch
-	TYA
-	JSR CmpPTR			; X=Y
+	JSR CheckChannel_Yhndl_exYintch_TYA_CmpPTR		; X=Y
 	BNE eof_NOTEND
 	LDX #&FF			; exit with X=FF
 	BNE eof_exit
@@ -4809,9 +4807,7 @@ ENDIF
 .BGETV_ENTRY
 {
 	JSR RememberXYonly
-	JSR CheckChannel_Yhndl_exYintch
-	TYA 				; A=Y
-	JSR CmpPTR
+	JSR CheckChannel_Yhndl_exYintch_TYA_CmpPTR	; A=Y
 	BNE bg_notEOF			; If PTR<>EXT
 	LDA MA+&1117,Y			; Already at EOF?
 	AND #&10
@@ -4979,8 +4975,7 @@ ENDIF
 	JSR ChannelBufferToDisk_Yintch	; Save buffer
 	LDA MA+&1114,Y			; EXT byte 0
 	BNE bp_loadbuf			; IF <>0 load buffer
-	TYA
-	JSR CmpPTR			; A=Y
+	JSR TYA_CmpPTR			; A=Y
 	BNE bp_loadbuf			; If PTR<>EXT, i.e. PTR<EXT
 	JSR CalcBufferSectorForPTR	; new sector!
 	BNE bp_savebyte			; always
@@ -4993,8 +4988,7 @@ ENDIF
 	JSR load_then_incSeqPtr_Yintch	; load buffer ptr into BA/BB then increments Seq Ptr
 	PLA
 	STA (&BA,X)			; Byte to buffer
-	TYA
-	JSR CmpPTR
+	JSR TYA_CmpPTR
 	BCC bp_exit			; If PTR<EXT
 	LDA #&20			; Update cat file len when closed
 	JSR ChannelFlags_SetBits	; Set bit 5
@@ -5073,6 +5067,10 @@ ENDIF
 	BNE bp_exit
 	JMP ChannelFlags_SetBit7	; Seq.Ptr in buffered sector
 
+.CheckChannel_Yhndl_exYintch_TYA_CmpPTR
+	JSR CheckChannel_Yhndl_exYintch
+.TYA_CmpPTR
+	TYA
 .CmpPTR
 	TAX
 	LDA MA+&1112,Y
