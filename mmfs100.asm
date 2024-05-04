@@ -3850,9 +3850,7 @@ ENDIF
 .gbpb6_rdcurdirdevice
 	JSR gbpb_SAVE_01		; GBPB 6
 	LDA DEFAULT_DRIVE		; Length of dev.name=1
-	ORA #&30			; Drive no. to ascii
-	JSR gbpb_gb_SAVEBYTE
-	JSR gbpb_SAVE_01		; Lendgh of dir.name=1
+	JSR gbpb_gb_SAVEBYTE_and_gbpb_SAVE_01 ; Lendgh of dir.name=1
 	LDA DEFAULT_DIR			; Directory
 	BNE gbpb_gb_SAVEBYTE
 
@@ -3860,9 +3858,7 @@ ENDIF
 .gbpb7_rdcurlibdevice
 	JSR gbpb_SAVE_01		; GBPB 7
 	LDA LIB_DRIVE			; Length of dev.name=1
-	ORA #&30			; Drive no. to ascii
-	JSR gbpb_gb_SAVEBYTE
-	JSR gbpb_SAVE_01		; Lendgh of dir.name=1
+	JSR gbpb_gb_SAVEBYTE_and_gbpb_SAVE_01		; Lendgh of dir.name=1
 	LDA LIB_DIR			; Directory
 	BNE gbpb_gb_SAVEBYTE
 
@@ -3895,6 +3891,9 @@ ENDIF
 	STA &B5
 	RTS
 
+.gbpb_gb_SAVEBYTE_and_gbpb_SAVE_01
+	ORA #&30			; Drive no. to ascii
+	JSR gbpb_gb_SAVEBYTE
 .gbpb_SAVE_01
 	LDA #&01
 	BNE gbpb_gb_SAVEBYTE		; always
