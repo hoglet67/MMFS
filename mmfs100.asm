@@ -3783,8 +3783,8 @@ ENDIF
 
 	\\ READ FILENAMES IN CURRENT CAT
 .gbpb8_rdfilescurdir
-	JSR Set_CurDirDrv_ToDefaults	; GBPB 8
-	JSR CheckCurDrvCat
+	; GBPB 8
+	JSR Set_CurDirDrv_ToDefaults_CheckCurDrvCat
 	LDA #LO(gbpb8_getbyte)
 	STA MA+&10D7
 	LDA #HI(gbpb8_getbyte)
@@ -3829,8 +3829,8 @@ ENDIF
 	\\ GET MEDIA TITLE
 .gbpb5_getmediatitle
 {
-	JSR Set_CurDirDrv_ToDefaults	; GBPB 5
-	JSR CheckCurDrvCat
+		; GBPB 5
+	JSR Set_CurDirDrv_ToDefaults_CheckCurDrvCat
 	LDA #&0C			; Length of title
 	JSR gbpb_gb_SAVEBYTE
 	LDY #&00
@@ -6891,6 +6891,8 @@ ENDIF
 }
 ENDIF
 
+.Set_CurDirDrv_ToDefaults_CheckCurDrvCat
+	JSR Set_CurDirDrv_ToDefaults
 	\\ **** Check if loaded catalogue is that
 	\\ of the current drive, if not load it ****
 .CheckCurDrvCat
