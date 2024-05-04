@@ -3904,7 +3904,6 @@ ENDIF
 	STA &B4
 	LDA MA+&107E
 	STA &B5
-.gpbp_exit
 	RTS
 
 .gbpb_SAVE_01
@@ -3912,7 +3911,7 @@ ENDIF
 	BNE gbpb_gb_SAVEBYTE		; always
 .gbpb_getbyteSAVEBYTE
 	JSR BGETV_ENTRY
-	BCS gpbp_exit			; If EOF
+	BCS gbpb_incdblworkd_exit			; If EOF
 .gbpb_gb_SAVEBYTE
 	BIT MA+&1081
 	BPL gBpb_gb_fromhost
@@ -3921,20 +3920,6 @@ ENDIF
 .gBpb_gb_fromhost
 	JSR gpbp_B8memptr
 	STA (&B8,X)
-	JMP gbpb_incDataPtr
-.gbpb_putbytes
-	JSR gpbp_pb_LOADBYTE
-	JSR BPUTV_ENTRY
-	CLC
-	RTS 				; always ok!
-.gpbp_pb_LOADBYTE
-	BIT MA+&1081
-	BPL gbpb_pb_fromhost
-	LDA TUBE_R3_DATA		; fast Tube Bput
-	JMP gbpb_incDataPtr
-.gbpb_pb_fromhost
-	JSR gpbp_B8memptr
-	LDA (&B8,X)
 
 .gbpb_incDataPtr
 	JSR RememberAXY			; Increment data ptr
@@ -3948,9 +3933,26 @@ ENDIF
 	INX
 	DEY
 	BNE gbpb_incdblword_loop
+}
 .gbpb_incdblworkd_exit
 	RTS
-}
+
+
+.gbpb_putbytes
+	JSR gpbp_pb_LOADBYTE
+	JSR BPUTV_ENTRY
+	CLC
+	RTS 				; always ok!
+.gpbp_pb_LOADBYTE
+	BIT MA+&1081
+	BPL gbpb_pb_fromhost
+	LDA TUBE_R3_DATA		; fast Tube Bput
+	JMP gbpb_incDataPtr
+.gbpb_pb_fromhost
+	JSR gpbp_B8memptr
+	LDA (&B8,X)
+	JMP gbpb_incDataPtr
+
 .fscv_osabouttoproccmd
 	BIT CMDEnabledIf1
 	BMI parameter_fsp
