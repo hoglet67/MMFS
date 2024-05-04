@@ -5609,8 +5609,7 @@ IF _INCLUDE_CMD_COPY_
 	JSR A_rorx4and3
 	STA &C3
 	LDA &BF
-	CLC
-	ADC #&FF
+	CMP #&1 ; C = 1 if file includes Partial sector
 	LDA &C0
 	ADC #&00
 	STA &C4
