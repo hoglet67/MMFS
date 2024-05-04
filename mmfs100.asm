@@ -4873,7 +4873,6 @@ ENDIF
 
 .ChannelBufferRW_Yintch_C1read
 {
-	PHP 				; Save C
 	INC MA+&10DD			; Remember in case of error?
 	LDY MA+&10C2			; Setup NMI vars
 	LDA MA+&1113,Y			; Buffer page
@@ -4886,7 +4885,6 @@ ENDIF
 	STA &C0				; Sector
 	LDA #&01
 	STA &C1
-	PLP
 	BCS chnbuf_read			; IF c=1 load buffer else save
 	LDA MA+&111C,Y			; Buffer sector
 	STA &C3				; Start sec. b0-b7
