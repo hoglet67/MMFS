@@ -5817,7 +5817,6 @@ ENDIF
 	JSR PrintChrA
 	SEC
 	SBC #&30
-	BCC jmp_errBadDrive
 	CMP #&04
 	BCS jmp_errBadDrive		; If >=4
 	STA CurrentDrv
