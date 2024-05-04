@@ -5676,10 +5676,9 @@ ENDIF
 .cd_swapvars
 	LDX #&11			; Swap BA-CB & 1045-1056
 .cd_swapvars_loop
-	LDA MA+&1045,X			; I.e. src/dest
-	LDY &BA,X
-	STA &BA,X
-	TYA
+	LDY MA+&1045,X			; I.e. src/dest
+	LDA &BA,X
+	STY &BA,X
 	STA MA+&1045,X
 	DEX
 	BPL cd_swapvars_loop
