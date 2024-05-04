@@ -5873,7 +5873,36 @@ ENDIF
 	BMI vf4				; If formatting
 
 	\ If verifying calc. no. of tracks
-	JSR TracksOnDisk	; reads catalogue, pops drive
+	; reads catalogue, pops drive
+
+	\ * Calc. no. of tracks on disk in curdrv *
+{
+	JSR LoadCurDrvCat		; Load catalogue
+	LDA MA+&0F06			; Size of disk
+	AND #&03
+	TAX
+	LDA MA+&0F07
+	LDY #&0A			; 10 sectors/track
+	STY &B0
+	LDY #&FF			; Calc number of tracks
+.trkloop1
+	SEC
+.trkloop2
+	INY
+	SBC &B0
+	BCS trkloop2
+	DEX
+	BPL trkloop1
+	ADC &B0
+	PHA
+	TYA
+	TAX
+	PLA
+	BEQ trkex
+	INX
+.trkex
+}
+
 	TXA
 	BEQ vf6_exit
 
@@ -5995,35 +6024,7 @@ ENDIF
 	RTS
 }
 
-	\ * Calc. no. of tracks on disk in curdrv *
-.TracksOnDisk
-{
-	JSR LoadCurDrvCat		; Load catalogue
-	LDA MA+&0F06			; Size of disk
-	AND #&03
-	TAX
-	LDA MA+&0F07
-	LDY #&0A			; 10 sectors/track
-	STY &B0
-	LDY #&FF			; Calc number of tracks
-.trkloop1
-	SEC
-.trkloop2
-	INY
-	SBC &B0
-	BCS trkloop2
-	DEX
-	BPL trkloop1
-	ADC &B0
-	PHA
-	TYA
-	TAX
-	PLA
-	BEQ trkex
-	INX
-.trkex
-	RTS
-}
+
 ;;}
 
 IF _INCLUDE_CMD_FREE_MAP_
