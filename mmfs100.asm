@@ -3038,9 +3038,28 @@ ENDIF
 IF _DEBUG
 	JSR PrintString
 	EQUB "Setting MMFS defaults", 13
-	NOP
 ENDIF
-	JSR FSDefaults
+
+{
+IF _MM32_
+	LDA #' '			; Reset the *DDRIVE table (MMFS2)
+	STA MA+&11C0
+	STA MA+&11D0
+ENDIF
+	LDA #'$'
+	STA DEFAULT_DIR
+	STA LIB_DIR
+	LDA #0
+	STA LIB_DRIVE
+	LDY #&00
+	STY DEFAULT_DRIVE
+	STY MA+&10C0
+
+	DEY				; Y=&FF
+	STY CMDEnabledIf1
+	STY FSMessagesOnIfZero
+	STY MA+&10DD
+}
 
 	\ INITIALISE VID VARIABLES
 	\ Don't reset if booting
@@ -3095,28 +3114,7 @@ ENDIF
 	JMP OSCLI
 }
 
-.FSDefaults
-{
-IF _MM32_
-	LDA #' '			; Reset the *DDRIVE table (MMFS2)
-	STA MA+&11C0
-	STA MA+&11D0
-ENDIF
-	LDA #'$'
-	STA DEFAULT_DIR
-	STA LIB_DIR
-	LDA #0
-	STA LIB_DRIVE
-	LDY #&00
-	STY DEFAULT_DRIVE
-	STY MA+&10C0
 
-	DEY				; Y=&FF
-	STY CMDEnabledIf1
-	STY FSMessagesOnIfZero
-	STY MA+&10DD
-	RTS
-}
 
 .VIDRESET				; Reset VID
 {
