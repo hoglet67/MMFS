@@ -2137,7 +2137,15 @@ ENDIF
 	JSR SetTextPointerYX		; ** RUN
 .NotCmdTable4
 {
-	JSR SetWordBA_txtptr		; (Y preserved)
+.SetWordBA_txtptr
+
+	LDA #&FF
+	STA &BE
+	LDA TextPointer
+	STA &BA
+	LDA TextPointer+1
+	STA &BB
+
 	STY MA+&10DA			; Y=0
 	JSR read_fspBA_reset		; Look in default drive/dir
 	STY MA+&10D9			; Y=text ptr offset
@@ -2220,15 +2228,6 @@ ENDIF
 	LDA #&01			; Execute program
 	JMP (&00BE)
 }
-
-.SetWordBA_txtptr
-	LDA #&FF
-	STA &BE
-	LDA TextPointer
-	STA &BA
-	LDA TextPointer+1
-	STA &BB
-	RTS
 
 .CMD_DIR
 	LDX #&00			; ** Set DEFAULT DIR/DRV
