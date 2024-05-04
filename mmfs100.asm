@@ -3879,13 +3879,12 @@ ENDIF
 	BNE gbpb_gb_SAVEBYTE
 
 .gpbp_B8memptr
-	PHA	 			; Set word &B8 to
-	LDA MA+&1061			; ctl blk mem ptr (host)
-	STA &B8
-	LDA MA+&1062
-	STA &B9
+	; Set word &B8 to
+	LDX MA+&1061			; ctl blk mem ptr (host)
+	STX &B8
+	LDX MA+&1062
+	STX &B9
 	LDX #&00
-	PLA
 	RTS
 
 .gbpb_bytesxferinvert
