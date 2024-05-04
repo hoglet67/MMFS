@@ -4420,14 +4420,15 @@ ENDIF
 	JSR parameter_fsp
 	JSR get_cat_firstentry80
 	BCS findv_filefound		; If file found
+	LDA #&00
 	PLP
 	BVC findv_createfile		; If not read only = write only
-	LDA #&00			; A=0=file not found
+; A=0=file not found
 	RTS 				; EXIT
 
 .findv_createfile
 	PHP 				; Clear data
-	LDA #&00			; BC-C3=0
+	; A=0 BC-C3=0
 	LDX #&07			; 1074-107B=0
 .findv_loop1
 	STA &BC,X
