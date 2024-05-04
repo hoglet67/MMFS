@@ -2385,9 +2385,7 @@ IF _INCLUDE_CMD_ACCESS_
 	BNE cmdac_getparam		; If not null string
 .cmdac_flag
 	STX &AA
-	JSR get_cat_firstentry80
-	BCS cmdac_filefound
-	JMP err_FILENOTFOUND
+	JSR getcatentry
 .cmdac_filefound
 	JSR CheckFileNotOpenY		; Error if it is!
 	LDA MA+&0E0F,Y			; Set/Reset locked flag
