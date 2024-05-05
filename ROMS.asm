@@ -5,15 +5,24 @@
 	\ \\**    *ROMS (<rom>)    **//
 .CMD_ROMS
 {
+	varA8 = &A8
+	varAA = &AA
+	varAB = &AB
+	varAE = &AE
+	romtableptrlo = &B4
+	romtableptrhi = &B5
+	ptrlo = &F6
+	ptrhi = &F7
+	;TextPointer = &F2 ; star command pointer
 	LDA #&00
-	STA &A8
+	STA varA8
 	JSR Sub_AAEA_StackAZero		; Change value of A in stack to 0?
 	LDA #&0F
-	STA &AA
+	STA varAA
 	JSR Sub_AADD_RomTablePtrBA
 	SEC
 	JSR GSINIT
-	STY &AB
+	STY varAB
 	CLC
 	BEQ Label_A9FF_notnum		; If null str (no parameter)
 .Label_A9E7_loop
@@ -26,35 +35,35 @@ ENDIF
 	CPX #16
 	BCS Label_A9E7_loop
 	TXA
-	STY &AB				; Save Y
-	STA &AA				; Rom Nr
+	STY varAB			; Save Y
+	STA varAA			; Rom Nr
 	JSR Label_AA53_RomInfo
-	LDY &AB
+	LDY varAB
 	JSR GSINIT_A
-	STY &AB				; Restore Y
+	STY varAB			; Restore Y
 	BNE Label_A9E7_loop		; Another rom id?
 	RTS
 
 .Label_A9FF_notnum
-	ROR &A8				; Loop through roms
+	ROR varA8				; Loop through roms
 .Label_AA01_loop
-	BIT &A8
+	BIT varA8
 	BPL Label_AA0A
 	JSR Sub_AA12_titlecmp		; Match title with parameter
 	BCC Label_AA0D_nomatch
 .Label_AA0A
 	JSR Label_AA53_RomInfo
 .Label_AA0D_nomatch
-	DEC &AA
+	DEC varAA
 	BPL Label_AA01_loop
 	RTS
 
 .Sub_AA12_titlecmp
 	LDA #&09			; wF6=&8009 = title
-	STA &F6
+	STA ptrlo
 	LDA #&80
-	STA &F7
-	LDY &AB
+	STA ptrhi
+	LDY varAB
 .Label_AA1C_loop
 	LDA (TextPointer),Y
 	CMP #&0D			; If end of str
@@ -65,14 +74,14 @@ ENDIF
 	CMP #&2A
 	BEQ Label_AA51_match		; If ="*"
 	JSR UcaseA2
-	STA &AE
+	STA varAE
 	JSR Sub_AACF_ReadRom
 	BEQ Label_AA42_nomatch
-	LDX &AE
+	LDX varAE
 	CPX #&23			; "#"
 	BEQ Label_AA1C_loop
 	JSR UcaseA2
-	CMP &AE
+	CMP varAE
 	BEQ Label_AA1C_loop
 .Label_AA42_nomatch
 	CLC
@@ -90,8 +99,8 @@ ENDIF
 	RTS
 
 .Label_AA53_RomInfo
-	LDY &AA				; Y=Rom nr
-	LDA (&B4),Y
+	LDY varAA			; Y=Rom nr
+	LDA (romtableptrlo),Y
 	BEQ Label_AA42_nomatch		; If RomTable(Y)=0
 	PHA
 	JSR PrintString
@@ -130,12 +139,12 @@ ENDIF
 
 .Label_AA9A_PrtRomTitle
 	LDA #&07			; Print ROM title
-	STA &F6
+	STA ptrlo
 	LDA #&80
-	STA &F7				; wF6=&8007
+	STA ptrhi				; wF6=&8007
 	JSR Sub_AACF_ReadRom
-	STA &AE				; Copyright offset
-	INC &F6				; wF6=&8009
+	STA varAE				; Copyright offset
+	INC ptrlo				; wF6=&8009
 	LDY #&1E
 	JSR Sub_AAC2_PrintRomStr
 	BCS Label_AACE_rts		; If reached copyright offset
@@ -152,7 +161,7 @@ ENDIF
 .DEY_Sub_AAC2_PrintRomStr
 	DEY
 .Sub_AAC2_PrintRomStr
-	LDA &F6
+	LDA ptrlo
 	CMP &AE
 	BCS Label_AACE_rts		; If >=
 	JSR Sub_AACF_ReadRom
@@ -164,9 +173,9 @@ ENDIF
 .Sub_AACF_ReadRom
 	TYA 				; Read byte from ROM
 	PHA
-	LDY &AA
+	LDY varAA
 	JSR OSRDRM			; Address in wF6
-	INC &F6
+	INC ptrlo
 	TAX
 	PLA
 	TAY
@@ -177,8 +186,8 @@ ENDIF
 	JSR RememberXYonly
 	LDA #&AA			; ROM information table @ XY
 	JSR osbyte_X0YFF
-	STX &B4
-	STY &B5
+	STX romtableptrlo
+	STY romtableptrhi
 	RTS
 
 .Sub_AAEA_StackAZero
