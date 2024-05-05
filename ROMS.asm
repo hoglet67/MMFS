@@ -9,14 +9,17 @@
 	varAA = &AA
 	varAB = &AB
 	varAE = &AE
-	romtableptrlo = &B4
-	romtableptrhi = &B5
+	romtableptrlo = &AC
+	romtableptrhi = &AD
 	ptrlo = &F6
 	ptrhi = &F7
 	;TextPointer = &F2 ; star command pointer
+
+	; Print string uses AE AF B3
 	LDA #&00
 	STA varA8
 	JSR Sub_AAEA_StackAZero		; Change value of A in stack to 0?
+
 	LDA #&0F
 	STA varAA
 	JSR Sub_AADD_RomTablePtrBA
