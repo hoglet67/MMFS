@@ -6,45 +6,45 @@
 .CMD_ROMS
 {
 	varA8 = &A8
-	varAA = &AA
+	currROMno = &AA
 	varAB = &AB
 	varAE = &AE
 	romtableptrlo = &AC
 	romtableptrhi = &AD
 	ptrlo = &F6
 	ptrhi = &F7
-	;TextPointer = &F2 ; star command pointer
-
+	; TextPointer = &F2 ; star command pointer
 	; Print string uses AE AF B3
-	LDA #&00
-	STA varA8
+
 	JSR Sub_AAEA_StackAZero		; Change value of A in stack to 0?
+	STA varA8					; A = 0 on exit.
 
 	LDA #&0F
-	STA varAA
+	STA currROMno
 	JSR Sub_AADD_RomTablePtrBA
 	SEC
 	JSR GSINIT
 	STY varAB
 	CLC
 	BEQ Label_A9FF_notnum		; If null str (no parameter)
-.Label_A9E7_loop
+
+.loopROMnumbers
 	JSR Param_ReadNum
 	BCS Label_A9FF_notnum		; If not valid number
 IF NOT(_MM32_)
 	CMP #0				; Ignore if number >= 16
-	BNE Label_A9E7_loop
+	BNE loopROMnumbers
 ENDIF
 	CPX #16
-	BCS Label_A9E7_loop
+	BCS loopROMnumbers
 	TXA
 	STY varAB			; Save Y
-	STA varAA			; Rom Nr
+	STA currROMno			; Rom Nr
 	JSR Label_AA53_RomInfo
 	LDY varAB
 	JSR GSINIT_A
 	STY varAB			; Restore Y
-	BNE Label_A9E7_loop		; Another rom id?
+	BNE loopROMnumbers		; Another rom id?
 	RTS
 
 .Label_A9FF_notnum
@@ -57,7 +57,7 @@ ENDIF
 .Label_AA0A
 	JSR Label_AA53_RomInfo
 .Label_AA0D_nomatch
-	DEC varAA
+	DEC currROMno
 	BPL Label_AA01_loop
 	RTS
 
@@ -102,7 +102,7 @@ ENDIF
 	RTS
 
 .Label_AA53_RomInfo
-	LDY varAA			; Y=Rom nr
+	LDY currROMno			; Y=Rom nr
 	LDA (romtableptrlo),Y
 	BEQ Label_AA42_nomatch		; If RomTable(Y)=0
 	PHA
@@ -176,7 +176,7 @@ ENDIF
 .Sub_AACF_ReadRom
 	TYA 				; Read byte from ROM
 	PHA
-	LDY varAA
+	LDY currROMno
 	JSR OSRDRM			; Address in wF6
 	INC ptrlo
 	TAX
