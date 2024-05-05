@@ -31,10 +31,12 @@ write_block=&58
 	\\ Carry=1 if card doesn't repsond at all!
 .MMC_INIT
 {
+IF _DEVICE_!="1"
 	trys%=&32
 	attempts%=skipsec%
 
 	JSR SetLEDS
+
 	LDA #0
 	STA MMC_STATE
 
@@ -43,7 +45,7 @@ write_block=&58
 
 	\\ 80 Clocks
 .iloop
-IF _DEVICE_!="1"
+
 	LDY #10
 	JSR MMC_SlowClocks
 
@@ -153,6 +155,7 @@ ENDIF
 	CLC
 	RTS
 
+IF _DEVICE_!="1"
 	\\ Failed to set block length
 .blkerr
 IF _MM32_
@@ -162,6 +165,7 @@ ELSE
 	EQUB &FF
 ENDIF
 	EQUS "Set block len error ",0
+ENDIF
 }
 
 	\\ Read CID and return CRC16 in YA
