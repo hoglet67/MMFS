@@ -2293,7 +2293,8 @@ ENDIF
 	JSR GSINIT_A
 	BNE ReadDirDrvParameters2	; If not null string
 	LDA #&00
-	JMP SetCurrentDrive_Adrive_noand; Drive 0!
+	STA CurrentDrv
+	RTS ; Drive 0!
 
 .ReadDirDrvParameters2
 {
