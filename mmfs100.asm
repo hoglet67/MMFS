@@ -7812,6 +7812,13 @@ dmAmbig%=MA+&100E	; string terminated with *
 .pdcloop
 	LDA (gdptr%),Y
 	BEQ pdcspc
+	CMP #&20
+	BCC pdcdot
+	CMP #&7F
+	BNE pdcprint
+.pdcdot
+	LDA #'.'
+.pdcprint
 	JSR PrintChrA
 	INY
 	CPY #12
