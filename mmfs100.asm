@@ -5071,8 +5071,6 @@ ENDIF
 
 	JSR RememberAXY			; Write Sequential Pointer
 	JSR CheckChannel_Yhndl_exYintch	; (new ptr @ 00+X)
-	LDY MA+&10C2
-
 
 .wsploop
 	JSR cmptoEXT
