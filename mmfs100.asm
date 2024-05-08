@@ -7244,7 +7244,12 @@ ELSE
 	STA &B0
 	TYA
 	AND #&01
+IF 	(MP+&0E) AND 1
+	CLC
+	ADC #MP+&0E
+ELSE
 	ORA #MP+&0E
+ENDIF
 	STA &B1
 
 	TYA				; A = table sector code
