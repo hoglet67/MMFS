@@ -4634,9 +4634,11 @@ ENDIF
 	BEQ ChannelBufferToDisk_Yhandle_A0	; If file(s) to media
 	CPY #&00
 	BEQ argsv_Y0
-	CMP #&03
+	CMP #&04
 	BCS argsv_exit			; If A>=3
 	JSR ReturnWithA0
+	CMP #&03
+	BEQ argsv3
 	CMP #&01
 	BNE argsv_rdseqptr_or_filelen
 	JMP argsv_WriteSeqPointer
@@ -4678,6 +4680,64 @@ ENDIF
 	LDA #&00
 	STA &03,X
 	RTS
+
+; args 3
+; Change EXT of file
+;
+; if new EXT > old EXT pad file with zeros
+; if new EXT <= old EXT truncate file and ensure ptr in <= new EXT
+
+.argsv3
+{
+	JSR CheckChannel_Yhndl_exYintch
+	JSR cmptoEXT
+	BCS truncate ; if new EXT <= EXT
+	LDA MA+&1110,Y	; save current ptr
+	PHA
+	LDA MA+&1111,Y
+	PHA
+	LDA MA+&1112,Y
+	PHA
+	JSR argsextendloop
+	PLA
+	STA MA+&1112,Y
+	PLA
+	STA MA+&1111,Y
+	PLA
+	STA MA+&1110,Y
+	JSR IsSeqPointerInBuffer_Yintch
+.truncate
+	LDA MA+&110C,Y
+	BMI filereadonly
+	ORA MA+&110E,Y
+	BMI filelocked
+	LDA #&20
+	JSR ChannelFlags_SetBits
+
+	LDA 0,X		; COPY new EXT to EXT
+	STA MA+&1114,Y
+	LDA 1,X
+	STA MA+&1115,Y
+	LDA 2,X
+	STA MA+&1116,Y
+	TXA			; save Args block
+	PHA
+	JSR TYA_CmpPTR
+	PLA
+	TAX
+	BCC dontchangeptr; PTR<EXT
+	JSR SetSeqPointer_Yintch
+.dontchangeptr
+	LDA #&EF ; Clear b4
+	JMP ChannelFlags_ClearBits
+
+.filereadonly
+	JMP errFILEREADONLY
+
+.filelocked
+	JMP errFILELOCKED
+
+}
 
 .IsHndlinUse_Yintch
 {
@@ -4997,21 +5057,28 @@ ENDIF
 	RTS
 
 
-.argsv_WriteSeqPointer
-{
-	JSR RememberAXY			; Write Sequential Pointer
-	JSR CheckChannel_Yhndl_exYintch	; (new ptr @ 00+X)
-	LDY MA+&10C2
-.wsploop
-
+.cmptoEXT
 	LDA MA+&1114,Y			; Compare ctl blk ptr
-	CMP &00,X			; to existing
+	CMP &00,X			; to existing EXT
 	LDA MA+&1115,Y			; Z=1 if same
 	SBC &01,X			; (ch.1=&1138)
 	LDA MA+&1116,Y
 	SBC &02,X
+	RTS
+
+.argsv_WriteSeqPointer
+
+	JSR RememberAXY			; Write Sequential Pointer
+	JSR CheckChannel_Yhndl_exYintch	; (new ptr @ 00+X)
+	LDY MA+&10C2
+
+
+.wsploop
+	JSR cmptoEXT
 	 				; C=p>=n
 	BCS SetSeqPointer_Yintch	; If EXT >= new PTR
+
+.argsextendloop
 	LDA MA+&1114,Y			; else new PTR>EXT so pad with a 0
 	STA MA+&1110,Y
 	LDA MA+&1115,Y			; first, actual PTR=EXT
@@ -5034,11 +5101,10 @@ ENDIF
 	PLA
 	STA &B6
 	JMP wsploop			; Loop
-}
 
 .SetSeqPointer_Yintch
 	LDA &00,X			; Set Sequential Pointer
-	STA MA+&1110,Y
+	STA MA+&1110,Y		; PTR #
 	LDA &01,X
 	STA MA+&1111,Y
 	LDA &02,X
@@ -5066,8 +5132,8 @@ ENDIF
 	TYA
 .CmpPTR
 	TAX
-	LDA MA+&1112,Y
-	CMP MA+&1116,X
+	LDA MA+&1112,Y ; PTR#
+	CMP MA+&1116,X ; EXT#
 	BNE cmpPE_exit
 	LDA MA+&1111,Y
 	CMP MA+&1115,X
