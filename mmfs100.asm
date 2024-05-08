@@ -50,6 +50,8 @@ _MM32_DRENAME=NOT(_BP12K_)
 IF _MASTER_
 	CPU 1				; 65C12
 	MA=&C000-&0E00			; Offset to Master hidden static workspace
+	_NON_WS_BUILD_COM = FALSE
+	guard_value=&C000
 ELIF _BP12K_
 	; Memory at &Axxx in the 12K private RAM has the (to us) undesirable
 	; property that code running there accesses the display RAM, whether
@@ -59,11 +61,21 @@ ELIF _BP12K_
 	MA=&A200-&0E00
 	UTILSBUF=(&BF-&B6)+HI(MA+&0E00)
 	MAEND=(UTILSBUF+1)<<8
+	_NON_WS_BUILD_COM = FALSE
+	guard_value=&C000
 ELIF _SWRAM_
-	MA=&B600-&0E00
-	UTILSBUF=&BF			; Utilities buffer page
+	MA=&B700-&0E00
+	_NON_WS_BUILD_COM = TRUE ; doesn't need workspace
+	; UTILSBUF=&BF			; Utilities buffer page
+	guard_value=&B6FE
+;; Add a special marker that ZMMFS uses to identify an already installed SWMMFS
+   	org &B6FE
+   	EQUB MAGIC0
+   	EQUB MAGIC1
 ELSE
+	_NON_WS_BUILD_COM = FALSE
 	MA=0
+	guard_value=&C000
 ENDIF
 MP=HI(MA)
 
@@ -168,18 +180,7 @@ MACRO BP12K_NEST
 	ENDIF
 ENDMACRO
 
-
-IF _SWRAM_ AND NOT(_BP12K_)
-   guard_value=&B5FE
-;; Add a special marker that ZMMFS uses to identify an already installed SWMMFS
-   org &B5FE
-   EQUB MAGIC0
-   EQUB MAGIC1
-ELSE
-   guard_value=&C000
-ENDIF
-
-   ORG &8000
+   	ORG &8000
 	GUARD guard_value
 
 	\\ ROM Header
@@ -6377,6 +6378,7 @@ ENDIF
 
 ; SFTODO: Slightly wasteful of space here
 IF _BP12K_
+	extraspace = MA+&0E00 - P%
 	SKIPTO MA+&0E00
 	; The tube host code can live in this region; it doesn't access our
 	; workspace and we won't page in the private 12K bank when calling this.
@@ -8523,8 +8525,11 @@ IF _BP12K_
 	PLP
 	RTS
 ENDIF
-
-PRINT "    code ends at",~P%," (",(guard_value - P%), "bytes free )"
+IF _BP12K_
+	PRINT "    code ends at",~P%," (",(guard_value - P%+extraspace), "bytes free )"
+ELSE
+	PRINT "    code ends at",~P%," (",(guard_value - P%), "bytes free )"
+ENDIF
 
 IF _DEVICE_="G"
 SAVE &8000, P%
