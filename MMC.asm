@@ -10,7 +10,7 @@ send_cid=&4A
 set_blklen=&50
 read_single_block=&51
 write_block=&58
-
+IF _DEVICE_!="1"
 	\\ **** Reset MMC Command Sequence ****
 	\\ A=cmd, token=&FF
 .MMC_SetCommand
@@ -25,7 +25,7 @@ write_block=&58
 	STA cmdseq%+6			;\ token
 	STA cmdseq%+7
 	RTS
-
+ENDIF
 	\\ ***** Initialise MMC card *****
 	\\ Carry=0 if ok
 	\\ Carry=1 if card doesn't repsond at all!
@@ -190,7 +190,11 @@ ENDIF
 .MMC_SetupRead
 	LDA #read_single_block
 .setuprw
+IF _DEVICE_!="1"
 	JSR MMC_SetCommand
+ELSE
+	STA cmdseq%+1
+ENDIF
 
 \\ Translate the sector number into a SPI Command Address
 \\ Sector number is in 256 bytes sectors
