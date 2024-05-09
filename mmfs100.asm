@@ -383,7 +383,7 @@ ENDIF
 	PLA
 .PrintNibbleSPL
 	JSR NibToASC
-	JMP OSASCI
+	JMP OSWRCH
 
 	\\ Print spaces, exit C=0 A preserved
 .Print2SpacesSPL
@@ -391,7 +391,7 @@ ENDIF
 .PrintSpaceSPL
 	PHA				; Print space
 	LDA #&20
-	JSR OSASCI
+	JSR OSWRCH
 	PLA
 	CLC
 	RTS
@@ -6168,8 +6168,7 @@ IF _INCLUDE_CMD_FREE_MAP_
 	JSR PrintNibbleSPL
 	LDA &C1
 	JSR PrintHexSPL
-	LDA #&0D
-	JSR OSASCI
+	JSR OSNEWL
 
 	JSR Sub_A8E2_nextblock
 
@@ -6295,11 +6294,11 @@ IF _INCLUDE_CMD_FREE_MAP_
 	LDY #&2C
 	ORA #&30
 .Label_A982
-	JSR OSASCI
+	JSR OSWRCH
 	CPX #&03
 	BNE Label_A98D
 	TYA
-	JSR OSASCI			; Print " " or ","
+	JSR OSWRCH			; Print " " or ","
 .Label_A98D
 	DEX
 	BPL Label_A96C_loop4
