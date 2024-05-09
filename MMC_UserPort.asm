@@ -23,22 +23,7 @@ ELSE
    msmask  = &FD \\ 1111 1101
 ENDIF
 
-    \\ Read byte (User Port)
-    \\ Write FF
-.MMC_GetByte
-.UP_ReadByteX
-{
-    LDA #(3 + msbits)   \\ Ensure CLK and MOSI both high
-    STA iorb%
-    JSR ShiftRegMode2
-    LDA #4
-.wait
-    BIT ifr%            \\ Bit 2 of IFR is the Shift Reg Interrupt flag
-    BEQ wait
-    JSR ShiftRegMode0
-    LDA sr%
-    RTS
-}
+
 
     \\ **** Send Data Token to card ****
 .MMC_SendingData
@@ -378,6 +363,21 @@ ENDIF
 \\
 \\ 22us/byte for &7000 bytes actually took 770ms.
 
+    \\ Read byte (User Port)
+    \\ Write FF
+.MMC_GetByte
+.UP_ReadByteX
+    LDA #(3 + msbits)   \\ Ensure CLK and MOSI both high
+    STA iorb%
+    JSR ShiftRegMode2
+    LDA #4
+.lastByte
+    BIT ifr%          \\ wait for the SR interrupt flag to be set
+    BEQ lastByte
+    JSR ShiftRegMode0 \\ returning to mode 0 here avoids an addional byte read
+    LDA sr%           \\ read the data byte, and clear the SR interrupt flag
+    RTS
+
 .WaitForShiftDone
 {
     LDA #4            \\ Bit 2 of IFR is the Shift Reg Interrupt flag
@@ -388,12 +388,7 @@ ENDIF
     BEQ notLastByte
     LDA sr%           \\ read the data byte, and clear the SR interrupt flag
     RTS
-.lastByte
-    BIT ifr%          \\ wait for the SR interrupt flag to be set
-    BEQ lastByte
-    JSR ShiftRegMode0 \\ returning to mode 0 here avoids an addional byte read
-    LDA sr%           \\ read the data byte, and clear the SR interrupt flag
-    RTS
+
 }
 
     \\ Reset the User VIA
