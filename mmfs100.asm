@@ -7549,10 +7549,14 @@ ENDIF
 	STA gdptr%
 	BNE gdx1
 	LDA gdptr%+1
-	EOR #1
+	EOR #(MP+&0E) EOR (MP+&0F)
 	STA gdptr%+1
 	ROR A
+IF 	(MP+&0E) AND 1
+	BCC gdx1
+ELSE
 	BCS gdx1
+ENDIF
 IF _LARGEMMB_
 	\\ Compare gdsec against num_chunks<<4 - 1
 	LDA NUM_CHUNKS	 	 	; 01,02,...,0F,10
