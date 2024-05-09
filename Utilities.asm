@@ -46,8 +46,8 @@
 	BCC dump_noteof			; If not eof
 .dump_padnum_loop
 	LDA #&2A				; Pad end of line with "** "
-	JSR OSASCI
-	JSR OSASCI
+	JSR OSWRCH
+	JSR OSWRCH
 	JSR PrintSpaceSPL		; exits with C=0
 	LDA #&00
 	STA &A8,X
@@ -69,7 +69,7 @@
 	LDA #&2E			; "."
 .showchrexit
 
-	JSR OSASCI
+	JSR OSWRCH
 	DEX
 	BPL dump_chr_loop
 
