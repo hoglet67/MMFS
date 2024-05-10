@@ -388,7 +388,6 @@ ENDIF
     BEQ notLastByte
     LDA sr%           \\ read the data byte, and clear the SR interrupt flag
     RTS
-
 }
 
     \\ Reset the User VIA

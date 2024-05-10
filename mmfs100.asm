@@ -7608,6 +7608,8 @@ ENDIF ;NOT(_MM32_)
 
 IF _UTILS_ OR NOT(_MM32_)
 \\ 16-bit BCD increment on ZP,X and ZP+1,X
+.bcd_inc16_zp_x_A8
+	LDX #&A8
 .bcd_inc16_zp_x
 {
 	SED
@@ -8054,12 +8056,13 @@ ENDIF
 	JMP storeDRIVE_INDEX4_ResetCRC7
 
 	\\ *DCAT ((<f.dno>) <t.dno>) (<adsp>)
-dcEnd%=&A8	; last disk in range
-dcCount%=&AA	; number of disks found
 
 IF _INCLUDE_CMD_DCAT_
 .CMD_DCAT
 {
+	dcCount%=&A8	; number of disks found
+	dcEnd%=&AA	; last disk in range
+
 	LDA #0
 	STA gdopt%			; GetDisk excludes unformatted disks
 	STA dcCount%
@@ -8127,7 +8130,7 @@ IF _INCLUDE_CMD_DCAT_
 	JSR PrintDCat
 
 	LDX #dcCount%
-	JSR bcd_inc16_zp_x
+	JSR bcd_inc16_zp_x_A8
 .dcnxt
 	JSR GetDiskNext
 	JMP dclp
@@ -8148,12 +8151,13 @@ IF _INCLUDE_CMD_DCAT_
 ENDIF
 
 	\\ *DFREE
-dfFree%=&A8	; number of unformatted disks
-dfTotal%=&AA	; total number of disks
 
 IF _INCLUDE_CMD_DFREE_
 .CMD_DFREE
 {
+	dfFree%=&A8	; number of unformatted disks
+	dfTotal%=&AA	; total number of disks
+
 	\ error if any params are specified
 	JSR Param_SyntaxErrorIfNotNull
 
@@ -8169,7 +8173,7 @@ IF _INCLUDE_CMD_DFREE_
 .dfreelp
 	BPL dffmted
 	LDX #dfFree%
-	JSR bcd_inc16_zp_x
+	JSR bcd_inc16_zp_x_A8
 .dffmted
 	LDX #dfTotal%
 	JSR bcd_inc16_zp_x

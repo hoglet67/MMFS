@@ -285,8 +285,7 @@ ENDIF
 	JMP err_FILENOTFOUND
 
 .Utils_PrintLineNo
-	LDX #&A8
-	JSR bcd_inc16_zp_x		; A = hi byte
+	JSR bcd_inc16_zp_x_A8		; A = hi byte
 	JSR PrintHexSPL
 	LDA &A8				; A = lo byte
 	JSR PrintHexSPL
