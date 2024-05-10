@@ -4292,8 +4292,6 @@ ENDIF
 
 	\ *CLOSE
 .CMD_CLOSE
-	LDA #&20
-	STA MA+&1086
 .CloseAllFiles_Osbyte77
 	JSR CloseSPOOLEXECfiles
 .CloseAllFiles
@@ -4309,8 +4307,6 @@ ENDIF
 }
 
 .CloseFiles_Yhandle
-	LDA #&20			; Update catalogue if write only
-	STA MA+&1086
 	TYA
 	BEQ CloseAllFiles_Osbyte77	; If y=0 Close all files
 .Check_Yhandle_exists_and_close
@@ -4330,7 +4326,7 @@ ENDIF
 	BEQ closefile_exit		; If bits 5&6=0
 	JSR Channel_SetDirDrv_GetCatEntry_Yintch
 	LDA MA+&1117,Y			; If file extended and not
-	AND MA+&1086			; forcing buffer to disk
+	AND #&20				; forcing buffer to disk
 	BEQ closefile_buftodisk		; update the file length
 	LDX MA+&10C3			; X=cat offset
 	LDA MA+&1114,Y			; File lenth = EXTENT
@@ -4602,14 +4598,12 @@ ENDIF
 {
 	LDA MA+&10C0			; Force buffer save
 	PHA 				; Save opened channels flag byte
-	LDA #&00			; Don't update catalogue
-	STA MA+&1086
 	TYA 				; A=handle
 	BNE chbuf1
 	JSR CloseAllFiles
 	BEQ chbuf2			; always
 .chbuf1
-	JSR Check_Yhandle_exists_and_close ; Bug fix to only close file and not update catalogue
+	JSR CloseFiles_Yhandle
 .chbuf2
 	PLA 				; Restore
 	STA MA+&10C0
