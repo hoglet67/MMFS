@@ -3656,7 +3656,6 @@ ENDIF
 	PHA
 	TXA
 	LDX &B5				; Restore X
-.gbpbv_unrecop
 	RTS
 
 .GBPBV_ENTRY
@@ -3665,9 +3664,9 @@ ENDIF
 	BCS gbpbv_unrecop
 	JSR RememberAXY
 	JSR ReturnWithA0
-	STX MA+&107D
+	STX MA+&107D		; Save pointer to command block
 	STY MA+&107E
-	TAY
+	TAY					; Call number
 	JSR gbpb_gosub
 	PHP
 	BIT MA+&1081
@@ -3675,6 +3674,7 @@ ENDIF
 	JSR TUBE_RELEASE_NoCheck
 .gbpb_nottube
 	PLP
+.gbpbv_unrecop
 	RTS
 }
 
@@ -3697,21 +3697,26 @@ ENDIF
 	STA MA+&1060,Y
 	DEY
 	BPL gbpb_ctlblk_loop
+;DFS 2.45 9E30
 	LDA MA+&1063			; Data ptr bytes 3 & 4
 	AND MA+&1064
 	ORA TubePresentIf0
 	CLC
 	ADC #&01
 	BEQ gbpb_nottube1		; If not tube
+
 	JSR TUBE_CLAIM
 	CLC
+
 	LDA #&FF
+
 .gbpb_nottube1
 	STA MA+&1081			; GBPB to TUBE IF >=&80
 	LDA MA+&107F			; Tube op: 0 or 1
 	BCS gbpb_nottube2		; If not tube
 	LDX #&61
 	LDY #MP+&10
+
 	JSR TubeCode 			; (YX=addr,A=0:initrd,A=1:initwr,A=4:strexe) ; Init TUBE addr @ 1061
 .gbpb_nottube2
 	PLP 				; Bit 1
@@ -3729,6 +3734,7 @@ ENDIF
 	STA &B6,X
 	DEX
 	BPL gbpb_seqptr_loop1		; on exit A=file handle=?&1060
+
 	LDX #&B6
 	LDY MA+&1060
 	LDA #&00
