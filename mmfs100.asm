@@ -351,12 +351,16 @@ ENDIF
 	TXA 				; X = chr destination
 	PHA
 	ORA #&10
-	JSR osbyte03_Aoutstream		; Disable spooled output
+	TAX
+	JSR osbyte03_Xoutstream		; Disable spooled output
 	PLA
 	TAX
 	PLA
 	JSR OSASCI			; Output chr
-	JMP osbyte03_Xoutstream		; Restore previous setting
+	; Restore previous setting
+.osbyte03_Xoutstream
+	LDA #3
+	JMP OSBYTE
 
 IF _ROMS_
 	\ Currently only used in *ROMS so save 3bytes
@@ -4131,13 +4135,6 @@ ENDIF
 	PLA
 	RTS
 ENDIF
-
-
-.osbyte03_Aoutstream
-	TAX
-.osbyte03_Xoutstream
-	LDA #&03
-	BNE goOSBYTE			; always
 
 ;;.osbyteFF_startupopts
 ;;	LDA #&FF
