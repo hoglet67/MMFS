@@ -2967,7 +2967,8 @@ ENDIF
 	STX MMC_STATE			; Uninitialised
 
 	LDX #&0F			; vectors claimed!
-	JSR osbyte8F_servreq
+	LDA #&8F
+	JSR OSBYTE
 
 	\\ If soft break and pws "full" and not booting a disk
 	\\ then copy pws to sws
@@ -4105,7 +4106,9 @@ ENDIF
 IF NOT(_SWRAM_)
 .ClaimStaticWorkspace
 	LDX #&0A
-	JSR osbyte8F_servreq		; Issue service request &A
+	LDA #&8F
+	JSR OSBYTE		; Issue service request &A
+
 	JSR SetPrivateWorkspacePointerB0
 	LDY #<ForceReset
 	LDA #&FF
@@ -4135,12 +4138,6 @@ ENDIF
 .osbyte03_Xoutstream
 	LDA #&03
 	BNE goOSBYTE			; always
-
-
-
-.osbyte8F_servreq
-	LDA #&8F
-	BNE goOSBYTE
 
 ;;.osbyteFF_startupopts
 ;;	LDA #&FF
