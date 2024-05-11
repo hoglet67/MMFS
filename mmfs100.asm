@@ -4129,26 +4129,22 @@ ENDIF
 ENDIF
 
 
-.osbyte0F_flushinbuf2
-	JSR RememberAXY
-.osbyte0F_flushinbuf
-	LDA #&0F
-	LDX #&01
-	LDY #&00
-	BEQ goOSBYTE			; always
 .osbyte03_Aoutstream
 	TAX
 .osbyte03_Xoutstream
 	LDA #&03
 	BNE goOSBYTE			; always
+
 .osbyte7E_ackESCAPE2
 	JSR RememberAXY
 .osbyte7E_ackESCAPE
 	LDA #&7E
 	BNE goOSBYTE
+
 .osbyte8F_servreq
 	LDA #&8F
 	BNE goOSBYTE
+
 ;;.osbyteFF_startupopts
 ;;	LDA #&FF
 .osbyte_X0YFF
@@ -5524,7 +5520,11 @@ ENDIF
 
 .ConfirmYN
 {
-	JSR osbyte0F_flushinbuf2
+	JSR RememberAXY
+	LDA #&0F
+	LDX #&01
+	LDY #&00
+	JSR OSBYTE
 	JSR OSRDCH			; Get chr
 	BCS err_ESCAPE			; If ESCAPE
 	AND #&5F
