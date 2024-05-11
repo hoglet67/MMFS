@@ -2849,7 +2849,8 @@ ENDIF
 	BIT &FF				; Check if ESCAPE presed
 	BPL noesc			; Used by *FORM/VERIFY
 .ReportESCAPE
-	JSR osbyte7E_ackESCAPE2
+	LDA #&7E
+	JSR OSBYTE
 	JSR ReportError
 	EQUB &11
 	EQUS "Escape",0
@@ -4135,11 +4136,7 @@ ENDIF
 	LDA #&03
 	BNE goOSBYTE			; always
 
-.osbyte7E_ackESCAPE2
-	JSR RememberAXY
-.osbyte7E_ackESCAPE
-	LDA #&7E
-	BNE goOSBYTE
+
 
 .osbyte8F_servreq
 	LDA #&8F
