@@ -5626,33 +5626,34 @@ ENDIF
 IF _INCLUDE_CMD_COPY_
 .CMD_COPY
 {
-	JSR parameter_afsp
-	JSR Get_CopyDATA_Drives
+	JSR parameter_afsp ; &10CD = `#` &10CE =`*`
+	JSR Get_CopyDATA_Drives ; &10D1 = source : &10D2 destination
 	JSR Param_SyntaxErrorIfNull
-	JSR read_fspTextPointer
+	JSR read_fspTextPointer ; &1000 = filename
 
 	\ Source
-	LDA MA+&10D1
-	JSR SetCurrentDrive_Adrive
+	LDA MA+&10D1 ; Already ranged checked
+	STA CurrentDrv
 	JSR getcatentry
 .copy_loop1
 	LDA DirectoryParam
 	PHA
-	LDA &B6
+	LDA &B6	 ;
 	STA &AB
 	JSR prt_InfoLine_Yoffset
 	LDX #&00
 .copy_loop2
 	LDA MA+&0E08,Y
-	STA &C5,X
+	STA &C5,X  ; filename
 	STA MA+&1050,X
 	LDA MA+&0F08,Y
-	STA &BB,X
+	STA &BB,X	; load address, exec ....
 	STA MA+&1047,X
 	INX
 	INY
 	CPX #&08
 	BNE copy_loop2
+
 	LDA &C1
 	JSR A_rorx4and3
 	STA &C3
@@ -5664,11 +5665,13 @@ IF _INCLUDE_CMD_COPY_
 	LDA &C3
 	ADC #&00
 	STA &C5
+
 	LDA MA+&104E
 	STA &C6
 	LDA MA+&104D
 	AND #&03
 	STA &C7
+
 	LDA #&FF
 	STA &A8				; Create new file
 	JSR CopyDATABLOCK
@@ -5737,7 +5740,7 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 .CopyDATABLOCK
 {
 ; Entry
-;  &A8 &A9
+;  &A8 0= Don't create file FF= create file
 ;  &C4 &C5 Size in sectors
 ;  &C6 &C7
 
@@ -5745,9 +5748,12 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 ; &BC
 ; &BD
 ; &C0
+; &C1
 ; &C2 &C3
-;
-; uses RAM for copying ( PAGE to HIMEM corrupts it)
+; &C4 &C5
+; &C6 &C7
+; &C8 &C9
+; uses RAM for copying ( PAGE to HIMEM corrupt)
 
 	LDA #&00			; *** Move or copy sectors
 	STA &BC				; Word &C4 = size of block
@@ -5779,7 +5785,7 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	STA CurrentDrv
 	BIT &A8
 	BPL cd_skipwrcat		; Don't create file
-	JSR cd_writedest_cat
+	JSR cd_writedest_cat  ; Returns next free sector in &C8 &C9
 	LDA #&00
 	STA &A8				; File created!
 .cd_skipwrcat
