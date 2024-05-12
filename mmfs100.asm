@@ -293,6 +293,7 @@ ENDIF
 	JSR PrintNibble
 	\ **** Print String ****
 	\ String terminated if bit 7 set
+	\ uses ZP &AE &AF &B3
 	\ Exit: AXY preserved, C=0
 .PrintString
 	STA &B3				; Print String (bit 7 terminates)
@@ -5451,7 +5452,7 @@ IF _INCLUDE_CMD_COMPACT_
 	STA MA+&0F0E,Y
 	LDA #&00
 	STA &A8				; Don't create file
-	STA &A9
+	;STA &A9 not actually used anywhere
 	JSR SaveCatToDisk		; save catalogue
 	JSR CopyDATABLOCK		; may use buffer @ &E00	;Move file
 	JSR CheckCurDrvCat
@@ -5735,6 +5736,19 @@ ENDIF
 IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 .CopyDATABLOCK
 {
+; Entry
+;  &A8 &A9
+;  &C4 &C5 Size in sectors
+;  &C6 &C7
+
+; ZP Usage
+; &BC
+; &BD
+; &C0
+; &C2 &C3
+;
+; uses RAM for copying ( PAGE to HIMEM corrupts it)
+
 	LDA #&00			; *** Move or copy sectors
 	STA &BC				; Word &C4 = size of block
 	STA &C0
@@ -7031,8 +7045,8 @@ IF _MM32_
 \\ On entry: A=FDC result, Z=1 if A=0
 .ReportIfDiskFault
 {
-	trk = &CA
-	sec = &CB
+	;trk = &CA
+	;sec = &CB
 
 	BNE l0
 
