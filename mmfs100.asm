@@ -691,21 +691,21 @@ ENDIF
 	BEQ getcatloop2			; always
 
 .get_cat_firstentry80
-	LDA #&00			; now first byte @ &1000+X
+	LDA #&00			; now first byte @ &E00+X
 .getcatentry1
 	PHA 				; Set up & return first
 	JSR CheckCurDrvCat		; catalogue entry matching
-	PLA 				; string at &1000+A
+	PLA 				; string at &E00+A
 .getcatentry2
 	TAX
 	LDA #&00			; word &B6 = &E00 = PTR
 	STA &B6
 .getcatloop2
 	LDY #&00
-	LDA #MP+&0E			; string at &1000+A
+	LDA #MP+&0E			; string at &E00+A
 	STA &B7
 	LDA &B6
-	CMP FilesX8
+	CMP FilesX8			; ( MA+&F05) number of files *8
 	BCS matfn_exitC0		; If >FilesX8 Exit with C=0
 	ADC #&08
 	STA &B6				; word &B6 += 8
@@ -747,6 +747,7 @@ ENDIF
 	CMP #&20
 	BNE matfn_exitC0		; If exit with c=0 (no match)
 	RTS 				; exit with C=1
+
 .matfn_nomatch
 	CPY #&07
 	BCS matfn_loop3			; If Y>=7
@@ -2169,7 +2170,7 @@ ENDIF
 	LDA LIB_DIR			; Look in library
 	STA DirectoryParam
 	LDA LIB_DRIVE
-	JSR SetCurrentDrive_Adrive
+	STA CurrentDrv
 	JSR read_fspBA
 	JSR get_cat_firstentry81
 	BCS runfile_found		; If file found
@@ -5678,7 +5679,7 @@ IF _INCLUDE_CMD_COPY_
 
 	\ Source
 	LDA MA+&10D1
-	JSR SetCurrentDrive_Adrive
+	STA CurrentDrv
 	JSR LoadCurDrvCat2
 	LDA &AB
 	STA &B6
