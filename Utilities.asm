@@ -5,7 +5,10 @@
 	\ ****** START OF UTILITIES *****
 
 .CMD_DUMP
-{	LDA #&40; Open file for input
+{
+	dumpbuffer = &A8 ; 8 byte buffer ( local use only)
+
+	LDA #&40; Open file for input
 	JSR Utils_FilenameAtXY
 
 	LDA #0
@@ -36,7 +39,7 @@
 .dump_getbytes_loop
 	JSR OSBGET
 	BCS dump_eof			; If eof
-	STA &A8,X				; save byte
+	STA dumpbuffer,X				; save byte
 	JSR PrintHexSPL
 	JSR PrintSpaceSPL		; exits with C=0
 	DEX
@@ -50,13 +53,13 @@
 	JSR OSWRCH
 	JSR PrintSpaceSPL		; exits with C=0
 	LDA #&00
-	STA &A8,X
+	STA dumpbuffer,X
 	DEX
 	BPL dump_padnum_loop
 .dump_noteof
 	LDX #7
 .dump_chr_loop
-	LDA &A8,X
+	LDA dumpbuffer,X
 
 	; Chr or "."
 
@@ -86,33 +89,35 @@
 	BCS Utils_CloseFile_Yhandle
 }
 
-
-
+\ *TYPE and *LIST are very similar
+\
+	linenumberA8 = &A8
+	printlinenumberAA = &AA
 .CMD_TYPE
 	LDA #&00
 	BEQ type
 .CMD_LIST
 	LDA #0
-	STA &A8				; word &A8
-	STA &A9				; used for line number
+	STA linenumberA8			; word &A8
+	STA linenumberA8+1			; used for line number
 	LDA #&FF
 .type
 {
-	STA &AB
+	STA printlinenumberAA
 	LDA #&40 ; Open file for input
 	JSR Utils_FilenameAtXY
 
 	LDA #&0D
 .list_loop_entry
-	AND &AB
+	AND printlinenumberAA
 	CMP #&0D			; Carriage return?
-	PHP 				; (Always false if CMD_TYPE)
+	TAX 				; (Always false if CMD_TYPE)
 .list_loop
 	JSR OSBGET
 	BCS list_eof			; EOF exit loop
 	CMP #&0A
 	BEQ list_loop			; ignore &0A
-	PLP
+	TXA
 	BNE list_skiplineno		; If don't print line number
 	PHA
 	JSR Utils_PrintLineNo
@@ -121,11 +126,10 @@
 	JSR OSASCI
 	BIT &FF
 	BMI Utils_ESCAPE_CloseFileY			; Escape?
-	BPL list_loop_entry
+	BPL list_loop_entry		;Always
 
 .list_eof
-	PLP	 			; Print newline + exit
-	JSR OSNEWL
+	JSR OSNEWL      ;Print newline + exit
 }
 .Utils_CloseFile_Yhandle
 	LDA #&00
