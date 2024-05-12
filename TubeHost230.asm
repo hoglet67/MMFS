@@ -5,32 +5,39 @@
 	\ *********** TUBE HOST 2.30 ***********
 
 .TUBE_CODE_500
-	EQUB &37
-	ORA &96
-	ORA TextPointer
-	ORA &07
-	ASL &27
-	ASL &68
-	ASL &5E
-	ORA &2D
-	ORA &20
-	ORA &42
-	ORA &A9
-	ORA &D1
-	ORA &86
-	DEY 
-	STX &98,Y
-	CLC 
-	CLC 
-	EQUB &82
-	CLC 
+;Tube R2 command entry block
+;---------------------------
+    EQUW &0537     ;   RDCH
+    EQUW &0596     ;   CLI
+    EQUW &05F2     ;   BYTELO
+    EQUW &0607     ;   BYTEHI
+    EQUW &0627     ;   WORD
+    EQUW &0668     ;   WORD0
+    EQUW &055E     ;   ARGS
+    EQUW &052D     ;   BGET
+    EQUW &0520     ;   BPUT
+    EQUW &0542     ;   FIND
+    EQUW &05A9     ;   FILE
+    EQUW &05D1     ;   GBPB
+
+;Tube data transfer flags
+;------------------------
+    EQUB &86       ;   CoPro->I/O bytes
+    EQUB &88       ;   I/O->CoPro bytes
+    EQUB &96       ;   CoPro->I/O words
+    EQUB &98       ;   I/O->CoPro words
+    EQUB &18       ;   Execute in CoPro
+    EQUB &18       ;   Reserved
+    EQUB &82       ;   CoPro->I/O 256 bytes
+    EQUB &18       ;   I/O->CoPro 256 bytes
+
 	JSR &06C5
-	TAY 
+	TAY
 	JSR &06C5
 	JSR OSBPUT
 	JMP &059C
 	JSR &06C5
-	TAY 
+	TAY
 	JSR OSBGET
 	JMP &053A
 	JSR OSRDCH
@@ -40,24 +47,24 @@
 	JMP &059E
 	JSR &06C5
 	BEQ Label_AD2D
-	PHA 
+	PHA
 	JSR &0582
-	PLA 
+	PLA
 	JSR OSFIND
 	JMP &059E
 .Label_AD2D
 	JSR &06C5
-	TAY 
+	TAY
 	LDA #&00
 	JSR OSFIND
 	JMP &059C
 	JSR &06C5
-	TAY 
+	TAY
 	LDX #&04
 .Label_AD3F
 	JSR &06C5
 	STA &FF,X
-	DEX 
+	DEX
 	BNE Label_AD3F
 	JSR &06C5
 	JSR OSARGS
@@ -66,7 +73,7 @@
 .Label_AD52
 	LDA &00,X
 	JSR &0695
-	DEX 
+	DEX
 	BPL Label_AD52
 	JMP &0036
 	LDX #&00
@@ -74,13 +81,13 @@
 .Label_AD61
 	JSR &06C5
 	STA &0700,Y
-	INY 
+	INY
 	BEQ Label_AD6E
 	CMP #&0D
 	BNE Label_AD61
 .Label_AD6E
 	LDY #&07
-	RTS 
+	RTS
 	JSR &0582
 	JSR OSCLI
 	LDA #&7F
@@ -94,7 +101,7 @@
 .Label_AD86
 	JSR &06C5
 	STA &01,X
-	DEX 
+	DEX
 	BNE Label_AD86
 	JSR &0582
 	STX &00
@@ -107,29 +114,29 @@
 .Label_ADA2
 	LDA &01,X
 	JSR &0695
-	DEX 
+	DEX
 	BNE Label_ADA2
 	BEQ Label_AD81
 	LDX #&0D
 .Label_ADAE
 	JSR &06C5
 	STA &FF,X
-	DEX 
+	DEX
 	BNE Label_ADAE
 	JSR &06C5
 	LDY #&00
 	JSR OSGBPB
-	PHA 
+	PHA
 	LDX #&0C
 .Label_ADC1
 	LDA &00,X
 	JSR &0695
-	DEX 
+	DEX
 	BPL Label_ADC1
-	PLA 
+	PLA
 	JMP &053A
 	JSR &06C5
-	TAX 
+	TAX
 	JSR &06C5
 	JSR OSBYTE
 .Label_ADD7
@@ -139,9 +146,9 @@
 .Label_ADDF
 	JMP &0036
 	JSR &06C5
-	TAX 
+	TAX
 	JSR &06C5
-	TAY 
+	TAY
 	JSR &06C5
 	JSR OSBYTE
 	EOR #&9D
@@ -154,21 +161,21 @@
 	STY TUBE_R2_DATA
 	BVS Label_ADD7
 	JSR &06C5
-	TAY 
+	TAY
 .Label_AE06
 	BIT TUBE_R2_STATUS
 	BPL Label_AE06
 	LDX TUBE_R2_DATA
-	DEX 
+	DEX
 	BMI Label_AE20
 .Label_AE11
 	BIT TUBE_R2_STATUS
 	BPL Label_AE11
 	LDA TUBE_R2_DATA
 	STA &0128,X
-	DEX 
+	DEX
 	BPL Label_AE11
-	TYA 
+	TYA
 .Label_AE20
 	LDX #&28
 	LDY #&01
@@ -177,7 +184,7 @@
 	BIT TUBE_R2_STATUS
 	BPL Label_AE27
 	LDX TUBE_R2_DATA
-	DEX 
+	DEX
 	BMI Label_AE40
 .Label_AE32
 	LDY &0128,X
@@ -185,7 +192,7 @@
 	BIT TUBE_R2_STATUS
 	BVC Label_AE35
 	STY TUBE_R2_DATA
-	DEX 
+	DEX
 	BPL Label_AE32
 .Label_AE40
 	JMP &0036
@@ -193,11 +200,11 @@
 .Label_AE45
 	JSR &06C5
 	STA &00,X
-	DEX 
+	DEX
 	BPL Label_AE45
-	INX 
+	INX
 	LDY #&00
-	TXA 
+	TXA
 	JSR OSWORD
 	BCC Label_AE5B
 	LDA #&FF
@@ -209,7 +216,7 @@
 .Label_AE62
 	LDA &0700,X
 	JSR &0695
-	INX 
+	INX
 	CMP #&0D
 	BNE Label_AE62
 	JMP &0036
@@ -217,54 +224,54 @@
 	BIT TUBE_R2_STATUS
 	BVC Label_AE70
 	STA TUBE_R2_DATA
-	RTS 
+	RTS
 .Label_AE79
 	BIT TUBE_R4_STATUS
 	BVC Label_AE79
 	STA TUBE_R4_DATA
-	RTS 
+	RTS
 	LDA &FF
-	SEC 
+	SEC
 	ROR A
 	BMI Label_AE97
-	PHA 
+	PHA
 	LDA #&00
 	JSR &06BC
-	TYA 
+	TYA
 	JSR &06BC
-	TXA 
+	TXA
 	JSR &06BC
-	PLA 
+	PLA
 .Label_AE97
 	BIT TUBE_R1_STATUS
 	BVC Label_AE97
 	STA TUBE_R1_DATA
-	RTS 
+	RTS
 .Label_AEA0
 	BIT TUBE_R2_STATUS
 	BPL Label_AEA0
 	LDA TUBE_R2_DATA
-	RTS 
+	RTS
 
 .SERVICE09_TUBEHelp
 	CMP #&09	;*HELP
 	BNE SERVICEFE_TUBEPostInit
-	TYA 
-	PHA 
+	TYA
+	PHA
 	LDA (TextPointer),Y
 	CMP #&0D
 	BNE Label_AED3
 	LDA #&E9
 	JSR osbyte_X0YFF
 	LDX PagedRomSelector_RAMCopy
-	TYA 
+	TYA
 	BEQ Label_AED3
 	JSR PrintString
 	EQUS 13,"TUBE HOST 2.30",13
 	NOP
 .Label_AED3
-	PLA 
-	TAY 
+	PLA
+	TAY
 	LDA #&09
 
 .SERVICEFE_TUBEPostInit
@@ -303,19 +310,19 @@
 	STA &0500,Y
 	LDA TUBE_CODE_500+&100,Y	; "LDA TUBE_CODE_600,Y"
 	STA &0600,Y
-	DEY 
+	DEY
 	BNE servFF_copytubecode_loop
 	JSR &0421	; CALL TUBE CODE
 	LDX #&41	; Copy error handling code
 .servFF_copytubezpcode_loop
 	LDA TUBE_ZP_CODE_0016,X
 	STA &16,X
-	DEX 
+	DEX
 	BPL servFF_copytubezpcode_loop
 .servFE_exitA_0
 	LDA #&00
 .servFE_exit
-	RTS 
+	RTS
 
 .TUBE_ZP_CODE_0016
 	LDA #&FF	; COPIED TO &0016
@@ -323,18 +330,18 @@
 	LDA TUBE_R2_DATA
 	LDA #&00
 	JSR &0695
-	TAY 
+	TAY
 	LDA (&FD),Y
 	JSR &0695
 .Label_AF4B
-	INY 
+	INY
 	LDA (&FD),Y
 	JSR &0695
-	TAX 
+	TAX
 	BNE Label_AF4B
 	LDX #&FF
-	TXS 
-	CLI 
+	TXS
+	CLI
 .Label_AF58
 	BIT TUBE_R1_STATUS
 	BPL Label_AF63
@@ -361,42 +368,42 @@
 	ORA #&40
 	CMP &15
 	BNE Label_AFAD
-	PHP 
-	SEI 
+	PHP
+	SEI
 	LDA #&05
 	JSR &069E
 	LDA &15
 	JSR &069E
-	PLP 
+	PLP
 	LDA #&80
 	STA &15
 	STA &14
-	RTS 
+	RTS
 .Label_AFA1
 	ASL &14
 	BCS Label_AFAB
 	CMP &15
 	BEQ Label_AFAD
-	CLC 
-	RTS 
+	CLC
+	RTS
 .Label_AFAB
 	STA &15
 .Label_AFAD
-	RTS 
+	RTS
 .Label_AFAE
-	PHP 
-	SEI 
+	PHP
+	SEI
 	STY &13
 	STX &12
 	JSR &069E
-	TAX 
+	TAX
 	LDY #&03
 	LDA &15
 	JSR &069E
 .Label_AFBF
 	LDA (&12),Y
 	JSR &069E
-	DEY 
+	DEY
 	BPL Label_AFBF
 	LDY #&18
 	STY TUBE_R1_STATUS
@@ -425,9 +432,9 @@
 	LDY #&88
 	STY TUBE_R1_STATUS
 .Label_AFFB
-	PLP 
-	RTS 
-	CLI 
+	PLP
+	RTS
+	CLI
 	BCS Label_B00A
 	BNE Label_B005
 	JMP &059C
@@ -440,8 +447,8 @@
 	BCC Label_B00A
 	JSR &04CE
 .Label_B014
-	PHP 
-	SEI 
+	PHP
+	SEI
 	LDA #&07
 	JSR &04C7
 	LDY #&00
@@ -449,12 +456,12 @@
 .Label_B01F
 	LDA (&00),Y
 	STA TUBE_R3_DATA
-	NOP 
-	NOP 
-	NOP 
-	INY 
+	NOP
+	NOP
+	NOP
+	INY
 	BNE Label_B01F
-	PLP 
+	PLP
 	INC &54
 	BNE Label_B035
 	INC &55
@@ -474,12 +481,12 @@
 	STA &01
 	LDA #&20
 	AND romtype
-	TAY 
+	TAY
 	STY &53
 	BEQ Label_B070
 	LDX copywoffset
 .Label_B05A
-	INX 
+	INX
 	LDA &8000,X
 	BNE Label_B05A
 	LDA &8001,X
