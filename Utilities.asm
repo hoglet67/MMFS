@@ -97,9 +97,6 @@
 	LDA #&00
 	BEQ type
 .CMD_LIST
-	LDA #0
-	STA linenumberA8			; word &A8
-	STA linenumberA8+1			; used for line number
 	LDA #&FF
 .type
 {
@@ -120,7 +117,7 @@
 	TXA
 	BNE list_skiplineno		; If don't print line number
 	PHA
-	JSR Utils_PrintLineNo
+	JSR Utils_PrintLineNoA8
 	PLA
 .list_skiplineno
 	JSR OSASCI
@@ -143,16 +140,16 @@
 .CMD_BUILD
 {
 IF _NON_WS_BUILD_COM
+
+	; linenumberA8 = &A8 NB this is a globally defined
 	flength = &AA
+
 	LDA #&80			; Open file for OUTPUT only
 	JSR Utils_FilenameAtXY		; XY points to filename
 	; Y is file handle
-	LDA #0
-	STA &A8	; reset line number
-	STA &A9
 
 .loop_newline
-	JSR Utils_PrintLineNo
+	JSR Utils_PrintLineNoA8
 	LDX #0
 .loop_line
 	JSR OSRDCH
@@ -208,7 +205,7 @@ ELSE
 	JSR Utils_FilenameAtXY		; XY points to filename
 	STA &AB	;File handle
 .build_loop1
-	JSR Utils_PrintLineNo		; Line number prompt:
+	JSR Utils_PrintLineNoA8		; Line number prompt:
 								; Build Osword control block @ AC
 IF _SWRAM_
 	LDA #UTILSBUF
@@ -257,7 +254,8 @@ ENDIF
 	TSX 				; Return A=0 to OS
 	LDA #&00
 	STA &0107,X
-
+	STA linenumberA8	; reset line number
+	STA linenumberA8+1  ; NB not always needed
 	DEY
 .utils_skipspcloop
 	INY 				; Skip spaces
@@ -288,10 +286,10 @@ ENDIF
 .utils_filenotfound
 	JMP err_FILENOTFOUND
 
-.Utils_PrintLineNo
+.Utils_PrintLineNoA8
 	JSR bcd_inc16_zp_x_A8		; A = hi byte
 	JSR PrintHexSPL
-	LDA &A8				; A = lo byte
+	LDA linenumberA8			; A = lo byte
 	JSR PrintHexSPL
 	JMP PrintSpaceSPL		; exits with C=0
 
