@@ -95,6 +95,14 @@ ELSE
 	MMC_STATE=MA+&109F			; Bit 6 set if card initialised
 ENDIF
 
+
+;Zero Page allocations
+; A8 - AF temporay * commands
+; B0 - BF FileSystem temporay workspace
+; C0 - CF current File system workspace
+
+; &CF not used
+
 FSMessagesOnIfZero=MA+&10C6
 CMDEnabledIf1=MA+&10C7
 DEFAULT_DIR=MA+&10C9
@@ -4142,7 +4150,6 @@ ENDIF
 	LDX #&00
 .osbyte_YFF
 	LDY #&FF
-.goOSBYTE
 	JMP OSBYTE
 
 	\ Vector table copied to &0212

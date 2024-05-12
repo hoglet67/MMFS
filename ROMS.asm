@@ -165,7 +165,7 @@ ENDIF
 	DEY
 .Sub_AAC2_PrintRomStr
 	LDA ptrlo
-	CMP &AE
+	CMP varAE
 	BCS Label_AACE_rts		; If >=
 	JSR Sub_AACF_ReadRom
 	BNE Label_AAB8_loop
