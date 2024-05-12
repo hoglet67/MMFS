@@ -668,11 +668,15 @@ ENDIF
 	BCS cmd_info_loop
 	RTS
 
-
+.get_cat_firstentry80
 .get_cat_firstentry81
 	JSR CheckCurDrvCat		; Get cat entry
-	LDA #&00
+	LDX #&00				; now first byte @ &1000+X
 	BEQ getcatentry2		; always
+
+.get_cat_nextentry
+	LDX #&00			; Entry: wrd &B6 -> first entry
+	BEQ getcatsetupB7	; always
 
 .get_cat_firstentry80fname
 	LDX #&06			; copy filename from &C5 to &1058
@@ -683,27 +687,17 @@ ENDIF
 	BPL getcatloop1
 	LDA #&20
 	STA MA+&105F
-	LDA #&58
-	BNE getcatentry1		; always
 
-.get_cat_nextentry
-	LDX #&00			; Entry: wrd &B6 -> first entry
-	BEQ getcatloop2			; always
-
-.get_cat_firstentry80
-	LDA #&00			; now first byte @ &E00+X
-.getcatentry1
-	PHA 				; Set up & return first
 	JSR CheckCurDrvCat		; catalogue entry matching
-	PLA 				; string at &E00+A
+	LDX #&58 				; string at &1058
 .getcatentry2
-	TAX
 	LDA #&00			; word &B6 = &E00 = PTR
 	STA &B6
-.getcatloop2
-	LDY #&00
+.getcatsetupB7
 	LDA #MP+&0E			; string at &E00+A
 	STA &B7
+.getcatloop2
+	LDY #&00
 	LDA &B6
 	CMP FilesX8			; ( MA+&F05) number of files *8
 	BCS matfn_exitC0		; If >FilesX8 Exit with C=0
@@ -5633,7 +5627,7 @@ IF _INCLUDE_CMD_COPY_
 	JSR read_fspTextPointer ; &1000 = filename
 
 	\ Source
-	LDA MA+&10D1 ; Already ranged checked
+	LDA MA+&10D1 ; Already ranged checked drive number
 	STA CurrentDrv
 	JSR getcatentry
 .copy_loop1
