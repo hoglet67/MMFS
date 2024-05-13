@@ -5739,16 +5739,18 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 ;  &A8 0= Don't create file FF= create file
 ;  &C4 &C5 Size in sectors
 ;  &C6 &C7 Start sector
+;  &C8 &C9 destination sector ( unless create a file)
+;  &10D1 source drive
+;  &10D2 destination drive
 
 ; ZP Usage
-; &BC
-; &BD
+; &BC &BD start addres of buffer
 ; &C0
-; &C1 ; holds the size to RAM available
+; &C1 ; number of sectors to copy limited by ram size
 ; &C2 &C3
 ; &C4 &C5
-; &C6 &C7
-; &C8 &C9 ; next free sector
+; &C6 &C7 ;
+; &C8 &C9 ; next free sector for destination
 ; uses RAM for copying ( PAGE to HIMEM corrupt)
 
 	LDA #&00			; *** Move or copy sectors
@@ -5765,17 +5767,19 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	LDY RAMBufferSize
 .cd_part
 	STY &C1
+
 	LDA &C6				; C2/C3 = Block start sector
 	STA &C3				; Start sec = Word C6
 	LDA &C7
 	STA &C2
+
 	LDA PAGE			; Buffer address
 	STA &BD
 	LDA MA+&10D1
 	STA CurrentDrv
 
 	\ Source
-	JSR SetLoadAddrToHost
+	JSR SetLoadAddrToHost ; &1074 = &1075 = 255
 	JSR LoadMemBlock
 	LDA MA+&10D2
 	STA CurrentDrv
@@ -5795,7 +5799,7 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	STA &BD
 
 	\ Destination
-	JSR SetLoadAddrToHost
+	JSR SetLoadAddrToHost ; &1074 = &1075 = 255
 	JSR SaveMemBlock
 	LDA &C1				; Word C8 += ?C1
 	CLC 				; Dest sector start
