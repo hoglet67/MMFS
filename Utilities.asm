@@ -114,12 +114,12 @@
 	BCS list_eof			; EOF exit loop
 	CMP #&0A
 	BEQ list_loop			; ignore &0A
+	PHA
 	TXA
 	BNE list_skiplineno		; If don't print line number
-	PHA
 	JSR Utils_PrintLineNoA8
-	PLA
 .list_skiplineno
+	PLA
 	JSR OSASCI
 	BIT &FF
 	BMI Utils_ESCAPE_CloseFileY			; Escape?
