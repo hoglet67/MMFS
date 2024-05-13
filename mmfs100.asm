@@ -44,7 +44,7 @@ _INCLUDE_CMD_DRECAT_=_COMMANDS_
 _INCLUDE_CMD_DABOUT_=_COMMANDS_
 
 ;; Additional MMFS2 DUTILs commands
-_MM32_DRENAME=NOT(_BP12K_)
+_MM32_DRENAME=_COMMANDS_ ; NOT(_BP12K_)
 
 \ MA/MP constants must be even numbers
 IF _MASTER_
