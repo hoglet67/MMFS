@@ -720,6 +720,8 @@ ENDIF
 	DEY
 	DEY
 	DEY
+
+.NotCmdTable2
 	RTS
 
 .MatchFilename
@@ -1414,39 +1416,6 @@ ENDIF
 .diskoptions_table
 	EQUS "off",0,"LOAD"
 	EQUS "RUN",0,"EXEC"
-
-
-.Getnextblock_Yoffset
-	LDA MA+&0F0E,Y
-	JSR A_rorx4and3
-	STA &C2				;len byte 3
-	CLC
-	LDA #&FF			; -1
-	ADC MA+&0F0C,Y			; + len byte 1
-	LDA MA+&0F0F,Y			; + start sec byte 1
-	ADC MA+&0F0D,Y			; + len byte 2
-	STA &C3
-	LDA MA+&0F0E,Y			; start sec byte 2
-	AND #&03
-	ADC &C2				; calc. next "free" sector
-	STA &C2				; wC2=start sec + len - 1
-.Getfirstblock_Yoffset
-	SEC
-	LDA MA+&0F07,Y			; secs on disk
-	SBC &C3				; or start sec of prev.
-	PHA 				; file
-	LDA MA+&0F06,Y			; - end of prev. file (wC2)
-	AND #&03
-	SBC &C2
-	TAX
-	LDA #&00
-	CMP &C0
-	PLA 				; ax=secs on disk-next blk
-	SBC &C1
-	TXA 				; req'd=c0/c1/c4
-	SBC &C4				; big enough?
-.NotCmdTable2
-	RTS
 
 
 	\ COMMAND TABLE 1		; MMFS commands
@@ -2520,6 +2489,7 @@ ENDIF
 	RTS
 }
 
+
 .CreateFile_2
 {
 	STA &C4
@@ -2529,14 +2499,46 @@ ENDIF
 	STA &C3				; wC2=&200=sector
 	LDY FilesX8			; find free block
 	CPY #&F8			; big enough
-	BCS errCATALOGUEFULL		; for new file
-	JSR Getfirstblock_Yoffset
-	JMP cfile_cont2
+	BCC Getfirstblock_Yoffset
+
+.errCATALOGUEFULL
+	JSR ReportErrorCB
+	EQUB &BE
+	EQUS "Cat full",0
 
 .cfile_loop
 	BEQ errDISKFULL
 	JSR Y_sub8
-	JSR Getnextblock_Yoffset
+
+	LDA MA+&0F0E,Y
+	JSR A_rorx4and3
+	STA &C2				;len byte 3
+	CLC
+	LDA #&FF			; -1
+	ADC MA+&0F0C,Y			; + len byte 1
+	LDA MA+&0F0F,Y			; + start sec byte 1
+	ADC MA+&0F0D,Y			; + len byte 2
+	STA &C3
+	LDA MA+&0F0E,Y			; start sec byte 2
+	AND #&03
+	ADC &C2				; calc. next "free" sector
+	STA &C2				; wC2=start sec + len - 1
+.Getfirstblock_Yoffset
+	SEC
+	LDA MA+&0F07,Y			; secs on disk
+	SBC &C3				; or start sec of prev.
+	PHA 				; file
+	LDA MA+&0F06,Y			; - end of prev. file (wC2)
+	AND #&03
+	SBC &C2
+	TAX
+	LDA #&00
+	CMP &C0
+	PLA 				; ax=secs on disk-next blk
+	SBC &C1
+	TXA 				; req'd=c0/c1/c4
+	SBC &C4				; big enough?
+
 .cfile_cont2
 	TYA
 	BCC cfile_loop			; If not big enough
@@ -2598,10 +2600,7 @@ ENDIF
 	RTS
 }
 
-.errCATALOGUEFULL
-	JSR ReportErrorCB
-	EQUB &BE
-	EQUS "Cat full",0
+
 
 IF _INCLUDE_CMD_ENABLE_
 .CMD_ENABLE
@@ -5622,25 +5621,26 @@ IF _INCLUDE_CMD_COPY_
 .CMD_COPY
 {
 	JSR parameter_afsp ; &10CD = `#` &10CE =`*`
-	JSR Get_CopyDATA_Drives ; &10D1 = source : &10D2 destination
+	JSR Get_CopyDATA_Drives ; &10D1 = source drive : &10D2 destination drive
 	JSR Param_SyntaxErrorIfNull
 	JSR read_fspTextPointer ; &1000 = filename
 
 	\ Source
 	LDA MA+&10D1 ; Already ranged checked drive number
 	STA CurrentDrv
-	JSR getcatentry
+	JSR getcatentry ; check if source file exists filname @ &1000
+					; Returns Y and &B6=Y+8
 .copy_loop1
 	LDA DirectoryParam
 	PHA
-	LDA &B6	 ;
+	LDA &B6	 ; setup by getcatentry pointer to next file.
 	STA &AB
 	JSR prt_InfoLine_Yoffset
 	LDX #&00
 .copy_loop2
 	LDA MA+&0E08,Y
-	STA &C5,X  ; filename
-	STA MA+&1050,X
+	STA &C5,X  ; store filename
+	STA MA+&1050,X	; put filename in buffer
 	LDA MA+&0F08,Y
 	STA &BB,X	; load address, exec ....
 	STA MA+&1047,X
@@ -5649,17 +5649,18 @@ IF _INCLUDE_CMD_COPY_
 	CPX #&08
 	BNE copy_loop2
 
-	LDA &C1
-	JSR A_rorx4and3
+	LDA &C1 ; get high bits
+	JSR A_rorx4and3 ; isolate length top two bits ( bits 16 and 17)
 	STA &C3
-	LDA &BF
+	LDA &BF		; load bits 7-0	 of length
 	CMP #&1 ; C = 1 if file includes Partial sector
-	LDA &C0
+				; round up number of sectors required
+	LDA &C0		; load bits 15-8 of length
 	ADC #&00
 	STA &C4
 	LDA &C3
 	ADC #&00
-	STA &C5
+	STA &C5		; this corrupts the first character of the filename we copied above
 
 	LDA MA+&104E
 	STA &C6
@@ -5743,11 +5744,11 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 ; &BC
 ; &BD
 ; &C0
-; &C1
+; &C1 ; holds the size to RAM available
 ; &C2 &C3
 ; &C4 &C5
 ; &C6 &C7
-; &C8 &C9
+; &C8 &C9 ; next free sector
 ; uses RAM for copying ( PAGE to HIMEM corrupt)
 
 	LDA #&00			; *** Move or copy sectors
@@ -5778,11 +5779,13 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	JSR LoadMemBlock
 	LDA MA+&10D2
 	STA CurrentDrv
+
 	BIT &A8
 	BPL cd_skipwrcat		; Don't create file
 	JSR cd_writedest_cat  ; Returns next free sector in &C8 &C9
 	LDA #&00
 	STA &A8				; File created!
+
 .cd_skipwrcat
 	LDA &C8				; C2/C3 = Block start sector
 	STA &C3				; Start sec = Word C8
