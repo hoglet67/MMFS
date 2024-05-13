@@ -676,7 +676,7 @@ ENDIF
 
 .get_cat_nextentry
 	LDX #&00			; Entry: wrd &B6 -> first entry
-	BEQ getcatsetupB7	; always
+	BEQ getcatsetupB7	; always ( almost certainly could be getcatloop2 )
 
 .get_cat_firstentry80fname
 	LDX #&06			; copy filename from &C5 to &1058
@@ -5651,20 +5651,20 @@ IF _INCLUDE_CMD_COPY_
 
 	LDA &C1 ; get high bits
 	JSR A_rorx4and3 ; isolate length top two bits ( bits 16 and 17)
-	STA &C3
+	TAX
 	LDA &BF		; load bits 7-0	 of length
 	CMP #&1 ; C = 1 if file includes Partial sector
 				; round up number of sectors required
 	LDA &C0		; load bits 15-8 of length
 	ADC #&00
 	STA &C4
-	LDA &C3
+	TXA
 	ADC #&00
 	STA &C5		; this corrupts the first character of the filename we copied above
 
-	LDA MA+&104E
+	LDA MA+&104E ; get start sector bits 7-0
 	STA &C6
-	LDA MA+&104D
+	LDA MA+&104D ; get start sector bits 9-8
 	AND #&03
 	STA &C7
 
@@ -5738,7 +5738,7 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 ; Entry
 ;  &A8 0= Don't create file FF= create file
 ;  &C4 &C5 Size in sectors
-;  &C6 &C7
+;  &C6 &C7 Start sector
 
 ; ZP Usage
 ; &BC
