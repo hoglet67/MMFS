@@ -91,7 +91,7 @@
 
 \ *TYPE and *LIST are very similar
 \
-	linenumberA8 = &A8
+	linenumberA8 = &A8 ; &A8 &A9
 	printlinenumberAA = &AA
 .CMD_TYPE
 	LDA #&00
@@ -107,7 +107,7 @@
 	LDA #&0D
 .list_loop_entry
 	AND printlinenumberAA
-	CMP #&0D			; Carriage return?
+	EOR #&0D			; Carriage return?
 	TAX 				; (Always false if CMD_TYPE)
 .list_loop
 	JSR OSBGET
