@@ -200,46 +200,56 @@ IF _NON_WS_BUILD_COM
 	RTS
 
 ELSE
-
+	; line number @ A8 A9
+	linelengthAA = &AA
+	filehandleAB = &AB
+	bufferAC = &AC 		; &AC &AD 16bit pointer
+	maxlinelengthAE = &AE
+	minasciivalueAF = &AF
+	maxasciivalueB0 = &B0 ; This over runs the A8-AF
 	LDA #&80			; Open file for OUTPUT only
 	JSR Utils_FilenameAtXY		; XY points to filename
-	STA &AB	;File handle
-.build_loop1
-	JSR Utils_PrintLineNoA8		; Line number prompt:
-								; Build Osword control block @ AC
+	STA filehandleAB	;File handle
+
 IF _SWRAM_
 	LDA #UTILSBUF
-	STA &AD
+	STA bufferAC+1
 ELSE
 	LDX PagedRomSelector_RAMCopy
 	LDA PagedROM_PrivWorkspaces,X	; Word AC -> 2nd PWSP Page
 	AND #&3F			; Bits 7 & 6 are flags
-	STA &AD
-	INC &AD
+	STA bufferAC+1
+	INC bufferAC+1
+
 ENDIF
 
-	LDX #&AC			; Osword ptr YX=&00AC
-	LDY #&FF
-	STY &AE				; Max length = 256
-	STY &B0
-	INY
-	STY &AC				; So word AC=&1800 (normally)
 	LDA #&20
-	STA &AF				; min ASCII value accepted
-	TYA 				; max value???
+	STA minasciivalueAF	; min ASCII value accepted
+
+.build_loop1
+	JSR Utils_PrintLineNoA8		; Line number prompt:
+								; Build Osword control block @ AC
+
+	LDY #&FF
+	STY maxlinelengthAE	; Max length = 256
+	STY maxasciivalueB0
+	INY
+	STY bufferAC		; So word AC=&1800 (normally)
+
+	TYA 				; OSwORD 0
+	LDX #bufferAC		; Osword ptr YX=&00AC
 	JSR OSWORD			; OSWORD 0, YX=&00AC
 	PHP 				; Read line from input
-	STY &AA				; Y=line length
-	LDY &AB				; Y=file handle
+	STY linelengthAA	; Y=line length
+	LDY filehandleAB    ; Y=file handle
 	LDX #&00
 	BEQ build_loop2entry		; always
 .build_loop2
-	LDA (&AC,X)			; Output line to file
+	LDA (bufferAC,X)			; Output line to file
 	JSR OSBPUT
-	INC &AC
+	INX
 .build_loop2entry
-	LDA &AC
-	CMP &AA
+	CPX linelengthAA
 	BNE build_loop2
 	PLP
 	BCS Utils_ESCAPE_CloseFileY	; Escape pressed so exit
@@ -250,7 +260,9 @@ ENDIF
 }
 
 .Utils_FilenameAtXY
-	STA &AF
+{
+	tempAF = &AF
+	STA tempAF
 	TSX 				; Return A=0 to OS
 	LDA #&00
 	STA &0107,X
@@ -277,7 +289,7 @@ ENDIF
 	ADC #&00
 	TAY
 
-	LDA &AF
+	LDA tempAF
 	JSR OSFIND
 	BEQ utils_filenotfound
 	TAY 				; Y=File handle
@@ -285,6 +297,7 @@ ENDIF
 
 .utils_filenotfound
 	JMP err_FILENOTFOUND
+}
 
 .Utils_PrintLineNoA8
 	JSR bcd_inc16_zp_x_A8		; A = hi byte
