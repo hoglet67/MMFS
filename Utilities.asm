@@ -201,12 +201,13 @@ IF _NON_WS_BUILD_COM
 
 ELSE
 	; line number @ A8 A9
-	linelengthAA = &AA
-	filehandleAB = &AB
-	bufferAC = &AC 		; &AC &AD 16bit pointer
-	maxlinelengthAE = &AE
-	minasciivalueAF = &AF
-	maxasciivalueB0 = &B0 ; This over runs the A8-AF
+	filehandleAB = &AA
+	bufferAC = &AB 		; &AC &AD 16bit pointer
+	maxlinelengthAE = &AD
+	minasciivalueAF = &AE
+	maxasciivalueB0 = &AF
+	tempAF = &AF ; This overlaps the last value of the OSWORD buffer
+				 ; which is rewritten before next OSWORD use
 	LDA #&80			; Open file for OUTPUT only
 	JSR Utils_FilenameAtXY		; XY points to filename
 	STA filehandleAB	;File handle
@@ -240,7 +241,7 @@ ENDIF
 	LDX #bufferAC		; Osword ptr YX=&00AC
 	JSR OSWORD			; OSWORD 0, YX=&00AC
 	PHP 				; Read line from input
-	STY linelengthAA	; Y=line length
+	STY tempAF			; Y=line length
 	LDY filehandleAB    ; Y=file handle
 	LDX #&00
 	BEQ build_loop2entry		; always
@@ -249,7 +250,7 @@ ENDIF
 	JSR OSBPUT
 	INX
 .build_loop2entry
-	CPX linelengthAA
+	CPX tempAF
 	BNE build_loop2
 	PLP
 	BCS Utils_ESCAPE_CloseFileY	; Escape pressed so exit
