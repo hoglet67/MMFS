@@ -5634,7 +5634,7 @@ IF _INCLUDE_CMD_COPY_
 	LDA DirectoryParam
 	PHA
 	LDA &B6	 ; setup by getcatentry pointer to next file.
-	STA &AB
+	PHA
 	JSR prt_InfoLine_Yoffset
 	LDX #&00
 .copy_loop2
@@ -5676,8 +5676,8 @@ IF _INCLUDE_CMD_COPY_
 	LDA MA+&10D1
 	STA CurrentDrv
 	JSR LoadCurDrvCat2
-	LDA &AB
-	STA &B6
+	PLA
+	STA &B6	; restore next file pointer
 	PLA
 	STA DirectoryParam
 	JSR get_cat_nextentry
