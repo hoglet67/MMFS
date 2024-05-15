@@ -3709,8 +3709,8 @@ ENDIF
 IF _FASTGBPB_
 ELSE
 	JSR gbpb_wordB4_word107D	; (B4) -> param blk
-	LDY #&0C
 ENDIF
+	LDY #&0C
 
 .gbpb_ctlblk_loop
 	LDA (&B4),Y			; Copy param blk to 1060
