@@ -800,7 +800,6 @@ ENDIF
 	TYA
 	SBC #&08
 	STA FilesX8
-	CLC
 }
 .print_infoline_exit
 	RTS
@@ -3983,7 +3982,7 @@ ENDIF
 	JSR CheckFileNotLocked		; DELETE FILE
 	JSR ReadFileAttribsToB0_Yoffset
 	JSR DeleteCatEntry_YFileOffset
-	BCC osfile_savecat_retA_1
+	JMP osfile_savecat_retA_1
 .osfile1_updatecat
 	JSR CheckFileExists		; UPDATE CAT ENTRY
 	JSR osfile_update_loadaddr_Xoffset
@@ -5691,12 +5690,12 @@ ENDIF
 	JSR cd_swapvars			; create file in destination catalogue
 
 	\ Destination
-	LDA MA+&10D2
+	LDA MA+&10D2			; destination drive
 	STA CurrentDrv
 	LDA DirectoryParam
 	PHA
 	JSR LoadCurDrvCat2		; Load cat
-	JSR get_cat_firstentry80fname
+	JSR get_cat_firstentry80fname ; use filename @ &C5 which copied to &1058
 	BCC cd_writedest_cat_nodel	; If file not found
 	JSR DeleteCatEntry_YFileOffset
 .cd_writedest_cat_nodel
@@ -5781,7 +5780,7 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	\ Source
 	JSR SetLoadAddrToHost ; &1074 = &1075 = 255
 	JSR LoadMemBlock
-	LDA MA+&10D2
+	LDA MA+&10D2		; desination drive
 	STA CurrentDrv
 
 	BIT &A8
