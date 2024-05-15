@@ -2553,7 +2553,7 @@ ENDIF
 	DEY
 	BCS cfile_insertfileloop
 .cfile_atcatentry
-	LDX #&00
+
 
 	LDA MA+&1076			; Exec address b17,b16
 	AND #&03
@@ -2574,22 +2574,23 @@ ENDIF
 	EOR &C2
 	STA &C2				; C2=mixed byte
 
+	LDX #&00
+	TYA
+	PHA
 .cfile_copyfnloop
 	LDA &C5,X			; Copy filename from &C5
 	STA MA+&0E08,Y
+	LDA &BC,X			; Copy attributes
+	STA MA+&0F08,Y
 	INY
 	INX
 	CPX #&08
 	BNE cfile_copyfnloop
-.cfile_copyattribsloop
-	LDA &BB,X			; Copy attributes
-	DEY
-	STA MA+&0F08,Y
-	DEX
-	BNE cfile_copyattribsloop
-	JSR prt_InfoMsg_Yoffset
-	TYA
+	PLA
+	TAY
 	PHA
+	JSR prt_InfoMsg_Yoffset
+
 	LDY FilesX8
 	JSR Y_add8
 	STY FilesX8			; FilesX+=8
@@ -5638,15 +5639,21 @@ IF _INCLUDE_CMD_COPY_
 	LDX #&00
 .copy_loop2
 	LDA MA+&0E08,Y
-	STA &C5,X  ; store filename
+	STA &C5,X  ; store filename &C5-&CC
 	STA MA+&1050,X	; put filename in buffer
 	LDA MA+&0F08,Y
-	STA &BB,X	; load address, exec ....
+	STA &BB,X	; load address, exec .... &BB- &C2
 	STA MA+&1047,X
 	INX
 	INY
 	CPX #&08
 	BNE copy_loop2
+
+
+
+
+
+
 
 	LDA &C1 ; get high bits
 	JSR A_rorx4and3 ; isolate length top two bits ( bits 16 and 17)
@@ -5688,25 +5695,26 @@ ENDIF
 .cd_writedest_cat
 {
 	JSR cd_swapvars			; create file in destination catalogue
-
+	; Filename that was at &1050 is now &C5
+	; file attributes that were at &1047 now at &BC
 	\ Destination
 	LDA MA+&10D2			; destination drive
 	STA CurrentDrv
 	LDA DirectoryParam
 	PHA
 	JSR LoadCurDrvCat2		; Load cat
-	JSR get_cat_firstentry80fname ; use filename @ &C5 which copied to &1058
+	JSR get_cat_firstentry80fname ; use filename @ &C5 which is copied to &1058
 	BCC cd_writedest_cat_nodel	; If file not found
 	JSR DeleteCatEntry_YFileOffset
 .cd_writedest_cat_nodel
 	PLA
-	STA DirectoryParam
+	STA DirectoryParam ; cant't see how this gets corrupted so why stack and restore ?
 	JSR LoadAddrHi2
 	JSR ExecAddrHi2
 	LDA &C2				; mixed byte
 	JSR A_rorx4and3
 
-	JSR CreateFile_2		; Saves cat
+	JSR CreateFile_2		; Saves cat.
 	LDA &C2				; Remember sector
 	AND #&03
 	PHA
