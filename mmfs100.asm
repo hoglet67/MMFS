@@ -867,7 +867,7 @@ ENDIF
 }
 
 
-
+IF 0
 .ReadFileAttribsToB0_Yoffset
 {
 	JSR RememberAXY			; Decode file attribs
@@ -929,6 +929,70 @@ ENDIF
 	INY
 	RTS
 }
+ELSE
+
+.ReadFileAttribsToB0_Yoffset
+{
+	; Read load , exec, length and locked into OSFILE structure
+
+	JSR RememberAXY			; save all regs
+	TYA						; Y contains file pointer
+	TAX						; move it into X
+	LDA MA+&0F08+6,X		; get mixed byte
+	PHA						; save it for the loop
+	LDY #2					; Skip first two bytes which point to filename
+.loop
+	LDA MA+&0F08,X			; get LSB
+	STA (&B0),Y				; store LSB
+	INX						; inc pointers
+	INY
+
+	LDA MA+&0F08,X			; get next byte
+	STA (&B0),Y				; store byte
+	INX						; inc pointers
+	INY
+
+	PLA						; get back mixed byte
+	LSR A					; skip 2 bits ( first two are sector)
+	LSR A
+	PHA						; save mixed byte
+
+	AND #3					; isolate lower two bits
+	CMP #3					; if both bit are set then we might need to sign extend
+	BNE readfileattribs_nothost
+	CPY #12					; if we are doing length we don't extend
+	BEQ readfileattribs_nothost
+	LDA #&FF
+	STA (&B0),Y				; store &FF
+	BNE lastbyte ; Always
+
+.readfileattribs_nothost
+	STA (&B0),Y				; store the two mixed bits
+	LDA #0					; MSB is going to be zero
+.lastbyte
+	INY						; inc pointer
+	STA (&B0),Y				; store MSB
+	INY						; inc pointer
+	CPY #14					; finshed the loop
+	BNE loop
+	PLA						; restore stack pointer
+
+	LDA MA+&0E08+7-6,X		; get locked bit
+	LSR A					; move into bit 3
+	LSR A
+	LSR A
+	LSR A
+	AND #8					; isolate bit
+	STA (&B0),Y				; pwsp+&E=8
+	LDA #0
+.clearloop
+	INY
+	STA (&B0),Y
+	CPY #17
+	BNE clearloop
+	RTS
+}
+ENDIF
 
 .inc_word_AE_and_load
 {
