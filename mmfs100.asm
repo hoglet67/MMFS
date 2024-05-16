@@ -6294,7 +6294,7 @@ IF _INCLUDE_CMD_FREE_MAP_
 	NOP
 .Label_A8BD_rst
 	RTS
-}
+
 
 
 .Sub_A8E2_nextblock
@@ -6399,7 +6399,7 @@ IF _INCLUDE_CMD_FREE_MAP_
 	NOP
 	JMP PrintStringSPL
 }
-
+}
 ENDIF
 
 	\ *********** MMC ERROR CODE ***********
