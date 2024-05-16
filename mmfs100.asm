@@ -4189,7 +4189,7 @@ IF NOT(_SWRAM_)
 	RTS
 
 .SetPrivateWorkspacePointerB0
-	PHA 				; Set word &B0 to
+	 				; Set word &B0 to
 	LDA #&00
 	STA &B0
 	LDX PagedRomSelector_RAMCopy	; point to Private Workspace
@@ -4198,7 +4198,6 @@ IF NOT(_MASTER_)
 	AND #&3F			; bits 7 & 6 are used as flags
 ENDIF
 	STA &B1
-	PLA
 	RTS
 ENDIF
 
