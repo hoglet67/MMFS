@@ -355,7 +355,7 @@ ENDIF
 .PrintChrA
 	JSR RememberAXY			; Print character
 	PHA
-	LDA #&EC
+	LDA #&EC			; Read character destination
 	JSR osbyte_X0YFF
 	TXA 				; X = chr destination
 	PHA
