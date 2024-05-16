@@ -4363,49 +4363,6 @@ ENDIF
 	BNE closeallfiles_loop		; always
 }
 
-.CloseFiles_Yhandle
-	TYA
-	BEQ CloseAllFiles_Osbyte77	; If y=0 Close all files
-.Check_Yhandle_exists_and_close
-	JSR CheckChannel_Yhndl_exYintch
-
-.CloseFile_Yintch
-{
-	PHA 				; Save A
-	JSR IsHndlinUse_Yintch		; (Saves X to &10C5)
-	BCS closefile_exit		; If file not open
-	LDA MA+&111B,Y			; bit mask
-	EOR #&FF
-	AND MA+&10C0
-	STA MA+&10C0			; Clear 'open' bit
-	LDA MA+&1117,Y			; A=flag byte
-	AND #&60
-	BEQ closefile_exit		; If bits 5&6=0
-	JSR Channel_SetDirDrv_GetCatEntry_Yintch
-	LDA MA+&1117,Y			; If file extended and not
-	AND #&20				; forcing buffer to disk
-	BEQ closefile_buftodisk		; update the file length
-	LDX MA+&10C3			; X=cat offset
-	LDA MA+&1114,Y			; File lenth = EXTENT
-	STA MA+&0F0C,X			; Len lo
-	LDA MA+&1115,Y
-	STA MA+&0F0D,X			; Len mi
-	LDA MA+&1116,Y
-	JSR A_rolx4			; Len hi
-	EOR MA+&0F0E,X			; "mixed byte"
-	AND #&30
-	EOR MA+&0F0E,X
-	STA MA+&0F0E,X
-	JSR SaveCatToDisk		; Update catalog
-	LDY MA+&10C2
-.closefile_buftodisk
-	JSR ChannelBufferToDisk_Yintch	; Restores Y
-.closefile_exit
-	LDX MA+&10C5			; Restore X (IsHndlInUse)
-	PLA 				; Restore A
-	RTS
-}
-
 .Channel_SetDirDrv_GetCatEntry_Yintch
 	JSR Channel_SetDirDrive_Yintch
 .Channel_GetCatEntry_Yintch
@@ -4451,9 +4408,53 @@ ENDIF
 	AND #&C0			; Bit 7=open for output
 	BNE findvnot0_openfile		; Bit 6=open for input
 	JSR RememberAXY
-	JMP CloseFiles_Yhandle		; Close file #Y
+}
+	; Fall into ....
+
+.CloseFiles_Yhandle
+	TYA
+	BEQ CloseAllFiles_Osbyte77	; If y=0 Close all files
+	JSR CheckChannel_Yhndl_exYintch
+
+.CloseFile_Yintch
+{
+	PHA 				; Save A
+	JSR IsHndlinUse_Yintch		; (Saves X to &10C5)
+	BCS closefile_exit		; If file not open
+	LDA MA+&111B,Y			; bit mask
+	EOR #&FF
+	AND MA+&10C0
+	STA MA+&10C0			; Clear 'open' bit
+	LDA MA+&1117,Y			; A=flag byte
+	AND #&60
+	BEQ closefile_exit		; If bits 5&6=0
+	JSR Channel_SetDirDrv_GetCatEntry_Yintch
+	LDA MA+&1117,Y			; If file extended and not
+	AND #&20				; forcing buffer to disk
+	BEQ closefile_buftodisk		; update the file length
+	LDX MA+&10C3			; X=cat offset
+	LDA MA+&1114,Y			; File lenth = EXTENT
+	STA MA+&0F0C,X			; Len lo
+	LDA MA+&1115,Y
+	STA MA+&0F0D,X			; Len mi
+	LDA MA+&1116,Y
+	JSR A_rolx4			; Len hi
+	EOR MA+&0F0E,X			; "mixed byte"
+	AND #&30
+	EOR MA+&0F0E,X
+	STA MA+&0F0E,X
+	JSR SaveCatToDisk		; Update catalog
+	LDY MA+&10C2
+.closefile_buftodisk
+	JSR ChannelBufferToDisk_Yintch	; Restores Y
+.closefile_exit
+	LDX MA+&10C5			; Restore X (IsHndlInUse)
+	PLA 				; Restore A
+	RTS
+}
 
 .findvnot0_openfile
+{
 	JSR RememberXYonly		; Open file
 	STX &BA				; YX=Location of filename
 	STY &BB
