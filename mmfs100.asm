@@ -600,7 +600,6 @@ ENDIF
 	LSR A
 .A_rorx4
 	LSR A
-.A_rorx3
 	LSR A
 	LSR A
 	LSR A
@@ -6327,7 +6326,9 @@ IF _INCLUDE_CMD_FREE_MAP_
 
 .Sub_A90D_freeinfo
 {
-	JSR A_rorx3			; *FREE line
+	LSR A					; *FREE line
+	LSR A
+	LSR A
 	JSR PrintBCDSPL			; A = Number of files
 	JSR PrintStringSPL
 	EQUS " Files "
