@@ -101,8 +101,6 @@ ENDIF
 ; B0 - BF FileSystem temporay workspace
 ; C0 - CF current File system workspace
 
-; &CF not used
-
 FSMessagesOnIfZero=MA+&10C6
 CMDEnabledIf1=MA+&10C7
 DEFAULT_DIR=MA+&10C9
@@ -2555,7 +2553,7 @@ ENDIF
 	STA CurrentDrv
 	LDA DirectoryParam
 	PHA
-	JSR LoadCurDrvCat2		; Load cat
+	JSR LoadCurDrvCat2		; Load cat ( BC to CB preserved)
 	JSR get_cat_firstentry80fname ; use filename @ &C5 which is copied to &1058
 	BCC cd_writedest_cat_nodel	; If file not found
 	JSR DeleteCatEntry_YFileOffset
@@ -2565,7 +2563,7 @@ ENDIF
 	JSR LoadandEexeAddrHi2
 	LDA &C2				; mixed byte
 	JSR A_rorx4and3
-	; this will be stored in C4 ( top bit of length)
+	; this will be stored in C4 ( top bits of length)
 .CreateFile_2
 {
 	STA &C4				; top bits of length ( C4 is a temp variable)
@@ -5541,6 +5539,7 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_DESTROY_ OR _INCLUDE_CMD_FORM_VERIFY_ OR
 	PLA 				; don't return to sub
 	PLA
 .isgo
+.isgoalready
 	RTS
 }
 ENDIF
@@ -5570,7 +5569,6 @@ ENDIF
 	TAY
 	CLC
 }
-.isgoalready
 	RTS
 .baddrv JMP errBADDRIVE
 
@@ -5587,11 +5585,7 @@ ENDIF
 
 .ConfirmYN
 {
-	JSR RememberAXY
-	LDA #&0F
-	LDX #&01
-	LDY #&00
-	JSR OSBYTE
+	JSR osbyte0F_flushinbuf2
 	JSR OSRDCH			; Get chr
 	BCS err_ESCAPE			; If ESCAPE
 	AND #&5F
@@ -5605,6 +5599,14 @@ ENDIF
 	PLP
 	RTS
 }
+
+.osbyte0F_flushinbuf2
+	JSR RememberAXY
+	LDA #&0F
+	LDX #&01
+	LDY #&00
+	JMP OSBYTE
+
 
 .err_ESCAPE
 	JMP ReportESCAPE
@@ -5627,7 +5629,7 @@ IF _INCLUDE_CMD_BACKUP_
 	STA CurrentDrv
 	JSR LoadCurDrvCat
 	LDA MA+&0F07			; Size of source disk
-	STA &C4				; Word C4 = size fo block
+	STA &C4				; Word C4 = size of block
 	LDA MA+&0F06
 	AND #&03
 	STA &C5
@@ -5756,9 +5758,9 @@ IF _INCLUDE_CMD_COPY_
 	ADC #&00
 	STA &C5
 
-	LDA MA+&104E ; get start sector bits 7-0
+	LDA &C2 ; MA+&104E ; get start sector bits 7-0
 	STA &C6
-	LDA MA+&104D ; get start sector bits 9-8
+	LDA &C1 ; MA+&104D ; get start sector bits 9-8
 	AND #&03
 	STA &C7
 
