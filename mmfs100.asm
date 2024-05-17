@@ -2551,10 +2551,24 @@ ENDIF
 	RTS
 }
 
-
+.CreateFile_3
+	STA CurrentDrv
+	LDA DirectoryParam
+	PHA
+	JSR LoadCurDrvCat2		; Load cat
+	JSR get_cat_firstentry80fname ; use filename @ &C5 which is copied to &1058
+	BCC cd_writedest_cat_nodel	; If file not found
+	JSR DeleteCatEntry_YFileOffset
+.cd_writedest_cat_nodel
+	PLA
+	STA DirectoryParam ; cant't see how this gets corrupted so why stack and restore ?
+	JSR LoadandEexeAddrHi2
+	LDA &C2				; mixed byte
+	JSR A_rorx4and3
+	; this will be stored in C4 ( top bit of length)
 .CreateFile_2
 {
-	STA &C4
+	STA &C4				; top bits of length ( C4 is a temp variable)
 	LDA #&00			; NB Cat stored in
 	STA &C2				; desc start sec order
 	LDA #&02			; (file at 002 last)
@@ -2601,7 +2615,6 @@ ENDIF
 	TXA 				; req'd=c0/c1/c4
 	SBC &C4				; big enough?
 
-.cfile_cont2
 	TYA
 	BCC cfile_loop			; If not big enough
 	STY &B0				; Else block found
@@ -2616,7 +2629,6 @@ ENDIF
 	DEY
 	BCS cfile_insertfileloop
 .cfile_atcatentry
-
 
 	LDA MA+&1076			; Exec address b17,b16
 	AND #&03
@@ -2687,7 +2699,8 @@ ENDIF
 .ldadd_nothost
 	RTS
 
-
+.LoadandEexeAddrHi2
+	JSR LoadAddrHi2
 .ExecAddrHi2
 {
 	LDA #&00
@@ -5507,9 +5520,7 @@ IF _INCLUDE_CMD_COMPACT_
 	AND #&FC
 	ORA &C9
 	STA MA+&0F0E,Y
-	LDA #&00
-	STA &A8				; Don't create file
-	;STA &A9 not actually used anywhere
+
 	JSR SaveCatToDisk		; save catalogue
 	JSR CopyDATABLOCK		; may use buffer @ &E00	;Move file
 	JSR CheckCurDrvCat
@@ -5610,7 +5621,6 @@ IF _INCLUDE_CMD_BACKUP_
 	STA &C9
 	STA &C8
 	STA &C6
-	STA &A8				; Don't create file
 
 	\ Source
 	LDA MA+&10D1
@@ -5712,11 +5722,26 @@ IF _INCLUDE_CMD_COPY_
 	CPX #&08
 	BNE copy_loop2
 
+; create file in destination catalogue
 
+	JSR cd_swapvars	; this is no longer opimal given the above copy.
+	; Filename that was at &1050 is now &C5
+	; file attributes that were at &1047 now at &BC
+	\ Destination
+	LDA MA+&10D2			; destination drive
 
+	JSR CreateFile_3		; Saves cat. ( pass in Drive)
 
-
-
+	LDA &C2				; Remember sector
+	AND #&03
+	PHA
+	LDA &C3
+	PHA
+	JSR cd_swapvars			; Back to source
+	PLA 				; Next free sec on dest
+	STA &C8
+	PLA
+	STA &C9
 
 	LDA &C1 ; get high bits
 	JSR A_rorx4and3 ; isolate length top two bits ( bits 16 and 17)
@@ -5729,7 +5754,7 @@ IF _INCLUDE_CMD_COPY_
 	STA &C4
 	TXA
 	ADC #&00
-	STA &C5		; this corrupts the first character of the filename we copied above
+	STA &C5
 
 	LDA MA+&104E ; get start sector bits 7-0
 	STA &C6
@@ -5737,8 +5762,6 @@ IF _INCLUDE_CMD_COPY_
 	AND #&03
 	STA &C7
 
-	LDA #&FF
-	STA &A8				; Create new file
 	JSR CopyDATABLOCK
 
 	\ Source
@@ -5755,43 +5778,9 @@ IF _INCLUDE_CMD_COPY_
 }
 ENDIF
 
-.cd_writedest_cat
-{
-	JSR cd_swapvars			; create file in destination catalogue
-	; Filename that was at &1050 is now &C5
-	; file attributes that were at &1047 now at &BC
-	\ Destination
-	LDA MA+&10D2			; destination drive
-	STA CurrentDrv
-	LDA DirectoryParam
-	PHA
-	JSR LoadCurDrvCat2		; Load cat
-	JSR get_cat_firstentry80fname ; use filename @ &C5 which is copied to &1058
-	BCC cd_writedest_cat_nodel	; If file not found
-	JSR DeleteCatEntry_YFileOffset
-.cd_writedest_cat_nodel
-	PLA
-	STA DirectoryParam ; cant't see how this gets corrupted so why stack and restore ?
-	JSR LoadAddrHi2
-	JSR ExecAddrHi2
-	LDA &C2				; mixed byte
-	JSR A_rorx4and3
-
-	JSR CreateFile_2		; Saves cat.
-	LDA &C2				; Remember sector
-	AND #&03
-	PHA
-	LDA &C3
-	PHA
-	JSR cd_swapvars			; Back to source
-	PLA 				; Next free sec on dest
-	STA &C8
-	PLA
-	STA &C9
-	RTS
-
 .cd_swapvars
 	LDX #&11			; Swap BA-CB & 1045-1056
+{
 .cd_swapvars_loop
 	LDY MA+&1045,X			; I.e. src/dest
 	LDA &BA,X
@@ -5806,71 +5795,62 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 .CopyDATABLOCK
 {
 ; Entry
-;  &A8 0= Don't create file FF= create file
 ;  &C4 &C5 Size in sectors
 ;  &C6 &C7 Start sector
-;  &C8 &C9 destination sector ( unless create a file)
+;  &C8 &C9 destination sector
 ;  &10D1 source drive
 ;  &10D2 destination drive
 
 ; ZP Usage
 ; &BC &BD start addres of buffer
-; &C0
+; &C0 always zero ( bytes in last sector)
 ; &C1 ; number of sectors to copy limited by ram size
-; &C2 &C3
-; &C4 &C5
-; &C6 &C7 ;
-; &C8 &C9 ; next free sector for destination
+; &C2 &C3 ; first sector of current block to read or write
+; &C4 &C5 ; number of sectors left to copy ( because we have more sectors than ram)
+; &C6 &C7 ; Start source sector ( local )
+; &C8 &C9 ; next free sector for destination (local)
 ; uses RAM for copying ( PAGE to HIMEM corrupt)
 
 	LDA #&00			; *** Move or copy sectors
 	STA &BC				; Word &C4 = size of block
 	STA &C0
+	LDA PAGE			; Buffer address
+	STA &BD
 	BEQ cd_loopentry		; always
 .cd_loop
-	LDA &C4
-	TAY
-	CMP RAMBufferSize		; Size of buffer
+	LDY &C4
+	CPY RAMBufferSize		; Size of buffer
 	LDA &C5
 	SBC #&00
 	BCC cd_part			; IF size<size of buffer
 	LDY RAMBufferSize
 .cd_part
-	STY &C1
+	STY &C1				; number of sectors to copy in this pass
 
 	LDA &C6				; C2/C3 = Block start sector
 	STA &C3				; Start sec = Word C6
 	LDA &C7
 	STA &C2
 
-	LDA PAGE			; Buffer address
-	STA &BD
-	LDA MA+&10D1
+	LDA MA+&10D1		; Source drive
 	STA CurrentDrv
 
 	\ Source
 	JSR SetLoadAddrToHost ; &1074 = &1075 = 255
-	JSR LoadMemBlock
+	JSR LoadMemBlock    ; pass in BC BD C2 C3, C1 C0
+
 	LDA MA+&10D2		; desination drive
 	STA CurrentDrv
 
-	BIT &A8
-	BPL cd_skipwrcat		; Don't create file
-	JSR cd_writedest_cat  ; Returns next free sector in &C8 &C9
-	LDA #&00
-	STA &A8				; File created!
-
-.cd_skipwrcat
 	LDA &C8				; C2/C3 = Block start sector
 	STA &C3				; Start sec = Word C8
 	LDA &C9
 	STA &C2
-	LDA PAGE			; Buffer address
-	STA &BD
 
 	\ Destination
 	JSR SetLoadAddrToHost ; &1074 = &1075 = 255
 	JSR SaveMemBlock
+
 	LDA &C1				; Word C8 += ?C1
 	CLC 				; Dest sector start
 	ADC &C8
@@ -5878,6 +5858,7 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	BCC cd_inc1
 	INC &C9
 .cd_inc1
+
 	LDA &C1				; Word C6 += ?C1
 	CLC 				; Source sector start
 	ADC &C6
@@ -5885,6 +5866,7 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	BCC cd_inc2
 	INC &C7
 .cd_inc2
+
 	SEC	 			; Word C4 -= ?C1
 	LDA &C4				; Sector counter
 	SBC &C1
@@ -5892,6 +5874,7 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	BCS cd_loopentry
 	DEC &C5
 .cd_loopentry
+
 	LDA &C4
 	ORA &C5
 	BNE cd_loop			; If Word C4 <> 0
@@ -6898,10 +6881,10 @@ ENDIF
 
 	\\ add start sector on disk
 	CLC
-	LDA MA+&1097
+	LDA MA+&1097 ; was C3
 	ADC sec%
 	STA sec%
-	LDA MA+&1096
+	LDA MA+&1096 ; was c2
 	AND #3
 	PHA
 	ADC sec%+1
@@ -6911,9 +6894,9 @@ ENDIF
 
 	\\ calc sector count
 .cvskip
-	LDA MA+&1095
+	LDA MA+&1095			; was C1
 	STA seccount%
-	LDA MA+&1096			; mixed byte
+	LDA MA+&1096			; C2 mixed byte
 	LSR A
 	LSR A
 	LSR A
@@ -6924,7 +6907,7 @@ IF _LARGEFILES
 ELSE
 	BNE errBlockSize
 ENDIF
-	LDA MA+&1094
+	LDA MA+&1094			; was C0 bytes in last sector
 	STA byteslastsec%
 	BEQ cvskip2
 	INC seccount%
@@ -6938,7 +6921,7 @@ ENDIF
 	\\ check for overflow
 .cvskip2
 	CLC
-	LDA MA+&1097
+	LDA MA+&1097     ; was c3
 	ADC seccount%
 	TAX
 	PLA
