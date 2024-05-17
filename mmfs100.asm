@@ -17,6 +17,9 @@ _LARGEMMB_=NOT(_MM32_)
 \\ (costs 95 bytes)
 _DBASE_=NOT(_MM32_)
 
+\\ Fast OSGBPB code
+_FASTGBPB_=TRUE
+
 ;; At the moment, we either include or exclude all the optional commands
 
 ;; Normal Commands
@@ -3750,6 +3753,10 @@ ENDIF
 	STX MA+&107D		; Save pointer to command block
 	STY MA+&107E
 	TAY					; Call number
+IF _FASTGBPB_
+	JMP fastgb
+.*upgbpb
+ENDIF
 	JSR gbpb_gosub
 	PHP
 	BIT MA+&1081
@@ -3773,7 +3780,11 @@ ENDIF
 	LSR A
 	PHP 				; Save bit 1 (1=read/write seq ptr)
 	STA MA+&107F			; Save Tube operation
+IF _FASTGBPB_
+ELSE
 	JSR gbpb_wordB4_word107D	; (B4) -> param blk
+ENDIF
+	LDY #&0C
 
 .gbpb_ctlblk_loop
 	LDA (&B4),Y			; Copy param blk to 1060
@@ -3856,6 +3867,7 @@ ENDIF
 	JSR gbpb_incdblword1060X	; inc. bytes to txf
 		 						; Copy parameter back
 	JSR gbpb_wordB4_word107D	; (B4) -> param blk
+	LDY #&0C
 .gbpb_restorectlblk_loop
 	LDA MA+&1060,Y
 	STA (&B4),Y
@@ -3975,7 +3987,6 @@ ENDIF
 }
 
 .gbpb_wordB4_word107D
-	LDY #&0C
 	LDA MA+&107D
 	STA &B4
 	LDA MA+&107E
@@ -4031,6 +4042,265 @@ ENDIF
 	JSR gpbp_B8memptr
 	LDA (&B8,X)
 	JMP gbpb_incDataPtr
+
+
+IF _FASTGBPB_
+
+\\ Workspace
+
+mainws      =       (MA+&1000)
+
+dosram      =       mainws+$0060	;copy of OSGBPB/OSFILE ctrl block; temp filename in *CAT
+acc         =       dosram+$000D	;temporary OSGBPB call number
+ltemp0      =       dosram+$000E	;temporary count of bytes remaining to transfer
+ldlow       =       mainws+$0072	;4 bytes; load address passed to OSFILE; Tube tx addr
+dcby        =       mainws+$00C2	;channel workspace pointer for current open file
+seqsem      =       mainws+$00DD	;$00=*SPOOL/*EXEC critical, close files on error
+
+seqmap      =       mainws+$0100	;workspaces for channels $11..$15
+seqcat      =       seqmap+$0000	;when accessing the catalogue entry
+seqlh       =       seqcat+$000D	;top bits exec/length/load/LBA in catalogue entry
+seqloc      =       seqcat+$000F	;LSB of starting LBA in catalogue entry
+seqpl       =       seqmap+$0010	;LSB of sequential pointer (PTR)
+seqpm       =       seqmap+$0011	;2MSB of sequential pointer
+seqph       =       seqmap+$0012	;MSB of sequential pointer
+seqlma      =       seqmap+$0015	;2MSB of open file's extent
+seqlha      =       seqmap+$0016	;MSB of open file's extent
+seqdah      =       seqmap+$001D	;MSB of starting LBA
+
+\\ Zeri Page
+
+atemp       =       $00B4		;2 bytes
+work        =       $00BA
+wrkcat      =       work  +$0002	;load/exec/length/start sector in catalogue format
+lodlo       =       work  +$0002	;LSB load address in OSFILE
+lodhi       =       work  +$0003	;3MSB load address in OSFILE
+lbahi       =       work  +$0008	;MSB LBA in OSFILE
+lbalo       =       work  +$0009	;LSB LBA in OSFILE
+lenlo       =       work  +$0006	;LSB file length in OSFILE
+lenhi       =       work  +$0007	;2MSB file length in OSFILE
+
+\\   JMP     LAE35		;raise "Illegal address" error
+
+.fastgb
+	JSR gbpb_wordB4_word107D;set up pointer to user's OSGBPB block
+	LDA gbpbv_table3,Y	;get microcode byte from table
+	AND #$03		;test bit 1 = transfer data
+	LSR A			;set C=1 iff preserving PTR
+	BEQ chain		;if not a transfer then pass call downstream
+	STY acc			;else save call number
+	LDY #$0C		;13 bytes to copy, $0C..$00:
+.copyl0
+	LDA (atemp),Y		;copy user's OSGBPB block
+	STA dosram,Y		;to workspace
+	DEY			;loop until 13 bytes copied
+	BPL copyl0
+	TAY			;file handle to Y
+	LDX #$03		;4 bytes to copy, $03..$00:
+.initl
+	LDA dosram+$05,X	;copy L in OSGBPB block
+	STA ltemp0,X		;to working L
+	DEX			;loop until 4 bytes copied
+	BPL initl
+	LDA dosram+$09		;get LSB of P, initial PTR to use for transfer
+	BCC dcptr		;if calls 1 or 3 then use P; else 2 or 4 use current PTR
+	TYA			;convert file handle to workspace pointer
+	JSR A_rolx5		;(file handle validated later)
+	TAY			;to Y as offset
+	LDA seqpl,Y		;get LSB of file pointer PTR
+	CLC			;clear carry flag for two's complement
+.dcptr
+	EOR #$FF		;take two's complement
+	ADC #$01		;=no. bytes from start of transfer to a page boundary
+	LDY #$FC		;reverse counter, 4 bytes to set:
+.hdrext					;do header/extender OSGBPB call
+	STA dosram+$05-$FC,Y	;replace L field with number of bytes to move
+	LDA #$00		;set MSB,2MSB,(3MSB) of user's L to zero
+	INY			;increment offset
+	BNE hdrext		;loop until 3 (4) bytes of L replaced
+	JSR subwk		;subtract L from working L
+	BCC trailr		;if underflow then within one sector, do trailer call
+	BNE align		;else if remaining working L >= 256 then enter loop
+.trailr					;else combine header/extender with trailer:
+	JSR addtol		;add working L to L
+.drain
+	LDA #<dosram		;point to OSGBPB block in workspace
+	STA atemp+$00		;-read user's block once
+	LDA #>dosram		;upgbpb will write it back once
+	STA atemp+$01
+	LDY acc			;restore call number
+.chain
+	JMP upgbpb		;and pass call downstream
+
+.morfst				;done a fast transfer, user's L = $00xxxx00
+	LDA ltemp0+$03		;get MSB of working L
+	JSR testl		;test MSB, 2MSB, 3MSB of working L
+	BNE dofast		;if >= 256 then try another fast transfer
+	STA dosram+$06		;else set user's L = 0
+	STA dosram+$07
+	LDA ltemp0+$00		;if 0 < working L < 256
+	BNE trailr		;then do trailer call with L = working L
+	CLC			;else C=0, no bytes remaining:
+.fgbfin				;working L reached zero or something went wrong:
+	PHP			;save carry flag that says which
+	JSR addtol		;add remaining request to bytes not transferred
+	PLP			;restore carry flag returned from OSGBPB call
+	JSR gbpb_wordB4_word107D;set up pointer to user's OSGBPB block
+	LDY #$0C		;copy 13 bytes of OSGBPB control block
+.retnl
+	LDA dosram,Y		;from DFS workspace
+	STA (atemp),Y		;to user's address
+	DEY			;loop until 13 bytes copied
+	BPL retnl
+	RTS			;return C=0 OSGBPB succeeded/C=1 OSGBPB failed
+
+.setmax				;set fast transfer request = maximum transfer size
+	STA dosram+$07		;set MSB request = MSB maximum
+	ORA dosram+$06
+	BNE sectr1		;if maximum > 0 then transfer sectors
+.throw				;working L >= 256, L = $00xxxx00, maximum = 0
+	LDY #$FD		;set user's L = 256
+	LDA #$01
+	BNE hdrext		;do extender OSGBPB call to extend file (always)
+
+.align
+	JSR drain		;call OSGBPB on workspace control block.
+				;this validates the file handle, sets PTR from P,
+				;aligns it to a sector boundary, and sets L=0
+	BCS fgbfin		;return if call failed else continue transfer
+.dofast				;working L >= 256, L = $00xxxx00, PTR on sector bdy
+	LDX ltemp0+$03		;test working L - are there 16 MiB or more to move?
+	BEQ sclamp		;if not then move 1..65535 sectors
+	LDX #$FF		;else transfer first 65535 sectors of remainder
+.sclamp
+	TXA
+	ORA ltemp0+$02
+	STA dosram+$07		;set MSB of transfer length = 2MSB of L
+	TXA
+	ORA ltemp0+$01
+	TAX			;hold LSB of transfer length in X
+	LDA dcby		;get channel workspace offset
+	SEC
+	ADC acc			;add 1+call number, 2..5 to workspace offset
+	EOR #$04		;bit 2 = 1 if writing
+	AND #$E4		;if writing then point to allocation instead of EXT
+	TAY
+	LDA seqlma,Y		;get 2MSB of channel EXT
+	SEC
+	SBC dosram+$0A		;subtract 2MSB of PTR
+	STA dosram+$06		;=LSB maximum transfer size
+	LDA seqlha,Y		;get MSB of EXT
+	SBC dosram+$0B		;subtract MSB of PTR = MSB maximum
+	BCC throw		;if maximum<0 throw back
+	CMP dosram+$07		;else compare MSB maximum - MSB request
+	BCC setmax		;if maximum < request then request = maximum
+	BNE sectr0		;if maximum > request then transfer sectors
+	CPX dosram+$06		;else compare LSB request - LSB maximum
+	BCS setmax		;if request >= maximum then request = maximum
+.sectr0					;transfer one or more sectors.
+	STX dosram+$06		;x=request, hold in 3MSB of L
+.sectr1
+	LDY dcby		;undo EXT/allocation fudge
+	JSR Channel_SetDirDrv_GetCatEntry_Yintch ;ensure open file still in drive
+	JSR ChannelBufferToDisk_Yintch		;ensure buffer up-to-date on disc L6
+	LDA #$3F		;b7=0 buffer does not contain PTR, b6=0 buffer not changed
+	STA seqdah,Y		;set buffer LBA out of range to force re-reading
+	JSR ChannelFlags_ClearBits		;clear b7,b6 of channel flags
+	LDA dosram+$01		;copy OSGBPB transfer address
+	STA lodlo		;to load address in OSFILE block
+	LDA dosram+$02
+	STA lodhi
+	LDA dosram+$03
+	STA ldlow+$02
+	LDA dosram+$04
+	STA ldlow+$03
+	LDA seqloc,Y		;get LSB LBA of start of open file
+	CLC
+	ADC dosram+$0A		;add 2MSB of PTR
+	STA lbalo		;store LSB target LBA in OSFILE block
+	LDA seqlh,Y		;get MSB LBA
+	ADC dosram+$0B		;add MSB of PTR
+	AND #$03		;mask MSB of target LBA
+	STA lbahi		;store MSB target LBA in OSFILE block
+	LDA #$00		;clear LSB file length in OSFILE block
+	STA lenlo
+	LDA dosram+$06		;copy transfer length
+	STA lenhi		;to file length in OSFILE block
+	LDA dosram+$07		;get MSB transfer length
+	JSR A_rolx4		;shift b1..b0 to b5..b4
+	ORA lbahi		;combine with LSB target LBA
+	STA wrkcat+$06		;pack into last byte of OSFILE block
+	LDA acc			;(L8826 needs load+exec unpacked, but length packed)
+	INC seqsem		;set *SPOOL/*EXEC critical flag (now $00)
+	JSR docmd		;transfer ordinary file L5
+	DEC seqsem		;clear *SPOOL/*EXEC critical flag (now $FF)
+	JSR subwk		;subtract amount transferred from working L
+	LDY dosram+$06		;get and hold LSB number of sectors transferred
+	TYA
+	CLC			;add to OSGBPB address field
+	ADC dosram+$02
+	STA dosram+$02
+	LDX dosram+$07		;get and hold MSB number of sectors transferred
+	TXA
+	ADC dosram+$03		;add to OSGBPB address field
+	STA dosram+$03
+	BCC updp		;carry out to high byte
+	INC dosram+$04
+.updp
+	TYA			;set A=LSB transfer size in sectors
+	LDY dcby		;set Y=channel workspace offset
+	CLC			;add to open file's pointer
+	ADC seqpm,Y
+	STA seqpm,Y		;update PTR
+	STA dosram+$0A		;update OSGBPB control block in workspace
+	TXA			;add MSB transfer size to MSB PTR
+	ADC seqph,Y
+	STA seqph,Y
+	STA dosram+$0B		;(MSB OSGBPB P field cleared by upgbpb)
+	TYA
+	JSR CmpPTR		;compare PTR - EXT
+	BCC doneit		;if file not extended then loop
+	BEQ doneit		;if PTR = EXT, at EOF then loop
+				;else PTR > EXT only possible if writing
+	JSR updext		;clamp PTR to 0..EXT by raising EXT
+.doneit
+	JMP morfst		;loop to transfer more sectors
+
+.subwk				;Subtract L from working L
+	SEC			;set carry flag for subtract
+	LDX #$FC		;reverse counter, 4 bytes to subtract
+.subwkl
+	LDA ltemp0-$FC,X	;get byte of working L
+	SBC dosram+$05-$FC,X	;subtract byte of L in OSGBPB block
+	STA ltemp0-$FC,X	;update byte of working L
+	INX			;loop until 4 bytes updated:
+	BNE subwkl
+.testl				;Test whether working L >= 256
+	ORA ltemp0+$02		;a=MSB, OR with 2MSB
+	ORA ltemp0+$01		;or with 3MSB
+	RTS			;return Z=1 iff working L < 256
+
+.addtol				;add working L to L in OSGBPB block
+	CLC			;clear carry flag for add
+	LDX #$FC		;reverse counter, 4 bytes to add:
+.addl
+	LDA ltemp0-$FC,X	;get byte of working L
+	ADC dosram+$05-$FC,X	;add to byte of L in OSGBPB block
+	STA dosram+$05-$FC,X	;update byte of L
+	INX			;loop until 4 bytes added
+	BNE addl
+	RTS
+
+.docmd
+	CMP #3
+	BCC dowrcmd
+.dowrcmd
+	JMP LoadMemBlock        ; Commands 3/4 as reads
+.dordcmd
+	JMP SaveMemBlock        ; Command 1/2 are writes
+
+ENDIF
+
 
 .fscv_osabouttoproccmd
 	BIT CMDEnabledIf1
@@ -5107,6 +5377,9 @@ ENDIF
 	STA (&BA,X)			; Byte to buffer
 	JSR TYA_CmpPTR
 	BCC bp_exit			; If PTR<EXT
+IF _FASTGBPB_
+.*updext
+ENDIF
 	LDA #&20			; Update cat file len when closed
 	JSR ChannelFlags_SetBits	; Set bit 5
 	LDX #&02			; EXT=PTR
