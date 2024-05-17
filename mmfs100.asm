@@ -6824,7 +6824,8 @@ IF NOT(_MM32_)
 .MMC_Sector_Reset
 {
 	LDY #&A
-.loop	LDA filemmb,Y
+.loop
+	LDA filemmb,Y
 	STA fatfilename%,Y
 	DEY
 	BPL loop

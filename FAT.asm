@@ -170,7 +170,7 @@ fatfilename%=MA+&10F0
 fatptr%=&C4		; word
 fatclust%=&C3		; 24-bits (3 bytes)
 
-	\\ Search dir (first 16 entries only)
+	\\ Search dir
 	LDA sec%+2 :PHA
 	LDA sec%+1 :PHA
 	LDA sec%   :PHA
