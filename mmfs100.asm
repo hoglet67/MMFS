@@ -1462,7 +1462,7 @@ ENDIF
 	LDY #&FF
 	BNE cat_skipspaces		; always => ?&A8=0
 .cat_samedir
-	LDY &A8				; [if ?&A0<>0 = first column]
+	LDY &A8				; [if ?&A8<>0 = first column]
 	BNE cat_newline
 	LDY #&05			; print column gap
 	JSR prt_Yspaces			; print 5 spaces => ?&A8=1
@@ -2863,7 +2863,7 @@ IF _INCLUDE_CMD_RENAME_
 	PHA
 	JSR getcatentry
 	JSR CheckFileNotLockedOrOpenY
-	STY &C4
+	STY &A8
 	PLA
 	TAY
 	JSR Param_SyntaxErrorIfNull
@@ -2875,7 +2875,7 @@ IF _INCLUDE_CMD_RENAME_
 	BNE jmpBADDRIVE
 	JSR get_cat_firstentry80
 	BCC rname_ok
-	CPY &C4
+	CPY &A8
 	BEQ rname_ok
 .errFILEEXISTS
 	JSR ReportErrorCB
@@ -2884,7 +2884,7 @@ IF _INCLUDE_CMD_RENAME_
 .jmpBADDRIVE
 	JMP errBADDRIVE
 .rname_ok
-	LDY &C4				; Copy filename
+	LDY &A8				; Copy filename
 	JSR Y_add8			; from C5 to catalog
 	LDX #&07
 .rname_loop
@@ -5726,9 +5726,9 @@ IF _INCLUDE_CMD_COMPACT_
 	LDY FilesX8
 	STY &CA				; ?CA=file offset
 	LDA #&02
-	STA &C8
+	STA &AC
 	LDA #&00
-	STA &C9				; word C8=next free sector
+	STA &AD				; word C8=next free sector
 .compact_loop
 	LDY &CA
 	JSR Y_sub8
@@ -5736,11 +5736,11 @@ IF _INCLUDE_CMD_COMPACT_
 	BNE compact_checkfile		; If not end of catalogue
 	LDA MA+&0F07			; Calc & print no. free sectors
 	SEC 				; (disk sectors - word C8)
-	SBC &C8
+	SBC &AC
 	PHA
 	LDA MA+&0F06
 	AND #&03
-	SBC &C9
+	SBC &AD
 	JSR PrintNibble
 	PLA
 	JSR PrintHex
@@ -5759,37 +5759,37 @@ IF _INCLUDE_CMD_COMPACT_
 	STA &BC
 	STA &C0
 	ADC MA+&0F0D,Y			; A=Len1
-	STA &C4
+	STA &A8
 	LDA MA+&0F0E,Y
 	PHP
 	JSR A_rorx4and3			; A=Len2
 	PLP
 	ADC #&00
-	STA &C5				; word C4=size in sectors
+	STA &A9				; word C4=size in sectors
 	LDA MA+&0F0F,Y			; A=sec0
-	STA &C6
+	STA &AA
 	LDA MA+&0F0E,Y
 	AND #&03			; A=sec1
-	STA &C7				; word C6=sector
-	CMP &C9				; word C6=word C8?
+	STA &AB				; word C6=sector
+	CMP &AD				; word C6=word C8?
 	BNE compact_movefile		; If no
-	LDA &C6
-	CMP &C8
+	LDA &AA
+	CMP &AC
 	BNE compact_movefile		; If no
 	CLC
-	ADC &C4
-	STA &C8
-	LDA &C9
-	ADC &C5
-	STA &C9				; word C8 += word C4
+	ADC &A8
+	STA &AC
+	LDA &AD
+	ADC &A9
+	STA &AD				; word C8 += word C4
 	JMP compact_fileinfo
 
 .compact_movefile
-	LDA &C8				; Move file
+	LDA &AC				; Move file
 	STA MA+&0F0F,Y			; Change start sec in catalogue
 	LDA MA+&0F0E,Y			; to word C8
 	AND #&FC
-	ORA &C9
+	ORA &AD
 	STA MA+&0F0E,Y
 
 	JSR SaveCatToDisk		; save catalogue
@@ -5892,20 +5892,20 @@ IF _INCLUDE_CMD_BACKUP_
 	JSR Get_CopyDATA_Drives
 	JSR IsEnabledOrGo
 	LDA #&00
-	STA &C7
-	STA &C9
-	STA &C8
-	STA &C6
+	STA &AB
+	STA &AD
+	STA &AC
+	STA &AA
 
 	\ Source
 	LDA MA+&10D1
 	STA CurrentDrv
 	JSR LoadCurDrvCat
 	LDA MA+&0F07			; Size of source disk
-	STA &C4				; Word C4 = size of block
+	STA &A8				; Word C4 = size of block
 	LDA MA+&0F06
 	AND #&03
-	STA &C5
+	STA &A9
 
 	\ Destination
 	LDA MA+&10D2
@@ -5913,11 +5913,11 @@ IF _INCLUDE_CMD_BACKUP_
 	JSR LoadCurDrvCat
 	LDA MA+&0F06			; Is dest disk smaller?
 	AND #&03
-	CMP &C5
+	CMP &A9
 	BCC err_DISKFULL2
 	BNE backup_copy
 	LDA MA+&0F07
-	CMP &C4
+	CMP &A8
 	BCC err_DISKFULL2
 
 .backup_copy
@@ -6014,9 +6014,9 @@ IF _INCLUDE_CMD_COPY_
 	PHA
 	JSR cd_swapvars			; Back to source
 	PLA 				; Next free sec on dest
-	STA &C8
+	STA &AC
 	PLA
-	STA &C9
+	STA &AD
 
 	LDA &C1 ; get high bits
 	JSR A_rorx4and3 ; isolate length top two bits ( bits 16 and 17)
@@ -6026,16 +6026,16 @@ IF _INCLUDE_CMD_COPY_
 				; round up number of sectors required
 	LDA &C0		; load bits 15-8 of length
 	ADC #&00
-	STA &C4
+	STA &A8
 	TXA
 	ADC #&00
-	STA &C5
+	STA &A9
 
 	LDA &C2 ; MA+&104E ; get start sector bits 7-0
-	STA &C6
+	STA &AA
 	LDA &C1 ; MA+&104D ; get start sector bits 9-8
 	AND #&03
-	STA &C7
+	STA &AB
 
 	JSR CopyDATABLOCK
 
@@ -6070,9 +6070,9 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 .CopyDATABLOCK
 {
 ; Entry
-;  &C4 &C5 Size in sectors
-;  &C6 &C7 Start sector
-;  &C8 &C9 destination sector
+;  &A8 &A9 Size in sectors
+;  &AA &AB Start sector
+;  &AC &AD destination sector
 ;  &10D1 source drive
 ;  &10D2 destination drive
 
@@ -6081,30 +6081,30 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 ; &C0 always zero ( bytes in last sector)
 ; &C1 ; number of sectors to copy limited by ram size
 ; &C2 &C3 ; first sector of current block to read or write
-; &C4 &C5 ; number of sectors left to copy ( because we have more sectors than ram)
-; &C6 &C7 ; Start source sector ( local )
-; &C8 &C9 ; next free sector for destination (local)
+; &A8 &A9 ; number of sectors left to copy ( because we have more sectors than ram)
+; &AA &AB ; Start source sector ( local )
+; &AC &AD ; next free sector for destination (local)
 ; uses RAM for copying ( PAGE to HIMEM corrupt)
 
 	LDA #&00			; *** Move or copy sectors
-	STA &BC				; Word &C4 = size of block
+	STA &BC				; Word &A8 = size of block
 	STA &C0
 	LDA PAGE			; Buffer address
 	STA &BD
 	BEQ cd_loopentry		; always
 .cd_loop
-	LDY &C4
+	LDY &A8
 	CPY RAMBufferSize		; Size of buffer
-	LDA &C5
+	LDA &A9
 	SBC #&00
 	BCC cd_part			; IF size<size of buffer
 	LDY RAMBufferSize
 .cd_part
 	STY &C1				; number of sectors to copy in this pass
 
-	LDA &C6				; C2/C3 = Block start sector
+	LDA &AA				; C2/C3 = Block start sector
 	STA &C3				; Start sec = Word C6
-	LDA &C7
+	LDA &AB
 	STA &C2
 
 	LDA MA+&10D1		; Source drive
@@ -6117,9 +6117,9 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	LDA MA+&10D2		; desination drive
 	STA CurrentDrv
 
-	LDA &C8				; C2/C3 = Block start sector
+	LDA &AC				; C2/C3 = Block start sector
 	STA &C3				; Start sec = Word C8
-	LDA &C9
+	LDA &AD
 	STA &C2
 
 	\ Destination
@@ -6128,30 +6128,30 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 
 	LDA &C1				; Word C8 += ?C1
 	CLC 				; Dest sector start
-	ADC &C8
-	STA &C8
+	ADC &AC
+	STA &AC
 	BCC cd_inc1
-	INC &C9
+	INC &AD
 .cd_inc1
 
 	LDA &C1				; Word C6 += ?C1
 	CLC 				; Source sector start
-	ADC &C6
-	STA &C6
+	ADC &AA
+	STA &AA
 	BCC cd_inc2
-	INC &C7
+	INC &AB
 .cd_inc2
 
 	SEC	 			; Word C4 -= ?C1
-	LDA &C4				; Sector counter
+	LDA &A8				; Sector counter
 	SBC &C1
-	STA &C4
+	STA &A8
 	BCS cd_loopentry
-	DEC &C5
+	DEC &A9
 .cd_loopentry
 
-	LDA &C4
-	ORA &C5
+	LDA &A8
+	ORA &A9
 	BNE cd_loop			; If Word C4 <> 0
 	RTS
 }
@@ -6167,7 +6167,7 @@ IF _INCLUDE_CMD_FORM_VERIFY_
 .vform1
 ;;{
 {
-	STA &C9
+	STA &AD
 	STA &B2				; If -ve, check go ok, calc. memory
 	BPL vform3_ok			; If verifying
 
@@ -6193,7 +6193,7 @@ ENDIF
 	BNE vform5_driveloop
 
 	\ No drive param, so ask!
-	BIT &C9
+	BIT &AD
 	BMI vform4_form			; IF formatting
 	JSR PrintString
 	EQUS "Verify"			; Verify
@@ -6245,7 +6245,7 @@ ENDIF
 
 	\\ Verify / Format current drive
 .VFCurDrv
-	BIT &C9
+	BIT &AD
 	BMI vf1				; If formatting
 
 IF NOT(_MM32_)
@@ -6282,7 +6282,7 @@ IF _MM32_
 	LDA #&63			; Format cmd
 	LDX #5				; 5 parameters
 ENDIF
-	BIT &C9
+	BIT &AD
 	BMI vf4				; If formatting
 
 	\ If verifying calc. no. of tracks
@@ -6370,7 +6370,7 @@ ENDIF
 	CMP &B5				; more tracks?
 	BNE vf5_trackloop
 
-	BIT &C9
+	BIT &AD
 	BPL vf6_exit			; If verifying
 
 	\ Save new catalogue
@@ -6448,20 +6448,20 @@ IF _INCLUDE_CMD_FREE_MAP_
 	CLC 				; \\\\\\\\\ *MAP
 .Label_A7F7
 {
-	ROR &C6
+	ROR &AA
 	JSR Param_OptionalDriveNo
 	JSR LoadCurDrvCat2
-	BIT &C6
+	BIT &AA
 	BMI Label_A818_free		; If *FREE
 	JSR PrintStringSPL
 	EQUS "Address :  Length",13	; "Address : Length"
 .Label_A818_free
 	LDA MA+&0F06
 	AND #&03
-	STA &C5
+	STA &A9
 	STA &C2
 	LDA MA+&0F07
-	STA &C4				; wC4=sector count
+	STA &A8				; wC4=sector count
 	SEC
 	SBC #&02			; wC1=sector count - 2 (map length)
 	STA &C1
@@ -6482,10 +6482,10 @@ IF _INCLUDE_CMD_FREE_MAP_
 .Label_A845_fileloop
 	JSR Sub_A8E2_nextblock
 	JSR Y_sub8			; Y -> next file
-	LDA &C4
+	LDA &A8
 	SEC
 	SBC &BB
-	LDA &C5
+	LDA &A9
 	SBC &BC
 	BCC Label_A86B_nofiles
 .Label_A856_fileloop_entry
@@ -6500,7 +6500,7 @@ IF _INCLUDE_CMD_FREE_MAP_
 	BCC Label_A845_fileloop
 .Label_A86B_nofiles
 	STY &BD
-	BIT &C6
+	BIT &AA
 	BMI Label_A87A_free		; If *FREE
 	LDA &C1				; MAP only
 	ORA &C2
@@ -6530,7 +6530,7 @@ IF _INCLUDE_CMD_FREE_MAP_
 	STA &C0
 	LDY &BD
 	BNE Label_A845_fileloop
-	BIT &C6
+	BIT &AA
 	BPL Label_A8BD_rst		; If *MAP
 	TAY
 	LDX &BF
@@ -6539,11 +6539,11 @@ IF _INCLUDE_CMD_FREE_MAP_
 	SBC FilesX8
 	JSR Sub_A90D_freeinfo
 	EQUS "Free",13			; "Free"
-	LDA &C4
+	LDA &A8
 	SEC
 	SBC &BF
 	TAX
-	LDA &C5
+	LDA &A9
 	SBC &C0
 	TAY
 	LDA FilesX8
@@ -7470,7 +7470,7 @@ ENDIF
 
 IF NOT(_MM32_)
 	\ **** Read / Write 'track' ****
-	\ ?&C9 : -ve = write, +ve = read
+	\ ?&AD : -ve = write, +ve = read
 	\ ?&B4 : track number
 	\ (Used by CMD_VERIFY / CMD_FORM)
 .RW_Track
@@ -7484,7 +7484,7 @@ IF NOT(_MM32_)
 	LDA #5
 	STA &B6
 .rwtrk2_loop
-	BIT &C9
+	BIT &AD
 	BMI rwtrk3
 	JSR MMC_ReadCatalogue		; verify
 	JMP rwtrk4
