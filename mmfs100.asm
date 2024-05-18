@@ -6248,9 +6248,7 @@ IF _MM32_
 	LDA #0
 	STA &B4				; track
 ELSE
-	LDX #&FF
-	STX CurrentCat			; Invalid catalogue
-	INX
+	LDX #0
 	STX &B4				; track
 ENDIF
 
