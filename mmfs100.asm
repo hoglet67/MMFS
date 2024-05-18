@@ -5143,6 +5143,7 @@ ENDIF
 	LDA #&FE
 	SEC
 	RTS 				; C=1=EOF
+
 .bg_notEOF
 	LDA MA+&1117,Y
 	BMI bg_samesector1		; If buffer ok
@@ -5267,7 +5268,7 @@ ENDIF
 	STY &B4				; Error, save intch handle
 	STY MA+&10C2			; for clean up
 	JSR ClearEXECSPOOLFileHandle
-.errCANTEXTEND
+
 	JSR ReportErrorCB
 	EQUB &BF
 	EQUS "Can't extend",0
@@ -5462,9 +5463,7 @@ ENDIF
 	BNE verloop
 
 .verex
-	LDA #13
-	JSR PrintChrA
-
+	JSR PrintNewLine
 .help_dfs_loop
 	LDA #0
 	STA &B9				; ?&B9=0=print command (not error)
@@ -6074,15 +6073,15 @@ ENDIF
 
 IF _INCLUDE_CMD_FORM_VERIFY_
 .CMD_VERIFY
-	LDA #&00			; \\\\\ *VERIFY
-	BEQ vform1
+	CLC			; \\\\\ *VERIFY
+	BCC vform1
 
 .CMD_FORM
-	LDA #&FF			; \\\\\ *FORM
+	SEC			; \\\\\ *FORM
 .vform1
 ;;{
 {
-	STA &AD
+	ROR &AD
 	STA &B2				; If -ve, check go ok, calc. memory
 	BPL vform3_ok			; If verifying
 
@@ -6346,6 +6345,10 @@ IF _INCLUDE_CMD_FREE_MAP_
 	CLC 				; \\\\\\\\\ *MAP
 .Label_A7F7
 {
+	; ZP usage
+	; &AA Bit 7
+	;
+
 	ROR &AA
 	JSR Param_OptionalDriveNo
 	JSR LoadCurDrvCat2
@@ -6355,28 +6358,33 @@ IF _INCLUDE_CMD_FREE_MAP_
 	EQUS "Address :  Length",13	; "Address : Length"
 .Label_A818_free
 	LDA MA+&0F06
-	AND #&03
+	AND #&03			; get high bits of total number of sectors
 	STA &A9
 	STA &C2
-	LDA MA+&0F07
+	LDA MA+&0F07		; LSB of total number of sectors
 	STA &A8				; wC4=sector count
+
 	SEC
 	SBC #&02			; wC1=sector count - 2 (map length)
 	STA &C1
 	BCS Label_A82F
 	DEC &C2
 .Label_A82F
+
 	LDA #&02
 	STA &BB				; wBB = 0002 (map address)
 	LDA #&00			; wBF = 0000
 	STA &BC
+
 	STA &BF
 	STA &C0
+
 	LDA FilesX8
-	AND #&F8
+	AND #&F8			; shouldn't be needed
 	TAY
 	BEQ Label_A86B_nofiles		; If no files
 	BNE Label_A856_fileloop_entry	; always
+
 .Label_A845_fileloop
 	JSR Sub_A8E2_nextblock
 	JSR Y_sub8			; Y -> next file
@@ -6386,16 +6394,18 @@ IF _INCLUDE_CMD_FREE_MAP_
 	LDA &A9
 	SBC &BC
 	BCC Label_A86B_nofiles
+
 .Label_A856_fileloop_entry
 	LDA MA+&0F07,Y			; wC1 = File Start Sec - Map addr
 	SEC
 	SBC &BB
 	STA &C1
-	LDA MA+&0F06,Y
+	LDA MA+&0F06,Y			; high bits of sector
 	AND #&03
 	SBC &BC
 	STA &C2
 	BCC Label_A845_fileloop
+
 .Label_A86B_nofiles
 	STY &BD
 	BIT &AA
@@ -6428,6 +6438,7 @@ IF _INCLUDE_CMD_FREE_MAP_
 	STA &C0
 	LDY &BD
 	BNE Label_A845_fileloop
+
 	BIT &AA
 	BPL Label_A8BD_rst		; If *MAP
 	TAY
