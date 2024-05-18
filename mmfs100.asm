@@ -6294,20 +6294,20 @@ IF NOT(_MM32_)
 ENDIF
 
 	JSR ClearCatalogue
-IF NOT(_MM32_)
-	LDA &B5
-	CMP #40
-	BNE vf7
+
 	LDY #&01
 	LDX #&90
-	BNE vf8
+
+	LDA &B5				; 40 or 80 tracks
+	CMP #40
+	BEQ vf8
 .vf7
 	LDY #&03
 	LDX #&20
 .vf8
 	STX MA+&F07			; Disk size in sectors
 	STY MA+&F06
-ENDIF
+
 	JSR SaveCatToDisk
 .vf6_exit
 	JMP PrintNewLine
@@ -6334,21 +6334,6 @@ ENDIF
 	INY
 	BNE ccatloop
 
-IF _MM32_
-	LDY &B5				; Pop number of sectors
-
-.loop2
-	LDA #&0A
-	CLC
-	ADC MA+&0F07
-	STA MA+&0F07
-	BCC label3
-
-	INC MA+&0F06
-
-.label3	DEY
-	BNE loop2
-ENDIF
 	RTS
 }
 
