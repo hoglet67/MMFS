@@ -5653,8 +5653,8 @@ IF _INCLUDE_CMD_COMPACT_
 	JSR PrintString			; "Compacting :"
 	EQUS "Compacting :"
 
-	STA MA+&10D1			; Source Drive No.
-	STA MA+&10D2			; Dest Drive No.
+	STA &AE			; Source Drive No.
+	STA &AF			; Dest Drive No.
 	JSR PrintNibble
 	JSR PrintNewLine
 	LDY #&00
@@ -5758,11 +5758,11 @@ ENDIF
 .Get_CopyDATA_Drives
 {
 	JSR Param_DriveNo_Syntax	; Get drives & calc ram & msg
-	STA MA+&10D1			; Source drive
+	STA &AE			; Source drive
 	JSR Param_DriveNo_Syntax
-	STA MA+&10D2			; Destination drive
+	STA &AF			; Destination drive
 
-	CMP MA+&10D1
+	CMP &AE
 	BEQ baddrv			; Drives must be different!
 
 	TYA
@@ -5770,19 +5770,20 @@ ENDIF
 	JSR CalcRAM			; Calc ram available
 	JSR PrintString			; Copying from:
 	EQUS "Copying from :"
-	LDA MA+&10D1
+	LDA &AE
 	JSR PrintNibble_PrintString			; to :
 	EQUS " to :"
-	LDA MA+&10D2
+	LDA &AF
 	JSR PrintNibble
 	JSR PrintNewLine
 	PLA
 	TAY
 	CLC
-}
 	RTS
-.baddrv JMP errBADDRIVE
 
+.baddrv
+	JMP errBADDRIVE
+}
 
 .ConfirmYNcolon
 	JSR PrintString
@@ -5836,7 +5837,7 @@ IF _INCLUDE_CMD_BACKUP_
 	STA &AA
 
 	\ Source
-	LDA MA+&10D1
+	LDA &AE
 	STA CurrentDrv
 	JSR LoadCurDrvCat
 	LDA MA+&0F07			; Size of source disk
@@ -5846,7 +5847,7 @@ IF _INCLUDE_CMD_BACKUP_
 	STA &A9
 
 	\ Destination
-	LDA MA+&10D2
+	LDA &AF
 	STA CurrentDrv
 	JSR LoadCurDrvCat
 	LDA MA+&0F06			; Is dest disk smaller?
@@ -5907,12 +5908,12 @@ IF _INCLUDE_CMD_COPY_
 .CMD_COPY
 {
 	JSR parameter_afsp ; &10CD = `#` &10CE =`*`
-	JSR Get_CopyDATA_Drives ; &10D1 = source drive : &10D2 destination drive
+	JSR Get_CopyDATA_Drives ; &AE = source drive : &AF destination drive
 	JSR Param_SyntaxErrorIfNull
 	JSR read_fspTextPointer ; &1000 = filename
 
 	\ Source
-	LDA MA+&10D1 ; Already ranged checked drive number
+	LDA &AE ; Already ranged checked drive number
 	STA CurrentDrv
 	JSR getcatentry ; check if source file exists filname @ &1000
 					; Returns Y and &B6=Y+8
@@ -5938,13 +5939,16 @@ IF _INCLUDE_CMD_COPY_
 	LDA &C2 ; get high bits
 	JSR A_rorx4and3 ; isolate length top two bits ( bits 16 and 17)
 	TAX
+
 	LDA &C0		; load bits 7-0	 of length
 	CMP #&1 ; C = 1 if file includes Partial sector
 				; round up number of sectors required
 	LDA &C1		; load bits 15-8 of length
 	ADC #&00
 	STA &A8
+
 	TXA
+
 	ADC #&00
 	STA &A9
 
@@ -5956,7 +5960,7 @@ IF _INCLUDE_CMD_COPY_
 
 ; create file in destination catalogue
 
-	LDA MA+&10D2			; destination drive
+	LDA &AF			; destination drive
 
 	JSR CreateFile_3		; Saves cat. ( pass in Drive)
 
@@ -5969,7 +5973,7 @@ IF _INCLUDE_CMD_COPY_
 	JSR CopyDATABLOCK
 
 	\ Source
-	LDA MA+&10D1
+	LDA &AE
 	STA CurrentDrv
 	JSR LoadCurDrvCat2
 	PLA
@@ -5989,8 +5993,8 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 ;  &A8 &A9 Size in sectors
 ;  &AA &AB Start sector
 ;  &AC &AD destination sector
-;  &10D1 source drive
-;  &10D2 destination drive
+;  &AE source drive
+;  &AF destination drive
 
 ; ZP Usage
 ; &BC &BD start addres of buffer
@@ -6023,14 +6027,14 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	LDA &AB
 	STA &C2
 
-	LDA MA+&10D1		; Source drive
+	LDA &AE		; Source drive
 	STA CurrentDrv
 
 	\ Source
 	JSR SetLoadAddrToHost ; &1074 = &1075 = 255
 	JSR LoadMemBlock    ; pass in BC BD C2 C3, C1 C0
 
-	LDA MA+&10D2		; desination drive
+	LDA &AF		; desination drive
 	STA CurrentDrv
 
 	LDA &AC				; C2/C3 = Block start sector
