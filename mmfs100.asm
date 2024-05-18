@@ -866,8 +866,6 @@ ENDIF
 	JMP PrintSpaceSPL
 }
 
-
-IF 0
 .ReadFileAttribsToB0_Yoffset
 {
 	JSR RememberAXY			; Decode file attribs
@@ -876,17 +874,29 @@ IF 0
 	TAX 				; X=cat offset
 	LDY #&12			; Y=(B0) offset
 	LDA #&00			; Clear pwsp+2 to pwsp+&11
+
 .readfileattribs_clearloop
 	DEY
 	STA (&B0),Y
 	CPY #&02
 	BNE readfileattribs_clearloop
+
 .readfileattribs_copyloop
-	JSR readfileattribs_copy2bytes	; copy low bytes of
-	INY 				; load/exec/length
+	LDA MA+&0F08,X	; copy low bytes of
+	STA (&B0),Y		; load/exec/length
+	INX
+	INY
+
+	LDA MA+&0F08,X
+	STA (&B0),Y
+	INX
+	INY
+
+	INY
 	INY
 	CPY #&0E
 	BNE readfileattribs_copyloop
+
 	PLA
 	TAX
 	LDA MA+&0E0F,X
@@ -920,79 +930,7 @@ IF 0
 .readfileattribs_exits
 	PLA
 	RTS
-.readfileattribs_copy2bytes
-	JSR readfileattribs_copy1byte
-.readfileattribs_copy1byte
-	LDA MA+&0F08,X
-	STA (&B0),Y
-	INX
-	INY
-	RTS
 }
-ELSE
-
-.ReadFileAttribsToB0_Yoffset
-{
-	; Read load , exec, length and locked into OSFILE structure
-
-	JSR RememberAXY			; save all regs
-	TYA						; Y contains file pointer
-	TAX						; move it into X
-	LDA MA+&0F08+6,X		; get mixed byte
-	PHA						; save it for the loop
-	LDY #2					; Skip first two bytes which point to filename
-.loop
-	LDA MA+&0F08,X			; get LSB
-	STA (&B0),Y				; store LSB
-	INX						; inc pointers
-	INY
-
-	LDA MA+&0F08,X			; get next byte
-	STA (&B0),Y				; store byte
-	INX						; inc pointers
-	INY
-
-	PLA						; get back mixed byte
-	LSR A					; skip 2 bits ( first two are sector)
-	LSR A
-	PHA						; save mixed byte
-
-	AND #3					; isolate lower two bits
-	CMP #3					; if both bit are set then we might need to sign extend
-	BNE readfileattribs_nothost
-	CPY #12					; if we are doing length we don't extend
-	BEQ readfileattribs_nothost
-	LDA #&FF
-	STA (&B0),Y				; store &FF
-	BNE lastbyte ; Always
-
-.readfileattribs_nothost
-	STA (&B0),Y				; store the two mixed bits
-	LDA #0					; MSB is going to be zero
-.lastbyte
-	INY						; inc pointer
-	STA (&B0),Y				; store MSB
-	INY						; inc pointer
-	CPY #14					; finshed the loop
-	BNE loop
-	PLA						; restore stack pointer
-
-	LDA MA+&0E08+7-6,X		; get locked bit
-	LSR A					; move into bit 3
-	LSR A
-	LSR A
-	LSR A
-	AND #8					; isolate bit
-	STA (&B0),Y				; pwsp+&E=8
-	LDA #0
-.clearloop
-	INY
-	STA (&B0),Y
-	CPY #17
-	BNE clearloop
-	RTS
-}
-ENDIF
 
 .inc_word_AE_and_load
 {
@@ -5988,54 +5926,45 @@ IF _INCLUDE_CMD_COPY_
 .copy_loop2
 	LDA MA+&0E08,Y
 	STA &C5,X  ; store filename &C5-&CC
-	STA MA+&1050,X	; put filename in buffer
+
 	LDA MA+&0F08,Y
-	STA &BB,X	; load address, exec .... &BB- &C2
-	STA MA+&1047,X
+	STA &BC,X	; load address, exec .... &BC- &C3
+
 	INX
 	INY
 	CPX #&08
 	BNE copy_loop2
 
-; create file in destination catalogue
-
-	JSR cd_swapvars	; this is no longer opimal given the above copy.
-	; Filename that was at &1050 is now &C5
-	; file attributes that were at &1047 now at &BC
-	\ Destination
-	LDA MA+&10D2			; destination drive
-
-	JSR CreateFile_3		; Saves cat. ( pass in Drive)
-
-	LDA &C2				; Remember sector
-	AND #&03
-	PHA
-	LDA &C3
-	PHA
-	JSR cd_swapvars			; Back to source
-	PLA 				; Next free sec on dest
-	STA &AC
-	PLA
-	STA &AD
-
-	LDA &C1 ; get high bits
+	LDA &C2 ; get high bits
 	JSR A_rorx4and3 ; isolate length top two bits ( bits 16 and 17)
 	TAX
-	LDA &BF		; load bits 7-0	 of length
+	LDA &C0		; load bits 7-0	 of length
 	CMP #&1 ; C = 1 if file includes Partial sector
 				; round up number of sectors required
-	LDA &C0		; load bits 15-8 of length
+	LDA &C1		; load bits 15-8 of length
 	ADC #&00
 	STA &A8
 	TXA
 	ADC #&00
 	STA &A9
 
-	LDA &C2 ; MA+&104E ; get start sector bits 7-0
+	LDA &C3 ; get start sector bits 7-0
 	STA &AA
-	LDA &C1 ; MA+&104D ; get start sector bits 9-8
+	LDA &C2 ; get start sector bits 9-8
 	AND #&03
 	STA &AB
+
+; create file in destination catalogue
+
+	LDA MA+&10D2			; destination drive
+
+	JSR CreateFile_3		; Saves cat. ( pass in Drive)
+
+	LDA &C2				; Remember sector
+	AND #&03
+	STA &AD
+	LDA &C3
+	STA &AC
 
 	JSR CopyDATABLOCK
 
@@ -6052,19 +5981,6 @@ IF _INCLUDE_CMD_COPY_
 	RTS
 }
 ENDIF
-
-.cd_swapvars
-	LDX #&11			; Swap BA-CB & 1045-1056
-{
-.cd_swapvars_loop
-	LDY MA+&1045,X			; I.e. src/dest
-	LDA &BA,X
-	STY &BA,X
-	STA MA+&1045,X
-	DEX
-	BPL cd_swapvars_loop
-	RTS
-}
 
 IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 .CopyDATABLOCK
@@ -7436,7 +7352,6 @@ IF _MM32_
 
 	JSR ErrCONTINUE
 	EQUS &C7, "sector not found at "
-	NOP
 
 	LDA #':'
 	JSR mm32_PrintChr100
@@ -7869,10 +7784,9 @@ ENDIF
 	PHA
 	LDX #0
 	JSR DecNo_Print_zp_y
-	JSR PrintString
-	EQUS " disc"
-	NOP
 	PLA
+	JSR PrintString		; preserves AXY
+	EQUS " disc"
 	TAX
 	LDA 1, X
 	BNE NotOne
