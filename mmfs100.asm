@@ -5765,8 +5765,6 @@ ENDIF
 	CMP &AE
 	BEQ baddrv			; Drives must be different!
 
-	TYA
-	PHA
 	JSR CalcRAM			; Calc ram available
 	JSR PrintString			; Copying from:
 	EQUS "Copying from :"
@@ -5776,9 +5774,6 @@ ENDIF
 	LDA &AF
 	JSR PrintNibble
 	JSR PrintNewLine
-	PLA
-	TAY
-	CLC
 	RTS
 
 .baddrv
