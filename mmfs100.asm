@@ -1322,6 +1322,7 @@ ENDIF
 	LDA LIB_DIR
 	JSR PrintChrA			; print library.dir
 	JSR PrintNewLine		; print
+
 	LDY #&00			; Mark files in cur dir
 .cat_curdirloop
 	CPY FilesX8			; no.of.files?
@@ -1343,6 +1344,7 @@ ENDIF
 	LDA #&FF
 	STA CurrentCat
 	JMP PrintNewLine		; ** EXIT OF PRINT CAT
+
 .cat_getnextunmarkedfile_loop
 	JSR Y_add8
 .cat_getnextunmarkedfileY
@@ -1364,10 +1366,12 @@ ENDIF
 	INX
 	CPX #&08
 	BNE cat_copyfnloop		; Chk fn < all other unmarked files
+
 .cat_comparefnloop1
 	JSR cat_getnextunmarkedfileY	; Next unmarked file
 	BCS cat_printfn			; If last file, so print anyway
 	SEC
+
 	LDX #&06
 .cat_comparefnloop2
 	LDA MA+&0E0E,Y			; compare filenames
@@ -1376,6 +1380,7 @@ ENDIF
 	DEY
 	DEX
 	BPL cat_comparefnloop2
+
 	JSR Y_add7
 	LDA MA+&0E0F,Y			; compare dir
 	JSR UcaseA2			; (clrs bit 7)
@@ -2116,7 +2121,6 @@ ENDIF
 	JSR SetTextPointerYX		; ** RUN
 .NotCmdTable4
 {
-.SetWordBA_txtptr
 
 	LDA #&FF
 	STA &BE
@@ -2175,7 +2179,7 @@ ENDIF
 	LDA DirectoryParam		; Directory D
 	STA MA+&1005
 	LDX #&00			; "E.:X.D.FILENAM"
-	LDY #MP+&10
+	LDY #HI(MP+&1000)
 	JMP OSCLI
 
 .runfile_run
@@ -2200,7 +2204,7 @@ ENDIF
 	JSR TUBE_CLAIM
 	LDX #&74			; Tell second processor
 	\ assume tube code doesn't change sw rom
-	LDY #MP+&10
+	LDY #HI(MP+&1000)
 	LDA #&04			; (Exec addr @ 1074)
 	JMP TubeCode			; YX=addr,A=0:initrd,A=1:initwr,A=4:strexe
 .runfile_inhost
@@ -2837,9 +2841,7 @@ ENDIF
 
 .TUBE_CheckIfPresent
 	LDA #&EA			; Tube present?
-	LDX #&00			; X=FF if Tube present
-	LDY #&FF
-	JSR OSBYTE
+	JSR osbyte_X0YFF	; X=FF if Tube present
 	TXA
 	EOR #&FF
 	STA TubePresentIf0
@@ -4726,7 +4728,6 @@ ENDIF
 	LDY MA+&10C2			; Y=intch
 	BNE SetupChannelInfoBlock_Yintch
 
-.errTOOMANYFILESOPEN
 	JSR ReportErrorCB
 	EQUB &C0
 	EQUS "Too many open",0
