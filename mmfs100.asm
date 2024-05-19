@@ -515,7 +515,28 @@ ENDIF
 	BCS rdafsp_padX			; IF end of string
 	CPX #&07
 	BNE rdafsp_rdfnloop
-	BEQ errBadName
+	BEQ errBadName			; always
+}
+
+
+
+.Rdafsp_padall
+	LDX #&01			; Pad all with spaces
+.rdafsp_padX
+{
+	LDA #&20			; Pad with spaces
+.rdafsp_padloop
+	STA workspace%+&00,X
+	INX
+	CPX #&40			; Why &40? : Wildcards buffer!
+	BNE rdafsp_padloop
+	LDX #&06			; Copy from &1000 to &C5
+.rdafsp_cpyfnloop
+	LDA workspace%+&00,X			; 7 byte filename
+	STA &C5,X
+	DEX
+	BPL rdafsp_cpyfnloop
+	RTS
 }
 
 .GSREAD_A
@@ -543,25 +564,6 @@ ENDIF
 .GSINIT_A
 	CLC
 	JMP GSINIT
-
-.Rdafsp_padall
-	LDX #&01			; Pad all with spaces
-.rdafsp_padX
-{
-	LDA #&20			; Pad with spaces
-.rdafsp_padloop
-	STA workspace%+&00,X
-	INX
-	CPX #&40			; Why &40? : Wildcards buffer!
-	BNE rdafsp_padloop
-	LDX #&06			; Copy from &1000 to &C5
-.rdafsp_cpyfnloop
-	LDA workspace%+&00,X			; 7 byte filename
-	STA &C5,X
-	DEX
-	BPL rdafsp_cpyfnloop
-	RTS
-}
 
 .prt_filename_Yoffset
 {
