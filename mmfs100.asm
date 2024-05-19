@@ -6346,7 +6346,13 @@ IF _INCLUDE_CMD_FREE_MAP_
 .Label_A7F7
 {
 	; ZP usage
-	; &AA Bit 7
+	; &AA Bit 7 Selects between *FREE and * MAP
+	; &A8 &A9 ; total number of sectors on disk
+	;
+	; &BB &BC
+	; &BD &BE
+	; &BF &C0
+	; &C1 &C2 ;
 	;
 
 	ROR &AA
@@ -6433,27 +6439,34 @@ IF _INCLUDE_CMD_FREE_MAP_
 	CLC
 	ADC &BF
 	STA &BF
+
 	LDA &C2
 	ADC &C0
 	STA &C0
+
 	LDY &BD
 	BNE Label_A845_fileloop
 
 	BIT &AA
 	BPL Label_A8BD_rst		; If *MAP
+
 	TAY
 	LDX &BF
-	LDA #&F8
+
+	LDA #&F8				; max number of files *8
 	SEC
-	SBC FilesX8
+	SBC FilesX8				; Actual number of files *8
+
 	JSR Sub_A90D_freeinfo
 	EQUS "Free",13			; "Free"
 	LDA &A8
+
 	SEC
 	SBC &BF
 	TAX
 	LDA &A9
 	SBC &C0
+
 	TAY
 	LDA FilesX8
 	JSR Sub_A90D_freeinfo
@@ -6493,74 +6506,91 @@ IF _INCLUDE_CMD_FREE_MAP_
 
 .Sub_A90D_freeinfo
 {
-	LSR A					; *FREE line
+	; YX number of sectors
+	; A number of files *8
+numberofdecdigits%=6
+numberofbits%=24
+								; *FREE line
+	LSR A					; Divide by 8 to file the number of files
 	LSR A
 	LSR A
 	JSR PrintBCDSPL			; A = Number of files
 	JSR PrintStringSPL
 	EQUS " Files "
+
 	STX &BC				; YX = Number of sectors
 	STY &BD
+
 	TYA
-	JSR PrintNibbleSPL
+	JSR PrintNibbleSPL	; high nibble of sector count
 	TXA
-	JSR PrintHexSPL
+	JSR PrintHexSPL		; low byte of sector count
 	JSR PrintStringSPL
 	EQUS " Sectors "
-	LDA #&00
+
+	LDA #&00			; create a 4 byte word of sectors*256
 	STA &BB
-	STA &BE				; !BB = number of sectors * 256
-	LDX #&1F			; i.e. !BB = number of bytes
-	STX &C1				; Convert to decimal string
-	LDX #&09
+
+	LDY #numberofbits%-1	; i.e. !BB = number of bytes
+
+	LDX #numberofdecdigits%-1			; clear 10 bytes
 .Label_A941_loop1
-	STA MA+&1000,X			; ?1000 - ?1009 = 0
+	STA MA+&1000,X		; ?1000 - ?1009 = 0
 	DEX
 	BPL Label_A941_loop1
+
 .Label_A947_loop2
 	ASL &BB				; !BB = !BB * 2
 	ROL &BC
 	ROL &BD
-	ROL &BE
-	LDX #&00
-	LDY #&09			; A=0
+
+	LDX #numberofdecdigits%-1			; loop 10 times
 .Label_A953_loop3
 	LDA MA+&1000,X
-	ROL A
+	ROL A				; *2 + carry
 	CMP #&0A
-	BCC Label_A95D			; If <10
+	BCC Label_A95D		; If <10
 	SBC #&0A
 .Label_A95D
 	STA MA+&1000,X
-	INX
-	DEY
+	DEX
 	BPL Label_A953_loop3
-	DEC &C1
+	DEY
 	BPL Label_A947_loop2
-	LDY #&20			; Print decimal string
-	LDX #&05
+
+; Print decimal string
+	LDY #&20			; print space for leading zero suppression
+	INX 				; X = 0
 .Label_A96C_loop4
-	BNE Label_A970
-	LDY #&2C
-.Label_A970
 	LDA MA+&1000,X
-	BNE Label_A97D
+	BNE Label_A97D		; non zero so print
+
+	CPX #numberofdecdigits%-1
+	BEQ printzero		; print last zero
+
+.Label_A970
+
 	CPY #&2C
-	BEQ Label_A97D
-	TYA
-	BNE Label_A982			; always
+	BEQ printzero		; if we have printed non zero then always print
+	TYA					; print space
+	BNE printchar		; always
+
 .Label_A97D
-	LDY #&2C
+	LDY #&2C 	; ","
+.printzero
 	ORA #&30
-.Label_A982
+.printchar
 	JSR OSWRCH
-	CPX #&03
+	CPX #numberofdecdigits%-1-3	; if we are at the 4th digit
 	BNE Label_A98D
 	TYA
 	JSR OSWRCH			; Print " " or ","
+
 .Label_A98D
-	DEX
-	BPL Label_A96C_loop4
+	INX
+	CPX #numberofdecdigits%
+	BNE Label_A96C_loop4
+
 	JSR PrintStringSPL
 	EQUS " Bytes "
 	NOP
