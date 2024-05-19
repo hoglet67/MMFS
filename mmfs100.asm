@@ -5913,16 +5913,16 @@ IF NOT(_MM32_) AND (_INCLUDE_CMD_TITLE_ OR _INCLUDE_CMD_BACKUP_)
 }
 ENDIF
 
+IF NOT(_MM32_)
 .SaveDiskTable
 
-IF _LARGEMMB_
-ELSE
+IF NOT(_LARGEMMB_)
 	LDA CurrentCat
 ENDIF
 
 	JSR DiskTableSec
 	JMP MMC_WriteCatalogue
-
+ENDIF
 
 IF _INCLUDE_CMD_COPY_
 .CMD_COPY
@@ -7780,11 +7780,6 @@ IF _LARGEMMB_
 .LoadDiskTable
 	STA DiskTableIndex
 	LDA #&80
-	STA CurrentCat
-	JSR DiskTableSec
-	JMP MMC_ReadCatalogue
-
-
 ELSE
 
 	\\ A=sector code (sector or &80)
@@ -7794,12 +7789,11 @@ ELSE
 
 	\\ A=sector code
 .LoadDiskTable
+
+ENDIF
 	STA CurrentCat
 	JSR DiskTableSec
 	JMP MMC_ReadCatalogue
-
-
-ENDIF
 
 
 	\\ GetDisk, returns name of disks
