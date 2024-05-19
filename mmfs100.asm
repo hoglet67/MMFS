@@ -49,7 +49,6 @@ _INCLUDE_CMD_DABOUT_=_COMMANDS_
 ;; Additional MMFS2 DUTILs commands
 _MM32_DRENAME=_COMMANDS_ ; NOT(_BP12K_)
 
-\ MA/MP constants must be even numbers
 IF _MASTER_
 	CPU 1				; 65C12
 	MA=&C000-&0E00			; Offset to Master hidden static workspace
@@ -62,7 +61,7 @@ ELIF _BP12K_
 	; needs to access user memory there. To use as much of it as possible up
 	; harmlessly, we situate our workspace in that range.
 	MA=&A200-&0E00
-	UTILSBUF=(&BF-&B6)+HI(MA+&0E00)
+	UTILSBUF=(&BF-&B6)+HI( MA+&E00)
 	MAEND=(UTILSBUF+1)<<8
 	_NON_WS_BUILD_COM = FALSE
 	guard_value=&C000
@@ -80,7 +79,18 @@ ELSE
 	MA=0
 	guard_value=&C000
 ENDIF
+
+IF _SWRAM_ AND NOT(_MM32_)
+	disccataloguebuffer% = MA+&E00
+ELSE
+	disccataloguebuffer% = MA+&E00
+ENDIF
+
 MP=HI(MA)
+
+buf%=disccataloguebuffer%
+cat%=disccataloguebuffer%
+FilesX8=disccataloguebuffer%+&105
 
 INCLUDE "VERSION.asm"
 INCLUDE "SYSVARS.asm"			; OS constants
@@ -137,9 +147,7 @@ ELSE
 	ENDMACRO
 ENDIF
 
-buf%=MA+&E00
-cat%=MA+&E00
-FilesX8=MA+&F05
+
 
 \\ TODO: CardSort should be protected by VID...
 
@@ -554,7 +562,7 @@ ENDIF
 .prt_filename_Yoffset
 {
 	JSR RememberAXY
-	LDA MA+&0E0F,Y
+	LDA disccataloguebuffer%+&0F,Y
 	PHP
 	AND #&7F			; directory
 	BNE prt_filename_prtchr
@@ -566,7 +574,7 @@ ENDIF
 .prt_filename_nodir
 	LDX #&06			; print filename
 .prt_filename_loop
-	LDA MA+&0E08,Y
+	LDA disccataloguebuffer%+&08,Y
 	AND #&7F
 	JSR PrintChrA
 	INY
@@ -683,22 +691,23 @@ ENDIF
 	BEQ getcatsetupB7	; always ( almost certainly could be getcatloop2 )
 
 .get_cat_firstentry80fname
-	LDX #&06			; copy filename from &C5 to &1058
+	LDX #&07			; copy filename from &C5 to &1058
+	LDA #&20			; set directory to " "
+	BNE getcatloopentry ; always
 .getcatloop1
 	LDA &C5,X
+.getcatloopentry
 	STA MA+&1058,X
 	DEX
 	BPL getcatloop1
-	LDA #&20
-	STA MA+&105F
 
 	JSR CheckCurDrvCat		; catalogue entry matching
 	LDX #&58 				; string at &1058
 .getcatentry2
-	LDA #&00			; word &B6 = &E00 = PTR
+	LDA #LO(disccataloguebuffer%)		; word &B6 = &E00 = PTR
 	STA &B6
 .getcatsetupB7
-	LDA #MP+&0E			; string at &E00+A
+	LDA #HI(disccataloguebuffer%)		; string at &E00+A
 	STA &B7
 .getcatloop2
 	LDY #&00
@@ -794,10 +803,10 @@ ENDIF
 {
 	JSR CheckFileNotLockedOrOpenY	; Delete catalogue entry
 .delcatloop
-	LDA MA+&0E10,Y
-	STA MA+&0E08,Y
-	LDA MA+&0F10,Y
-	STA MA+&0F08,Y
+	LDA disccataloguebuffer%+10,Y
+	STA disccataloguebuffer%+&08,Y
+	LDA disccataloguebuffer%+&100+10,Y
+	STA disccataloguebuffer%+&100+&08,Y
 	INY
 	CPY FilesX8
 	BCC delcatloop
@@ -833,7 +842,7 @@ ENDIF
 	PHA
 	LDA #&60			; word &B0=1060
 	STA &B0
-	LDA #MP+&10
+	LDA #HI(MA+&1000)
 	STA &B1
 	JSR ReadFileAttribsToB0_Yoffset	; create no. str
 	LDY #&02
@@ -843,10 +852,10 @@ ENDIF
 	JSR PrintHex3Byte		; Length
 	PLA
 	TAY
-	LDA MA+&0F0E,Y			; First sector high bits
+	LDA disccataloguebuffer%+&100+&0E,Y			; First sector high bits
 	AND #&03
 	JSR PrintNibble
-	LDA MA+&0F0F,Y			; First sector low byte
+	LDA disccataloguebuffer%+&100+&0F,Y			; First sector low byte
 	JSR PrintHex
 
 	\ Print New Line
@@ -886,12 +895,12 @@ ENDIF
 	BNE readfileattribs_clearloop
 
 .readfileattribs_copyloop
-	LDA MA+&0F08,X	; copy low bytes of
+	LDA disccataloguebuffer%+&100+&08,X	; copy low bytes of
 	STA (&B0),Y		; load/exec/length
 	INX
 	INY
 
-	LDA MA+&0F08,X
+	LDA disccataloguebuffer%+&100+&08,X
 	STA (&B0),Y
 	INX
 	INY
@@ -903,12 +912,12 @@ ENDIF
 
 	PLA
 	TAX
-	LDA MA+&0E0F,X
+	LDA disccataloguebuffer%+&0F,X
 	BPL readfileattribs_notlocked	; If not locked
 	LDA #&08
 	STA (&B0),Y			; pwsp+&E=8
 .readfileattribs_notlocked
-	LDA MA+&0F0E,X			; mixed byte
+	LDA disccataloguebuffer%+&100+&0E,X			; mixed byte
 	LDY #&04			; load address high bytes
 	JSR readfileattribs_addrHiBytes
 	LDY #&0C			; file length high bytes
@@ -1265,10 +1274,10 @@ ENDIF
 	INY
 	STY &AA				; Y=0
 .cat_titleloop
-	LDA MA+&0E00,Y			; print disk title
+	LDA disccataloguebuffer%+&00,Y			; print disk title
 	CPY #&08
 	BCC cat_titlelo
-	LDA MA+&0EF8,Y
+	LDA disccataloguebuffer%+&F8,Y
 .cat_titlelo
 	JSR PrintChrA
 	INY
@@ -1278,7 +1287,7 @@ ENDIF
 	EQUS " ("			; Print "Drive "
 
 IF _MM32_
-	LDA MA+&0F04
+	LDA disccataloguebuffer%+&100+&04
 	JSR PrintHex
 ELSE
 	\ Print disk no. instead of cycle no.
@@ -1294,7 +1303,7 @@ ENDIF
 	JSR prt_Yspaces			; print 13 spaces
 	JSR PrintString
 	EQUS "Option "
-	LDA MA+&0F06
+	LDA disccataloguebuffer%+&100+&06
 	JSR A_rorx4
 	PHA
 		; print option.no
@@ -1331,13 +1340,13 @@ ENDIF
 .cat_curdirloop
 	CPY FilesX8			; no.of.files?
 	BCS cat_sortloop1		; If @ end of catalogue
-	LDA MA+&0E0F,Y
+	LDA disccataloguebuffer%+&0F,Y
 	EOR DEFAULT_DIR
 	AND #&5F
 	BNE cat_curdirnext		; If not current dir
-	LDA MA+&0E0F,Y			; Set dir to null, sort=>first
+	LDA disccataloguebuffer%+&0F,Y			; Set dir to null, sort=>first
 	AND #&80			; Keep locked flag (bit 7)
-	STA MA+&0E0F,Y
+	STA disccataloguebuffer%+&0F,Y
 .cat_curdirnext
 	JSR Y_add8
 	BCC cat_curdirloop		; always
@@ -1354,7 +1363,7 @@ ENDIF
 .cat_getnextunmarkedfileY
 	CPY FilesX8
 	BCS cat_exit			; If @ end of cat exit, c=1
-	LDA MA+&0E08,Y
+	LDA disccataloguebuffer%+&08,Y
 	BMI cat_getnextunmarkedfile_loop	; If marked file
 .cat_exit
 	RTS
@@ -1363,7 +1372,7 @@ ENDIF
 	STY &AB				; save Y=cat offset
 	LDX #&00
 .cat_copyfnloop
-	LDA MA+&0E08,Y			; Copy filename to 1060
+	LDA disccataloguebuffer%+&08,Y			; Copy filename to 1060
 	JSR UcaseA2
 	STA MA+&1060,X
 	INY
@@ -1378,7 +1387,7 @@ ENDIF
 
 	LDX #&06
 .cat_comparefnloop2
-	LDA MA+&0E0E,Y			; compare filenames
+	LDA disccataloguebuffer%+&0E,Y			; compare filenames
 	JSR UcaseA2			; (catfn-memfn)
 	SBC MA+&1060,X
 	DEY
@@ -1386,7 +1395,7 @@ ENDIF
 	BPL cat_comparefnloop2
 
 	JSR Y_add7
-	LDA MA+&0E0F,Y			; compare dir
+	LDA disccataloguebuffer%+&0F,Y			; compare dir
 	JSR UcaseA2			; (clrs bit 7)
 	SBC MA+&1067
 	BCC cat_printfilename		; If catfn<memfn
@@ -1394,9 +1403,9 @@ ENDIF
 	BCS cat_comparefnloop1		; else memfn>catfn
 .cat_printfn
 	LDY &AB				; Y=cat offset
-	LDA MA+&0E08,Y			; mark file as printed
+	LDA disccataloguebuffer%+&08,Y			; mark file as printed
 	ORA #&80
-	STA MA+&0E08,Y
+	STA disccataloguebuffer%+&08,Y
 	LDA MA+&1067			; dir
 	CMP &AA				; dir being printed
 	BEQ cat_samedir			; If in same dir
@@ -1873,7 +1882,7 @@ IF _INCLUDE_CMD_WIPE_
 {
 	JSR parameter_afsp_Param_SyntaxErrorIfNull_getcatentry_fspTxtP
 .wipeloop
-	LDA MA+&0E0F,Y
+	LDA disccataloguebuffer%+&0F,Y
 	BMI wipenext			; Ignore locked files
 	JSR prt_filename_Yoffset
 	JSR ConfirmYNcolon		; Confirm Y/N
@@ -1910,7 +1919,7 @@ IF _INCLUDE_CMD_DESTROY_
 	JSR IsEnabledOrGo		; If NO it returns to calling sub
 	JSR parameter_afsp_Param_SyntaxErrorIfNull_getcatentry_fspTxtP
 .destroyloop1
-	LDA MA+&0E0F,Y			; Print list of matching files
+	LDA disccataloguebuffer%+&0F,Y			; Print list of matching files
 	BMI destroylocked1		; IF file locked
 	JSR prt_filename_Yoffset
 	JSR PrintNewLine
@@ -1922,7 +1931,7 @@ IF _INCLUDE_CMD_DESTROY_
 	JSR CheckForDiskChange
 	JSR get_cat_firstentry80
 .destroyloop2
-	LDA MA+&0E0F,Y
+	LDA disccataloguebuffer%+&0F,Y
 	BMI destroylocked2		; IF file locked
 	JSR DeleteCatEntry_AdjustPtr
 .destroylocked2
@@ -1983,12 +1992,12 @@ ENDIF
 
 	\ use file's load address
 .loadAtLoadAddr
-	LDA MA+&0F0E,Y 			; mixed byte
+	LDA disccataloguebuffer%+&100+&0E,Y 			; mixed byte
 	STA &C2
 	JSR LoadAddrHi2
 
 .load_copyfileinfo_loop
-	LDA MA+&0F08,Y
+	LDA disccataloguebuffer%+&100+&08,Y
 	STA &BC,X
 	INY
 	INX
@@ -2153,12 +2162,12 @@ ENDIF
 	EQUS "command",0
 
 .runfile_found
-	LDA MA+&0F0E,Y			; New to DFS
+	LDA disccataloguebuffer%+&100+&0E,Y			; New to DFS
 	JSR A_rorx6and3			; If ExecAddr=&FFFFFFFF *EXEC it
 	CMP #&03
 	BNE runfile_run			; If ExecAddr<>&FFFFFFFF
-	LDA MA+&0F0A,Y
-	AND MA+&0F0B,Y
+	LDA disccataloguebuffer%+&100+&0A,Y
+	AND disccataloguebuffer%+&100+&0B,Y
 	CMP #&FF
 	BNE runfile_run			; If ExecAddr<>&FFFFFFFF
 	LDX #&06			; Else *EXEC file  (New to DFS)
@@ -2183,7 +2192,7 @@ ENDIF
 	LDA DirectoryParam		; Directory D
 	STA MA+&1005
 	LDX #&00			; "E.:X.D.FILENAM"
-	LDY #HI(MP+&1000)
+	LDY #HI(MA+&1000)
 	JMP OSCLI
 
 .runfile_run
@@ -2208,7 +2217,7 @@ ENDIF
 	JSR TUBE_CLAIM
 	LDX #&74			; Tell second processor
 	\ assume tube code doesn't change sw rom
-	LDY #HI(MP+&1000)
+	LDY #HI(MA+&1000)
 	LDA #&04			; (Exec addr @ 1074)
 	JMP TubeCode			; YX=addr,A=0:initrd,A=1:initwr,A=4:strexe
 .runfile_inhost
@@ -2348,10 +2357,10 @@ IF NOT(_MM32_)
 ENDIF
 	CPX #&08
 	BCC setdisttit_page
-	STA MA+&0EF8,X
+	STA disccataloguebuffer%+&F8,X
 	RTS
 .setdisttit_page
-	STA MA+&0E00,X
+	STA disccataloguebuffer%+&00,X
 	RTS
 }
 ENDIF
@@ -2372,10 +2381,10 @@ IF _INCLUDE_CMD_ACCESS_
 	JSR getcatentry
 .cmdac_filefound
 	JSR CheckFileNotOpenY		; Error if it is!
-	LDA MA+&0E0F,Y			; Set/Reset locked flag
+	LDA disccataloguebuffer%+&0F,Y			; Set/Reset locked flag
 	AND #&7F
 	ORA &AA
-	STA MA+&0E0F,Y
+	STA disccataloguebuffer%+&0F,Y
 	JSR prt_InfoMsg_Yoffset
 	JSR get_cat_nextentry
 	BCS cmdac_filefound
@@ -2429,10 +2438,10 @@ ENDIF
 	JSR LoadCurDrvCat		; load cat
 	PLA
 	JSR A_rolx4
-	EOR MA+&0F06
+	EOR disccataloguebuffer%+&100+&06
 	AND #&30
-	EOR MA+&0F06
-	STA MA+&0F06
+	EOR disccataloguebuffer%+&100+&06
+	STA disccataloguebuffer%+&100+&06
 	JMP SaveCatToDisk		; save cat
 
 .DiskTrapOption
@@ -2533,25 +2542,25 @@ ENDIF
 	BEQ errDISKFULL
 	JSR Y_sub8
 
-	LDA MA+&0F0E,Y
+	LDA disccataloguebuffer%+&100+&0E,Y
 	JSR A_rorx4and3
 	STA &C2				;len byte 3
 	CLC
 	LDA #&FF			; -1
-	ADC MA+&0F0C,Y			; + len byte 1
-	LDA MA+&0F0F,Y			; + start sec byte 1
-	ADC MA+&0F0D,Y			; + len byte 2
+	ADC disccataloguebuffer%+&100+&0C,Y			; + len byte 1
+	LDA disccataloguebuffer%+&100+&0F,Y			; + start sec byte 1
+	ADC disccataloguebuffer%+&100+&0D,Y			; + len byte 2
 	STA &C3
-	LDA MA+&0F0E,Y			; start sec byte 2
+	LDA disccataloguebuffer%+&100+&0E,Y			; start sec byte 2
 	AND #&03
 	ADC &C2				; calc. next "free" sector
 	STA &C2				; wC2=start sec + len - 1
 .Getfirstblock_Yoffset
 	SEC
-	LDA MA+&0F07,Y			; secs on disk
+	LDA disccataloguebuffer%+&100+&07,Y			; secs on disk
 	SBC &C3				; or start sec of prev.
 	PHA 				; file
-	LDA MA+&0F06,Y			; - end of prev. file (wC2)
+	LDA disccataloguebuffer%+&100+&06,Y			; - end of prev. file (wC2)
 	AND #&03
 	SBC &C2
 	TAX
@@ -2569,10 +2578,10 @@ ENDIF
 .cfile_insertfileloop
 	CPY &B0
 	BEQ cfile_atcatentry		; If at new entry
-	LDA MA+&0E07,Y
-	STA MA+&0E0F,Y
-	LDA MA+&0F07,Y
-	STA MA+&0F0F,Y
+	LDA disccataloguebuffer%+&07,Y
+	STA disccataloguebuffer%+&0F,Y
+	LDA disccataloguebuffer%+&100+&07,Y
+	STA disccataloguebuffer%+&100+&0F,Y
 	DEY
 	BCS cfile_insertfileloop
 .cfile_atcatentry
@@ -2601,9 +2610,9 @@ ENDIF
 	PHA
 .cfile_copyfnloop
 	LDA &C5,X			; Copy filename from &C5
-	STA MA+&0E08,Y
+	STA disccataloguebuffer%+&08,Y
 	LDA &BC,X			; Copy attributes
-	STA MA+&0F08,Y
+	STA disccataloguebuffer%+&100+&08,Y
 	INY
 	INX
 	CPX #&08
@@ -2835,7 +2844,7 @@ IF _INCLUDE_CMD_RENAME_
 	LDX #&07
 .rname_loop
 	LDA &C5,X
-	STA MA+&0E07,Y
+	STA disccataloguebuffer%+&07,Y
 	DEY
 	DEX
 	BPL rname_loop			; else Save catalogue
@@ -2988,7 +2997,6 @@ ENDIF
 	BNE extendedvec_loop
 
 	STY CurrentCat			; curdrvcat<>0
-	STY MA+&1083			; ?
 	STX CurrentDrv			; curdrv=0
 	STX MMC_STATE			; Uninitialised
 
@@ -3115,7 +3123,7 @@ ENDIF
 	BNE initdfs_exit		; branch if not boot file
 
 	JSR LoadCurDrvCat
-	LDA MA+&0F06			; Get boot option
+	LDA disccataloguebuffer%+&100+&06			; Get boot option
 	JSR A_rorx4
 	BNE notOPT0				; branch if not opt.0
 
@@ -3503,7 +3511,7 @@ ENDIF
 	BMI OSWORD7E
 
 	LDY #&00			; OSWORD &7D return cycle no.
-	LDA MA+&0F04
+	LDA disccataloguebuffer%+&100+&04
 	STA (&B0),Y
 	RTS
 
@@ -3512,10 +3520,10 @@ ENDIF
 	TAY
 	STA (&B0),Y
 	INY
-	LDA MA+&0F07			; sector count LB
+	LDA disccataloguebuffer%+&100+&07			; sector count LB
 	STA (&B0),Y
 	INY
-	LDA MA+&0F06			; sector count HB
+	LDA disccataloguebuffer%+&100+&06			; sector count HB
 	AND #&03
 	STA (&B0),Y
 	INY
@@ -3751,7 +3759,7 @@ ENDIF
 	LDA MA+&107F			; Tube op: 0 or 1
 	BCS gbpb_nottube2		; If not tube
 	LDX #&61
-	LDY #MP+&10
+	LDY #HI(MA+&1000)
 
 	JSR TubeCode 			; (YX=addr,A=0:initrd,A=1:initwr,A=4:strexe) ; Init TUBE addr @ 1061
 .gbpb_nottube2
@@ -3835,7 +3843,7 @@ ENDIF
 .gbpb8_loop
 	CPY FilesX8
 	BCS gbpb8_endofcat		; If end of catalogue, C=1
-	LDA MA+&0E0F,Y			; Directory
+	LDA disccataloguebuffer%+&0F,Y			; Directory
 	JSR IsAlphaChar
 	EOR DirectoryParam
 	BCS gbpb8_notalpha
@@ -3850,7 +3858,7 @@ ENDIF
 	JSR gbpb_gb_SAVEBYTE
 	STA &B0				; loop counter
 .gbpb8_copyfn_loop
-	LDA MA+&0E08,Y			; Copy fn
+	LDA disccataloguebuffer%+&08,Y			; Copy fn
 	JSR gbpb_gb_SAVEBYTE
 	INY
 	DEC &B0
@@ -3858,7 +3866,7 @@ ENDIF
 	CLC 				; C=0=more to follow
 .gbpb8_endofcat
 	STY MA+&1069			; Save offset (seq ptr)
-	LDA MA+&0F04
+	LDA disccataloguebuffer%+&100+&04
 	STA MA+&1060			; Cycle number (file handle)
 	RTS 				; **** END GBPB 8
 }
@@ -3875,16 +3883,16 @@ ENDIF
 .gbpb5_titleloop
 	CPY #&08			; Title
 	BCS gbpb5_titlehi
-	LDA MA+&0E00,Y
+	LDA disccataloguebuffer%+&00,Y
 	BCC gbpb5_titlelo
 .gbpb5_titlehi
-	LDA MA+&0EF8,Y
+	LDA disccataloguebuffer%+&F8,Y
 .gbpb5_titlelo
 	JSR gbpb_gb_SAVEBYTE
 	INY
 	CPY #&0C
 	BNE gbpb5_titleloop
-	LDA MA+&0F06			; Boot up option
+	LDA disccataloguebuffer%+&100+&06			; Boot up option
 	JSR A_rorx4
 	JSR gbpb_gb_SAVEBYTE
 	LDA CurrentDrv			; Current drive
@@ -4296,35 +4304,35 @@ ENDIF
 	JSR RememberAXY			; Update load address
 	LDY #&02
 	LDA (&B0),Y
-	STA MA+&0F08,X
+	STA disccataloguebuffer%+&100+&08,X
 	INY
 	LDA (&B0),Y
-	STA MA+&0F09,X
+	STA disccataloguebuffer%+&100+&09,X
 	INY
 	LDA (&B0),Y
 	ASL A
 	ASL A
-	EOR MA+&0F0E,X
+	EOR disccataloguebuffer%+&100+&0E,X
 	AND #&0C
 	BPL osfile_savemixedbyte	; always
 .osfile_update_execaddr_Xoffset
 	JSR RememberAXY			; Update exec address
 	LDY #&06
 	LDA (&B0),Y
-	STA MA+&0F0A,X
+	STA disccataloguebuffer%+&100+&0A,X
 	INY
 	LDA (&B0),Y
-	STA MA+&0F0B,X
+	STA disccataloguebuffer%+&100+&0B,X
 	INY
 	LDA (&B0),Y
 	ROR A
 	ROR A
 	ROR A
-	EOR MA+&0F0E,X
+	EOR disccataloguebuffer%+&100+&0E,X
 	AND #&C0
 .osfile_savemixedbyte
-	EOR MA+&0F0E,X			; save mixed byte
-	STA MA+&0F0E,X
+	EOR disccataloguebuffer%+&100+&0E,X			; save mixed byte
+	STA disccataloguebuffer%+&100+&0E,X
 	CLV
 	RTS
 .osfile_updatelock
@@ -4335,17 +4343,17 @@ ENDIF
 	BEQ osfile_notlocked
 	LDA #&80			; Lock!
 .osfile_notlocked
-	EOR MA+&0E0F,X
+	EOR disccataloguebuffer%+&0F,X
 	AND #&80
-	EOR MA+&0E0F,X
-	STA MA+&0E0F,X
+	EOR disccataloguebuffer%+&0F,X
+	STA disccataloguebuffer%+&0F,X
 	RTS
 
 .CheckFileNotLocked
 	JSR read_fspBA_findcatentry	; exit:X=Y=offset
 	BCC ExitCallingSubroutine
 .CheckFileNotLockedY
-	LDA MA+&0E0F,Y
+	LDA disccataloguebuffer%+&0F,Y
 	BPL chklock_exit
 .errFILELOCKED
 	JSR ReportErrorCB
@@ -4615,9 +4623,9 @@ ENDIF
 
 .CheckForDiskChange
 	JSR RememberAXY
-	LDA MA+&0F04
+	LDA disccataloguebuffer%+&100+&04
 	JSR LoadCurDrvCat2
-	CMP MA+&0F04
+	CMP disccataloguebuffer%+&100+&04
 	BEQ chkdskchangexit		; If cycle no not changed!
 
 .errDISKCHANGED
@@ -4657,15 +4665,15 @@ ENDIF
 	BEQ closefile_buftodisk		; update the file length
 	LDX MA+&10C3			; X=cat offset
 	LDA MA+&1114,Y			; File lenth = EXTENT
-	STA MA+&0F0C,X			; Len lo
+	STA disccataloguebuffer%+&100+&0C,X			; Len lo
 	LDA MA+&1115,Y
-	STA MA+&0F0D,X			; Len mi
+	STA disccataloguebuffer%+&100+&0D,X			; Len mi
 	LDA MA+&1116,Y
 	JSR A_rolx4			; Len hi
-	EOR MA+&0F0E,X			; "mixed byte"
+	EOR disccataloguebuffer%+&100+&0E,X			; "mixed byte"
 	AND #&30
-	EOR MA+&0F0E,X
-	STA MA+&0F0E,X
+	EOR disccataloguebuffer%+&100+&0E,X
+	STA disccataloguebuffer%+&100+&0E,X
 	JSR SaveCatToDisk		; Update catalog
 	LDY MA+&10C2
 .closefile_buftodisk
@@ -4746,10 +4754,10 @@ ENDIF
 	LDA #&08
 	STA MA+&10C4
 .chnlblock_loop1
-	LDA MA+&0E08,X			; Copy file name & attributes
+	LDA disccataloguebuffer%+&08,X			; Copy file name & attributes
 	STA MA+&1100,Y			; to channel info block
 	INY
-	LDA MA+&0F08,X
+	LDA disccataloguebuffer%+&100+&08,X
 	STA MA+&1100,Y
 	INY
 	INX
@@ -4767,7 +4775,7 @@ ENDIF
 	LDA MA+&10C2			; A=intch
 	TAY
 	JSR A_rorx5
-	ADC #MP+&11
+	ADC #HI(MA+&1100)
 	STA MA+&1113,Y			; Buffer page
 	LDA MA+&10C1
 	STA MA+&111B,Y			; Mask bit
@@ -4840,7 +4848,7 @@ ENDIF
 	AND #&03
 	BNE fop_nothisfile		; If not current drv?
 .fop_cmpfn_loop
-	LDA MA+&0E08,X			; Compare filename
+	LDA disccataloguebuffer%+&08,X			; Compare filename
 	EOR MA+&1100,Y
 	AND #&7F
 	BNE fop_nothisfile
@@ -5257,11 +5265,11 @@ ENDIF
 	JSR Channel_GetCatEntry_Yintch	; Enough space in gap?
 	LDX MA+&10C3			; X=cat file offset
 	SEC 				; Calc size of gap
-	LDA MA+&0F07,X			; Next file start sector
-	SBC MA+&0F0F,X			; This file start
+	LDA disccataloguebuffer%+&100+&07,X			; Next file start sector
+	SBC disccataloguebuffer%+&100+&0F,X			; This file start
 	PHA 				; lo byte
-	LDA MA+&0F06,X
-	SBC MA+&0F0E,X			; Mixed byte
+	LDA disccataloguebuffer%+&100+&06,X
+	SBC disccataloguebuffer%+&100+&0E,X			; Mixed byte
 	AND #&03			; hi byte
 	CMP MA+&111A,Y			; File size in sectors
 	BNE bp_extendby100		; If must be <gap size
@@ -5285,17 +5293,17 @@ ENDIF
 	ASL A
 	ASL A
 	ASL A
-	EOR MA+&0F0E,X			; Mixed byte
+	EOR disccataloguebuffer%+&100+&0E,X			; Mixed byte
 	AND #&30
-	EOR MA+&0F0E,X
-	STA MA+&0F0E,X			; File len 2
+	EOR disccataloguebuffer%+&100+&0E,X
+	STA disccataloguebuffer%+&100+&0E,X			; File len 2
 	PLA
 	LDA #&00
 .bp_extendtogap
-	STA MA+&0F0D,X			; File len 1
+	STA disccataloguebuffer%+&100+&0D,X			; File len 1
 	STA MA+&1119,Y
 	LDA #&00
-	STA MA+&0F0C,X			; File len 0
+	STA disccataloguebuffer%+&100+&0C,X			; File len 0
 	JSR SaveCatToDisk
 	LDY MA+&10C2			; Y=intch
 .bp_noextend
@@ -5674,11 +5682,11 @@ IF _INCLUDE_CMD_COMPACT_
 	JSR Y_sub8
 	CPY #&F8
 	BNE compact_checkfile		; If not end of catalogue
-	LDA MA+&0F07			; Calc & print no. free sectors
+	LDA disccataloguebuffer%+&100+&07			; Calc & print no. free sectors
 	SEC 				; (disk sectors - word C8)
 	SBC &AC
 	PHA
-	LDA MA+&0F06
+	LDA disccataloguebuffer%+&100+&06
 	AND #&03
 	SBC &AD
 	JSR PrintNibble
@@ -5693,22 +5701,22 @@ IF _INCLUDE_CMD_COMPACT_
 	STY &CA				; Y=cat offset
 	JSR prt_InfoMsg_Yoffset		; Only if messages on
 	LDY &CA				; Y preserved?
-	LDA MA+&0F0C,Y			; A=Len0
+	LDA disccataloguebuffer%+&100+&0C,Y			; A=Len0
 	CMP #&01			; C=sec count
 	LDA #&00
 	STA &BC
 	STA &C0
-	ADC MA+&0F0D,Y			; A=Len1
+	ADC disccataloguebuffer%+&100+&0D,Y			; A=Len1
 	STA &A8
-	LDA MA+&0F0E,Y
+	LDA disccataloguebuffer%+&100+&0E,Y
 	PHP
 	JSR A_rorx4and3			; A=Len2
 	PLP
 	ADC #&00
 	STA &A9				; word C4=size in sectors
-	LDA MA+&0F0F,Y			; A=sec0
+	LDA disccataloguebuffer%+&100+&0F,Y			; A=sec0
 	STA &AA
-	LDA MA+&0F0E,Y
+	LDA disccataloguebuffer%+&100+&0E,Y
 	AND #&03			; A=sec1
 	STA &AB				; word C6=sector
 	CMP &AD				; word C6=word C8?
@@ -5726,11 +5734,11 @@ IF _INCLUDE_CMD_COMPACT_
 
 .compact_movefile
 	LDA &AC				; Move file
-	STA MA+&0F0F,Y			; Change start sec in catalogue
-	LDA MA+&0F0E,Y			; to word C8
+	STA disccataloguebuffer%+&100+&0F,Y			; Change start sec in catalogue
+	LDA disccataloguebuffer%+&100+&0E,Y			; to word C8
 	AND #&FC
 	ORA &AD
-	STA MA+&0F0E,Y
+	STA disccataloguebuffer%+&100+&0E,Y
 
 	JSR SaveCatToDisk		; save catalogue
 	JSR CopyDATABLOCK		; may use buffer @ &E00	;Move file
@@ -5837,9 +5845,9 @@ IF _INCLUDE_CMD_BACKUP_
 	LDA &AE
 	STA CurrentDrv
 	JSR LoadCurDrvCat
-	LDA MA+&0F07			; Size of source disk
+	LDA disccataloguebuffer%+&100+&07			; Size of source disk
 	STA &A8				; Word C4 = size of block
-	LDA MA+&0F06
+	LDA disccataloguebuffer%+&100+&06
 	AND #&03
 	STA &A9
 
@@ -5847,12 +5855,12 @@ IF _INCLUDE_CMD_BACKUP_
 	LDA &AF
 	STA CurrentDrv
 	JSR LoadCurDrvCat
-	LDA MA+&0F06			; Is dest disk smaller?
+	LDA disccataloguebuffer%+&100+&06			; Is dest disk smaller?
 	AND #&03
 	CMP &A9
 	BCC err_DISKFULL2
 	BNE backup_copy
-	LDA MA+&0F07
+	LDA disccataloguebuffer%+&100+&07
 	CMP &A8
 	BCC err_DISKFULL2
 
@@ -5867,10 +5875,10 @@ IF _INCLUDE_CMD_BACKUP_
 .tloop
 	CPX #&08
 	BCC tskip1
-	LDA MA+&0EF8,X
+	LDA disccataloguebuffer%+&F8,X
 	BCS tskip2
 .tskip1
-	LDA MA+&0E00,X
+	LDA disccataloguebuffer%+&00,X
 .tskip2
 	STA titlestr%,X
 	DEX
@@ -5922,10 +5930,10 @@ IF _INCLUDE_CMD_COPY_
 	JSR prt_InfoLine_Yoffset
 	LDX #&00
 .copy_loop2
-	LDA MA+&0E08,Y
+	LDA disccataloguebuffer%+&08,Y
 	STA &C5,X  ; store filename &C5-&CC
 
-	LDA MA+&0F08,Y
+	LDA disccataloguebuffer%+&100+&08,Y
 	STA &BC,X	; load address, exec .... &BC- &C3
 
 	INX
@@ -6208,10 +6216,10 @@ ENDIF
 	\ * Calc. no. of tracks on disk in curdrv *
 {
 	JSR LoadCurDrvCat		; Load catalogue
-	LDA MA+&0F06			; Size of disk
+	LDA disccataloguebuffer%+&100+&06			; Size of disk
 	AND #&03
 	TAX
-	LDA MA+&0F07
+	LDA disccataloguebuffer%+&100+&07
 	LDY #&0A			; 10 sectors/track
 	STY &B0
 	LDY #&FF			; Calc number of tracks
@@ -6329,8 +6337,8 @@ ELSE
 ENDIF
 	TYA
 .ccatloop
-	STA MA+&0E00,Y
-	STA MA+&0F00,Y
+	STA disccataloguebuffer%+&00,Y
+	STA disccataloguebuffer%+&100+&00,Y
 	INY
 	BNE ccatloop
 
@@ -6366,11 +6374,11 @@ IF _INCLUDE_CMD_FREE_MAP_
 	JSR PrintStringSPL
 	EQUS "Address :  Length",13	; "Address : Length"
 .Label_A818_free
-	LDA MA+&0F06
+	LDA disccataloguebuffer%+&100+&06
 	AND #&03			; get high bits of total number of sectors
 	STA &A9
 	STA &C2
-	LDA MA+&0F07		; LSB of total number of sectors
+	LDA disccataloguebuffer%+&100+&07		; LSB of total number of sectors
 	STA &A8				; wC4=sector count
 
 	SEC
@@ -6405,11 +6413,11 @@ IF _INCLUDE_CMD_FREE_MAP_
 	BCC Label_A86B_nofiles
 
 .Label_A856_fileloop_entry
-	LDA MA+&0F07,Y			; wC1 = File Start Sec - Map addr
+	LDA disccataloguebuffer%+&100+&07,Y			; wC1 = File Start Sec - Map addr
 	SEC
 	SBC &BB
 	STA &C1
-	LDA MA+&0F06,Y			; high bits of sector
+	LDA disccataloguebuffer%+&100+&06,Y			; high bits of sector
 	AND #&03
 	SBC &BC
 	STA &C2
@@ -6482,7 +6490,7 @@ IF _INCLUDE_CMD_FREE_MAP_
 
 .Sub_A8E2_nextblock
 {
-	LDA MA+&0F06,Y			; wBB = start sec + len
+	LDA disccataloguebuffer%+&100+&06,Y			; wBB = start sec + len
 	PHA
 	JSR A_rorx4and3
 	STA &BC
@@ -6491,7 +6499,7 @@ IF _INCLUDE_CMD_FREE_MAP_
 	CLC
 	ADC &BC
 	STA &BC
-	LDA MA+&0F04,Y
+	LDA disccataloguebuffer%+&100+&04,Y
 	CMP #1		; carry C=0 if whole sector
 	LDA #0
 	ADC FilesX8,Y
@@ -6499,7 +6507,7 @@ IF _INCLUDE_CMD_FREE_MAP_
 	INC &BC
 .Label_A902
 	CLC
-	ADC MA+&0F07,Y
+	ADC disccataloguebuffer%+&100+&07,Y
 	STA &BB
 	BCC Label_A90C
 	INC &BC
@@ -6673,8 +6681,8 @@ ENDIF
 
 ; SFTODO: Slightly wasteful of space here
 IF _BP12K_
-	extraspace = MA+&0E00 - P%
-	SKIPTO MA+&0E00
+	extraspace = disccataloguebuffer%+&00 - P%
+	SKIPTO disccataloguebuffer%+&00
 	; The tube host code can live in this region; it doesn't access our
 	; workspace and we won't page in the private 12K bank when calling this.
 IF _TUBEHOST_ AND (_BP12K_)
@@ -6820,7 +6828,7 @@ IF _LARGEMMB_
 
 	\\ Process the new MMB length byte
 	LDX #&00       	        ; default NUM_CHUNKS for 511 disk MMB
-	LDA MA+&0E08		; new MMB size byte A0..AF
+	LDA disccataloguebuffer%+&08		; new MMB size byte A0..AF
 	EOR #&A0		; 00..0F
 	CMP #&10		; support upto 16x 511 disks
 	BCS skip		; skip TAX if out of range
@@ -6831,7 +6839,7 @@ IF _LARGEMMB_
 
 	\\ Process the new MMB chunk base byte
 	LDX #&00
-	LDA MA+&0E09		; new MMB chunk base byte
+	LDA disccataloguebuffer%+&09		; new MMB chunk base byte
 	CMP NUM_CHUNKS		; compare with the number of chunks
 	BCS skip2		; skip TAX if equal or greater
 	TAX 			; accept the value
@@ -7254,11 +7262,11 @@ ENDIF
 
 	\\ **** Save catalogue of current drive ****
 .SaveCatToDisk
-	LDA MA+&0F04			; Increment Cycle Number
+	LDA disccataloguebuffer%+&100+&04			; Increment Cycle Number
 	CLC
 	SED
 	ADC #&01
-	STA MA+&0F04
+	STA disccataloguebuffer%+&100+&04
 	CLD
 
 IF _MM32_
@@ -7297,7 +7305,7 @@ IF _MM32_
 	STA CurrentCat
 	RTS
 
-.datax	EQUB &00, MP+&0E, &FF, &FF, &03, &53, &00, &00, &22
+.datax	EQUB &00, HI(disccataloguebuffer%), &FF, &FF, &03, &53, &00, &00, &22
 }
 
 
@@ -7501,7 +7509,7 @@ IF _LARGEMMB_
 	AND #&F0        ; M4 : M3 M2 M1 M0  0  0  0  0
 	STA &B0         ; M4 : M3 M2 M1 M0  0  0  0  0 ==> Final B0
 	LDA #&00        ; M4 :  0  0  0  0  0  0  0  0
-	ADC #MP+&0E     ;  0 :  0  0  0  0  1  1  1 M4
+	ADC #HI(disccataloguebuffer%)     ;  0 :  0  0  0  0  1  1  1 M4
 	STA &B1		;  0 :  0  0  0  0  1  1  1 M4 ==> Final B1
   	TYA
 	\\ A  = (DD << 4) | (DM' >> 5)
@@ -7541,11 +7549,11 @@ ELSE
 	STA &B0
 	TYA
 	AND #&01
-IF 	(MP+&0E) AND 1
+IF 	(disccataloguebuffer%) AND 1
 	CLC
-	ADC #MP+&0E
+	ADC #HI(disccataloguebuffer%)
 ELSE
-	ORA #MP+&0E
+	ORA #HI(disccataloguebuffer%)
 ENDIF
 	STA &B1
 
@@ -7845,10 +7853,10 @@ ENDIF
 	STA gdptr%
 	BNE gdx1
 	LDA gdptr%+1
-	EOR #(MP+&0E) EOR (MP+&0F)
+	EOR #HI(disccataloguebuffer%) EOR (HI(disccataloguebuffer%+&100))
 	STA gdptr%+1
 	ROR A
-IF 	(MP+&0E) AND 1
+IF 	(HI(disccataloguebuffer%)) AND 1
 	BCC gdx1
 ELSE
 	BCS gdx1
@@ -8022,7 +8030,7 @@ IF _INCLUDE_CMD_DRECAT_
 
 	\ Test if we are at the end of the disk table sector
 	LDA gdptr%+1
-	CMP #MP+&0F
+	CMP #HI(disccataloguebuffer%+&100)
 	BCC skipsave
 	LDA gdptr%
 	CMP #&F0
@@ -8499,9 +8507,9 @@ IF _INCLUDE_CMD_DONBOOT_
 	JSR LoadBaseSector
 	LDX CurrentDrv
 	LDA &B8
-	STA MA+&0E00, X
+	STA disccataloguebuffer%+&00, X
 	LDA &B9
-	STA MA+&0E04, X
+	STA disccataloguebuffer%+&04, X
 	JMP SaveDiskTable
 ENDIF
 
@@ -8794,7 +8802,7 @@ IF _BP12K_
 	LDA &B1
 	CMP #&B0
 	BEQ done
-	CMP #HI(MA+&0E00)
+	CMP #HI(disccataloguebuffer%+&00)
 	BNE loop
 	LDA #HI(MAEND)
 	STA &B1

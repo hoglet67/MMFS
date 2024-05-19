@@ -2526,8 +2526,8 @@ ENDIF
 	TYA		;A=0
 
 .floop
-	STA MA+&0E00,Y
-	STA MA+&0F00,Y
+	STA disccataloguebuffer%+&00,Y
+	STA disccataloguebuffer%+&100+&00,Y
 	INY
 	BNE floop
 

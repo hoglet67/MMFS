@@ -275,7 +275,7 @@ ENDIF
 	LDA #0
 	STA TubeNoTransferIf0
 	STA datptr%
-	LDA #MP+&0E
+	LDA #HI(disccataloguebuffer%)
 	STA datptr%+1
 	RTS
 
@@ -336,7 +336,7 @@ IF _MM32_
 	LDY #HI(mm32_taddr%)
 ELSE
 	LDX #&72
-	LDY #MP+&10
+	LDY #HI(MA+&1000)
 ENDIF
 
 	PLA
@@ -701,16 +701,16 @@ read16str%=MA+&1000
 
 	JSR MMC_SetupRead
 	JSR MMC_StartRead
-	LDA #&00			; LO(read16str%)
+	LDA #LO(read16str%)
 	STA datptr%
-	LDA #MP+&10			; HI(read16str%)
+	LDA #HI(read16str%)
 	STA datptr%+1
 	LDA #8
 	STA byteslastsec%
 	JSR MMC_ReadBLS
 	LDY #256-8
 	JSR MMC_Clocks
-	LDA #&08			; LO(read16str%+8)
+	LDA #LO(read16str%+8)
 	STA datptr%			; assume same page
 	\LDA #8
 	STA byteslastsec%
@@ -798,9 +798,9 @@ IF _DONBOOT_
 .loop
 	JSR LoadBaseSector
 	\\ Copy the drive mapping from the disk table to &B8/B9
-	LDA MA+&0E00, X
+	LDA disccataloguebuffer%+&00, X
 	STA &B8
-	LDA MA+&0E04, X
+	LDA disccataloguebuffer%+&04, X
 	STA &B9
 	JSR LoadDriveX
 	DEX
