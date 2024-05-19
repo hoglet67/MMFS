@@ -10,12 +10,12 @@ FRAG_X=&CE		;8bit
 CLUST_X=&C8		;24bit
 SECT_X=&CB		;8bit
 
-CLUST_Y=MA+&10A0	;32bit
+CLUST_Y=workspace%+&A0	;32bit
 
-mm32_sector%=MA+&10A4	;8bit
-mm32_track%=MA+&10A5	;8bit
-mm32_error%=MA+&10A6	;8bit
-mm32_taddr%=MA+&10AA	;32bit
+mm32_sector%=workspace%+&A4	;8bit
+mm32_track%=workspace%+&A5	;8bit
+mm32_error%=workspace%+&A6	;8bit
+mm32_taddr%=workspace%+&AA	;32bit
 
 mm32_star = 1		;String markers
 mm32_hash = 2
@@ -29,7 +29,7 @@ mm32_logging%=&B7	; 8 bit : bit 7 = cataloguing
 mm32_cluster%=&B7	; 24 bit
 mm32_attrib%=&B9	; 8 bit
 
-mm32_str%=MA+&1000		; 1000 - 103F (64 bytes)
+mm32_str%=workspace%+&00		; 1000 - 103F (64 bytes)
 mm32_drvtbl%=MA+&11C0	; 11C0 - 11DF (32 bytes)
 
 ;; FOR INFO: sec%=&BE

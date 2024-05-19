@@ -7,8 +7,8 @@
 discaccess = &FCA6
 
 ; not used
-;byteCounter% = MA+&10FF
-;lowByteStore% = MA+&10FE
+;byteCounter% = workspace%+&FF
+;lowByteStore% = workspace%+&FE
 
 	\\ RESET DEVICE
 .MMC_DEVICE_RESET

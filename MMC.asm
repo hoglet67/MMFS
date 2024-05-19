@@ -313,13 +313,13 @@ IF _MM32_
 	AND mm32_taddr%+3
 ELSE
 	\ Copy load address to 1072
-	LDA MA+&1090
-	STA MA+&1072
-	LDA MA+&1091
-	STA MA+&1073
+	LDA workspace%+&90
+	STA workspace%+&72
+	LDA workspace%+&91
+	STA workspace%+&73
 
-	LDA MA+&1074
-	AND MA+&1075
+	LDA workspace%+&74
+	AND workspace%+&75
 ENDIF
 
 	ORA TubePresentIf0
@@ -336,7 +336,7 @@ IF _MM32_
 	LDY #HI(mm32_taddr%)
 ELSE
 	LDX #&72
-	LDY #HI(MA+&1000)
+	LDY #HI(workspace%+&00)
 ENDIF
 
 	PLA
@@ -684,7 +684,7 @@ IF NOT(_MM32_)
 	\\ *** read16sec% contains the address   ***
 	\\ *** of the first disc sector          ***
 read16sec%=&B4	; 3 byte sector value
-read16str%=MA+&1000
+read16str%=workspace%+&00
 
 .MMC_ReadDiscTitle
 {
@@ -740,7 +740,7 @@ ELSE
 ENDIF
 .begloop1
 	LDA &BC,X
-	STA MA+&1090,X
+	STA workspace%+&90,X
 	DEX
 	BPL begloop1
 
@@ -869,7 +869,7 @@ ELSE
 	LDX #9
 ENDIF
 .eloop0
-	LDA MA+&1090,X
+	LDA workspace%+&90,X
 	STA &BC,X
 	DEX
 	BPL eloop0
