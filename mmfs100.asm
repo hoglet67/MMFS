@@ -467,6 +467,7 @@ ENDIF
 .read_fspTextPointer
 	JSR Set_CurDirDrv_ToDefaults	; **Read filename to &1000
 	JMP rdafsp_entry		; **1st pad &1000-&103F with spaces
+
 .read_fspBA_reset
 	JSR Set_CurDirDrv_ToDefaults	; Reset cur dir & drive
 .read_fspBA
@@ -517,8 +518,6 @@ ENDIF
 	BNE rdafsp_rdfnloop
 	BEQ errBadName			; always
 }
-
-
 
 .Rdafsp_padall
 	LDX #&01			; Pad all with spaces
@@ -848,7 +847,7 @@ ENDIF
 	PHA
 	LDA #&60			; word &B0=1060
 	STA &B0
-	LDA #HI(workspace%+&00)
+	LDA #HI(workspace%+&0060)
 	STA &B1
 	JSR ReadFileAttribsToB0_Yoffset	; create no. str
 	LDY #&02
@@ -2223,7 +2222,7 @@ ENDIF
 	JSR TUBE_CLAIM
 	LDX #&74			; Tell second processor
 	\ assume tube code doesn't change sw rom
-	LDY #HI(workspace%+&00)
+	LDY #HI(workspace%+&0074)
 	LDA #&04			; (Exec addr @ 1074)
 	JMP TubeCode			; YX=addr,A=0:initrd,A=1:initwr,A=4:strexe
 .runfile_inhost
@@ -5910,9 +5909,19 @@ IF NOT(_MM32_) AND (_INCLUDE_CMD_TITLE_ OR _INCLUDE_CMD_BACKUP_)
 	STA (&B0),Y
 	DEY
 	BPL loop
-	JMP SaveDiskTable
+	; fail in to SaveDiskTable
 }
 ENDIF
+
+.SaveDiskTable
+
+IF _LARGEMMB_
+ELSE
+	LDA CurrentCat
+ENDIF
+
+	JSR DiskTableSec
+	JMP MMC_WriteCatalogue
 
 
 IF _INCLUDE_CMD_COPY_
@@ -7775,9 +7784,6 @@ IF _LARGEMMB_
 	JSR DiskTableSec
 	JMP MMC_ReadCatalogue
 
-.SaveDiskTable
-	JSR DiskTableSec
-	JMP MMC_WriteCatalogue
 
 ELSE
 
@@ -7792,10 +7798,7 @@ ELSE
 	JSR DiskTableSec
 	JMP MMC_ReadCatalogue
 
-.SaveDiskTable
-	LDA CurrentCat
-	JSR DiskTableSec
-	JMP MMC_WriteCatalogue
+
 ENDIF
 
 
@@ -8358,6 +8361,7 @@ IF _INCLUDE_CMD_DBASE_
 	LDA CHUNK_BASE
 	STA MA+&E09
 	JMP SaveDiskTable
+
 .info
 	JSR PrintString
 	EQUS "MMB Base: "
