@@ -217,6 +217,10 @@ ENDMACRO
 .Go_FSCV
 	JMP (FSCV)
 
+.BootOptions
+	EQUS "L.!BOOT",13
+	EQUS "E.!BOOT",13
+
 	\ Illuminate Caps Lock & Shift Lock
 .SetLEDS
 IF _ELECTRON_
@@ -2900,9 +2904,7 @@ ENDIF
 	RTS
 
 
-.BootOptions
-	EQUS "L.!BOOT",13
-	EQUS "E.!BOOT",13
+
 
 .AUTOBOOT
 IF _MM32_
