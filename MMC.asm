@@ -679,49 +679,6 @@ IF _LARGEFILES
 }
 ENDIF
 
-IF NOT(_MM32_)
-	\\ *** Read the disc title to read16str% ***
-	\\ *** read16sec% contains the address   ***
-	\\ *** of the first disc sector          ***
-read16sec%=&B4	; 3 byte sector value
-read16str%=workspace%+&00
-
-.MMC_ReadDiscTitle
-{
-	JSR SetLEDS
-	LDA #0
-	STA TubeNoTransferIf0
-
-	LDX #2
-.loop
-	LDA read16sec%, X
-	STA sec%, X
-	DEX
-	BPL loop
-
-	JSR MMC_SetupRead
-	JSR MMC_StartRead
-	LDA #LO(read16str%)
-	STA datptr%
-	LDA #HI(read16str%)
-	STA datptr%+1
-	LDA #8
-	STA byteslastsec%
-	JSR MMC_ReadBLS
-	LDY #256-8
-	JSR MMC_Clocks
-	LDA #LO(read16str%+8)
-	STA datptr%			; assume same page
-	\LDA #8
-	STA byteslastsec%
-	JSR MMC_ReadBLS
-	LDY #256-8+2
-	JSR MMC_Clocks
-
-	JMP ResetLEDS
-}
-ENDIF
-
 	\\ **** CHECK MMC STATUS ****
 	\\ Preserves AXY, and values in BC-C5
 .MMC_BEGIN2

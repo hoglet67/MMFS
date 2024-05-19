@@ -83,10 +83,11 @@ ENDIF
 IF _SWRAM_ AND NOT(_MM32_)
 	disccataloguebuffer% = MA+&E00
 	workspace% = MA+ &1000
-
+	tempbuffer% = MA+ &1100
 ELSE
 	disccataloguebuffer% = MA+&E00
 	workspace% = MA+ &1000
+	tempbuffer% = MA+ &1000
 ENDIF
 
 MP=HI(MA)
@@ -8002,6 +8003,8 @@ IF NOT(_MM32_)
 IF _INCLUDE_CMD_DRECAT_
 .CMD_DRECAT
 {
+read16sec%=&B4	; 3 byte sector value
+read16str%=tempbuffer%+&00
 	\ error if any params are specified
 	JSR Param_SyntaxErrorIfNotNull
 
@@ -8021,7 +8024,43 @@ IF _INCLUDE_CMD_DRECAT_
 
 .drc_loop2
 	\ read disc title
-	JSR MMC_ReadDiscTitle
+	;JSR MMC_ReadDiscTitle
+
+		\\ *** Read the disc title to read16str% ***
+	\\ *** read16sec% contains the address   ***
+	\\ *** of the first disc sector          ***
+
+	JSR SetLEDS
+	LDA #0
+	STA TubeNoTransferIf0
+
+	LDX #2
+.loop
+	LDA read16sec%, X
+	STA sec%, X
+	DEX
+	BPL loop
+
+	JSR MMC_SetupRead
+	JSR MMC_StartRead
+	LDA #LO(read16str%)
+	STA datptr%
+	LDA #HI(read16str%)
+	STA datptr%+1
+	LDA #8
+	STA byteslastsec%
+	JSR MMC_ReadBLS
+	LDY #256-8
+	JSR MMC_Clocks
+	LDA #LO(read16str%+8)
+	STA datptr%			; assume same page
+	\LDA #8
+	STA byteslastsec%
+	JSR MMC_ReadBLS
+	LDY #256-8+2
+	JSR MMC_Clocks
+
+	JSR ResetLEDS
 
 	\ copy title to table
 	LDY #&0B
