@@ -637,11 +637,7 @@ ENDIF
 	JSR parameter_afsp
 .Param_SyntaxErrorIfNull_getcatentry_fspTxtP
 	JSR Param_SyntaxErrorIfNull
-.getcatentry_fspTxtP
-	JSR read_fspTextPointer
-	BMI getcatentry			;always
-.getcatentry_fspBA
-	JSR read_fspBA_reset
+	JSR read_fspTextPointer  ; string is 7 chars with a space at 8th
 .getcatentry
 	JSR get_cat_firstentry80
 	BCS getcat_exit
@@ -669,7 +665,7 @@ ENDIF
 	JSR Rdafsp_padall
 	JSR parameter_afsp
 	JSR getcatentry
-	JMP cmd_info_loop
+	BCS cmd_info_loop ; always
 }
 
 	\ *INFO <afsp>
@@ -685,6 +681,8 @@ ENDIF
 	BCS cmd_info_loop
 	RTS
 
+.read_fspBA_reset_get_cat_firstentry80
+	JSR read_fspBA_reset
 .get_cat_firstentry80
 .get_cat_firstentry81
 	JSR CheckCurDrvCat		; Get cat entry
@@ -741,13 +739,14 @@ ENDIF
 
 .NotCmdTable2
 	RTS
-
+IF 1
 .MatchFilename
 {
 	JSR RememberAXY			; Match filename at &1000+X
+							; ( must be terminated with a non "*" to prevent overflow)
 .matfn_loop1
 	LDA workspace%+&00,X			; with that at (&B6)
-	CMP workspace%+&CE
+	CMP workspace%+&CE		; &FF or "*"
 	BNE matfn_nomatch		; e.g. If="*"
 	INX
 .matfn_loop2
@@ -775,6 +774,23 @@ ENDIF
 	CLC 				; exit with C=0
 .matfn_exit
 	RTS
+ELSE
+.MatchFilename
+{
+	JSR RememberAXY
+
+.matchloop
+	LDA workspace%+&00,X
+	CMP workspace%+&CE		; &FF or "*"
+	BEQ
+
+}
+.matfn_exitC0
+	CLC 				; exit with C=0
+.matfn_exit
+	RTS
+
+ENDIF
 
 .MatchChr
 {
@@ -1978,7 +1994,7 @@ ENDIF
 	RTS
 
 .osfileFF_loadfiletoaddr
-	JSR getcatentry_fspBA		; Get Load Addr etc.
+	JSR read_fspBA_reset_get_cat_firstentry80	; Get Load Addr etc.
 	JSR SetParamBlockPointerB0	; from catalogue
 	JSR ReadFileAttribsToB0_Yoffset	; (Just for info?)
 
@@ -2479,8 +2495,7 @@ ENDIF
 
 .CreateFile_FSP
 {
-	JSR read_fspBA_reset
-	JSR get_cat_firstentry80	; loads cat/does file exist?
+	JSR read_fspBA_reset_get_cat_firstentry80 ; loads cat/does file exist?
 	BCC createfile_nodel		; If NO
 
 	JSR DeleteCatEntry_YFileOffset	; delete previous file
@@ -4267,6 +4282,7 @@ ENDIF
 .param_out
 	STA workspace%+&CD
 	RTS
+
 .parameter_afsp
 	LDA #&2A	; "*"
 	STA workspace%+&CE
@@ -4383,8 +4399,7 @@ ENDIF
 	RTS
 
 .read_fspBA_findcatentry
-	JSR read_fspBA_reset
-	JSR get_cat_firstentry80
+	JSR read_fspBA_reset_get_cat_firstentry80
 	BCC checkexit
 	TYA
 	TAX 				; X=Y=offset
