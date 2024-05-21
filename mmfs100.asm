@@ -695,7 +695,7 @@ ENDIF
 
 .get_cat_firstentry80fname
 	LDX #&07			; copy filename from &C5 to &1058
-	LDA #&20			; set directory to " "
+	LDA #&20			; set last char to " "
 	BNE getcatloopentry ; always
 .getcatloop1
 	LDA &C5,X
@@ -775,20 +775,28 @@ IF 1
 .matfn_exit
 	RTS
 ELSE
+
 .MatchFilename
 {
 	JSR RememberAXY
 
 .matchloop
 	LDA workspace%+&00,X
-	CMP workspace%+&CE		; &FF or "*"
-	BEQ
+	JSR	MatchChr
+	BNE matfn_exitC0
+	INX
+	INY
+	CPY #7
+	BEQ matchloop
 
+	SEC
+	RTS
 }
 .matfn_exitC0
 	CLC 				; exit with C=0
 .matfn_exit
 	RTS
+
 
 ENDIF
 
@@ -824,9 +832,9 @@ ENDIF
 {
 	JSR CheckFileNotLockedOrOpenY	; Delete catalogue entry
 .delcatloop
-	LDA disccataloguebuffer%+10,Y
+	LDA disccataloguebuffer%+&10,Y
 	STA disccataloguebuffer%+&08,Y
-	LDA disccataloguebuffer%+&100+10,Y
+	LDA disccataloguebuffer%+&100+&10,Y
 	STA disccataloguebuffer%+&100+&08,Y
 	INY
 	CPY FilesX8
@@ -2173,7 +2181,7 @@ ENDIF
 	STA DirectoryParam
 	LDA LIB_DRIVE
 	STA CurrentDrv
-	JSR read_fspBA
+	JSR read_fspBA			; **** is this really required? can't we just reset the pointers?
 	JSR get_cat_firstentry81
 	BCS runfile_found		; If file found
 
@@ -2849,9 +2857,9 @@ IF _INCLUDE_CMD_RENAME_
 	CMP CurrentDrv
 	BNE jmpBADDRIVE
 	JSR get_cat_firstentry80
-	BCC rname_ok
-	CPY &A8
-	BEQ rname_ok
+	BCC rname_ok		; second filename doesn't exist
+	CPY &A8				; if both names are the same
+	BEQ rname_ok		; then just do the rename anyway
 .errFILEEXISTS
 	JSR ReportErrorCB
 	EQUB &C4
@@ -4388,6 +4396,7 @@ ENDIF
 	JSR IsFileOpen_Yoffset
 	BCC checkexit
 	JMP errFILEOPEN
+
 .CheckFileExists
 	JSR read_fspBA_findcatentry	; exit:X=Y=offset
 	BCS checkexit			; If file found
@@ -5788,22 +5797,25 @@ ENDIF
 .Get_CopyDATA_Drives
 {
 	JSR Param_DriveNo_Syntax	; Get drives & calc ram & msg
-	STA &AE			; Source drive
+	STA &A8			; Source drive
 	JSR Param_DriveNo_Syntax
-	STA &AF			; Destination drive
+	STA &A9			; Destination drive
 
-	CMP &AE
+	CMP &A8
 	BEQ baddrv			; Drives must be different!
-
+	TYA
+	PHA
 	JSR CalcRAM			; Calc ram available
 	JSR PrintString			; Copying from:
 	EQUS "Copying from :"
-	LDA &AE
+	LDA &A8
 	JSR PrintNibble_PrintString			; to :
 	EQUS " to :"
-	LDA &AF
+	LDA &A9
 	JSR PrintNibble
 	JSR PrintNewLine
+	PLA
+	TAY
 	RTS
 
 .baddrv
@@ -5862,26 +5874,26 @@ IF _INCLUDE_CMD_BACKUP_
 	STA &AA
 
 	\ Source
-	LDA &AE
+	LDA &A8
 	STA CurrentDrv
 	JSR LoadCurDrvCat
 	LDA disccataloguebuffer%+&100+&07			; Size of source disk
-	STA &A8				; Word C4 = size of block
+	STA &AE				; Word C4 = size of block
 	LDA disccataloguebuffer%+&100+&06
 	AND #&03
-	STA &A9
+	STA &AF
 
 	\ Destination
-	LDA &AF
+	LDA &A9
 	STA CurrentDrv
 	JSR LoadCurDrvCat
 	LDA disccataloguebuffer%+&100+&06			; Is dest disk smaller?
 	AND #&03
-	CMP &A9
+	CMP &AF
 	BCC err_DISKFULL2
 	BNE backup_copy
 	LDA disccataloguebuffer%+&100+&07
-	CMP &A8
+	CMP &AE
 	BCC err_DISKFULL2
 
 .backup_copy
@@ -5942,13 +5954,14 @@ ENDIF
 IF _INCLUDE_CMD_COPY_
 .CMD_COPY
 {
+	; AE AF used in printstring
+
 	JSR parameter_afsp ; &10CD = `#` &10CE =`*`
-	JSR Get_CopyDATA_Drives ; &AE = source drive : &AF destination drive
+	JSR Get_CopyDATA_Drives ; &A8 = source drive : &A9 destination drive
 	JSR Param_SyntaxErrorIfNull
 	JSR read_fspTextPointer ; &1000 = filename
-
 	\ Source
-	LDA &AE ; Already ranged checked drive number
+	LDA &A8 ; Already ranged checked drive number
 	STA CurrentDrv
 	JSR getcatentry ; check if source file exists filname @ &1000
 					; Returns Y and &B6=Y+8
@@ -5980,12 +5993,12 @@ IF _INCLUDE_CMD_COPY_
 				; round up number of sectors required
 	LDA &C1		; load bits 15-8 of length
 	ADC #&00
-	STA &A8
+	STA &AE
 
 	TXA
 
 	ADC #&00
-	STA &A9
+	STA &AF
 
 	LDA &C3 ; get start sector bits 7-0
 	STA &AA
@@ -5995,7 +6008,7 @@ IF _INCLUDE_CMD_COPY_
 
 ; create file in destination catalogue
 
-	LDA &AF			; destination drive
+	LDA &A9			; destination drive
 
 	JSR CreateFile_3		; Saves cat. ( pass in Drive)
 
@@ -6008,7 +6021,7 @@ IF _INCLUDE_CMD_COPY_
 	JSR CopyDATABLOCK
 
 	\ Source
-	LDA &AE
+	LDA &A8
 	STA CurrentDrv
 	JSR LoadCurDrvCat2
 	PLA
@@ -6025,32 +6038,32 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 .CopyDATABLOCK
 {
 ; Entry
-;  &A8 &A9 Size in sectors
+;  &AE &AF Size in sectors
 ;  &AA &AB Start sector
 ;  &AC &AD destination sector
-;  &AE source drive
-;  &AF destination drive
+;  &A8 source drive
+;  &A9 destination drive
 
 ; ZP Usage
 ; &BC &BD start addres of buffer
 ; &C0 always zero ( bytes in last sector)
 ; &C1 ; number of sectors to copy limited by ram size
 ; &C2 &C3 ; first sector of current block to read or write
-; &A8 &A9 ; number of sectors left to copy ( because we have more sectors than ram)
+; &AE &AF ; number of sectors left to copy ( because we have more sectors than ram)
 ; &AA &AB ; Start source sector ( local )
 ; &AC &AD ; next free sector for destination (local)
 ; uses RAM for copying ( PAGE to HIMEM corrupt)
 
 	LDA #&00			; *** Move or copy sectors
-	STA &BC				; Word &A8 = size of block
+	STA &BC				; Word &AE = size of block
 	STA &C0
 	LDA PAGE			; Buffer address
 	STA &BD
 	BEQ cd_loopentry		; always
 .cd_loop
-	LDY &A8
+	LDY &AE
 	CPY RAMBufferSize		; Size of buffer
-	LDA &A9
+	LDA &AF
 	SBC #&00
 	BCC cd_part			; IF size<size of buffer
 	LDY RAMBufferSize
@@ -6062,14 +6075,14 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 	LDA &AB
 	STA &C2
 
-	LDA &AE		; Source drive
+	LDA &A8		; Source drive
 	STA CurrentDrv
 
 	\ Source
 	JSR SetLoadAddrToHost ; &1074 = &1075 = 255
 	JSR LoadMemBlock    ; pass in BC BD C2 C3, C1 C0
 
-	LDA &AF		; desination drive
+	LDA &A9		; desination drive
 	STA CurrentDrv
 
 	LDA &AC				; C2/C3 = Block start sector
@@ -6098,15 +6111,15 @@ IF _INCLUDE_CMD_BACKUP_ OR _INCLUDE_CMD_COMPACT_ OR _INCLUDE_CMD_COPY_
 .cd_inc2
 
 	SEC	 			; Word C4 -= ?C1
-	LDA &A8				; Sector counter
+	LDA &AE				; Sector counter
 	SBC &C1
-	STA &A8
+	STA &AE
 	BCS cd_loopentry
-	DEC &A9
+	DEC &AF
 .cd_loopentry
 
-	LDA &A8
-	ORA &A9
+	LDA &AE
+	ORA &AF
 	BNE cd_loop			; If Word C4 <> 0
 	RTS
 }
