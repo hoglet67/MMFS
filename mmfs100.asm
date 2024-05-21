@@ -724,7 +724,7 @@ ENDIF
 	LDA DirectoryParam
 	LDY #&07
 	JSR MatchChr
-	BNE getcatloop2			; If directory doesn't match
+	BCC getcatloop2			; If directory doesn't match
 	LDY &B6
 	SEC 				; Return, Y=offset-8, C=1
 .Y_sub8
@@ -739,7 +739,8 @@ ENDIF
 
 .NotCmdTable2
 	RTS
-IF 1
+
+IF 0
 .MatchFilename
 {
 	JSR RememberAXY			; Match filename at &1000+X
@@ -774,32 +775,6 @@ IF 1
 	CLC 				; exit with C=0
 .matfn_exit
 	RTS
-ELSE
-
-.MatchFilename
-{
-	JSR RememberAXY
-
-.matchloop
-	LDA workspace%+&00,X
-	JSR	MatchChr
-	BNE matfn_exitC0
-	INX
-	INY
-	CPY #7
-	BEQ matchloop
-
-	SEC
-	RTS
-}
-.matfn_exitC0
-	CLC 				; exit with C=0
-.matfn_exit
-	RTS
-
-
-ENDIF
-
 .MatchChr
 {
 	CMP workspace%+&CE
@@ -815,6 +790,48 @@ ENDIF
 .matchr_exit
 	RTS 				; If n=1 then matched
 }
+
+
+ELSE
+
+.MatchChr
+	JSR RememberXYonly
+	JMP matchcharentry
+.MatchFilename
+{
+	JSR RememberXYonly
+
+.matchloop
+	LDA workspace%+&00,X
+.^matchcharentry
+	CMP workspace%+&CE
+	BEQ matchfound		; eg. If "*"
+	CMP workspace%+&CD
+	BEQ matchr_exit		; eg. If "#"
+	JSR IsAlphaChar
+	EOR (&B6),Y
+	BCS matchr_notalpha	; IF not alpah char
+	AND #&5F
+.matchr_notalpha
+	AND #&7F
+	BNE matfn_exitC0
+.matchr_exit
+	INX
+	INY
+	CPY #7
+	BCC matchloop
+.matchfound
+	SEC
+	RTS
+}
+.matfn_exitC0
+	CLC 				; exit with C=0
+	RTS
+
+
+ENDIF
+
+
 
 .UcaseA2
 {
