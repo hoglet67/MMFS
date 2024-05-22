@@ -719,11 +719,15 @@ ENDIF
 	BCS matfn_exitC0		; If >FilesX8 Exit with C=0
 	ADC #&08
 	STA &B6				; word &B6 += 8
+	TXA
+	PHA
 	JSR MatchFilename
+	PLA
+	TAX
 	BCC getcatloop2			; not a match, try next file
 	LDA DirectoryParam
 	LDY #&07
-	JSR MatchChr
+	JSR matchcharentry
 	BCC getcatloop2			; If directory doesn't match
 	LDY &B6
 	SEC 				; Return, Y=offset-8, C=1
@@ -740,69 +744,12 @@ ENDIF
 .NotCmdTable2
 	RTS
 
-IF 0
 .MatchFilename
 {
-	JSR RememberAXY			; Match filename at &1000+X
-							; ( must be terminated with a non "*" to prevent overflow)
-.matfn_loop1
-	LDA workspace%+&00,X			; with that at (&B6)
-	CMP workspace%+&CE		; &FF or "*"
-	BNE matfn_nomatch		; e.g. If="*"
-	INX
-.matfn_loop2
-	JSR MatchFilename
-	BCS matfn_exit			; If match then exit with C=1
-	INY
-	CPY #&07
-	BCC matfn_loop2			; If Y<7
-.matfn_loop3
-	LDA workspace%+&00,X			; Check next char is a space!
-	CMP #&20
-	BNE matfn_exitC0		; If exit with c=0 (no match)
-	RTS 				; exit with C=1
-
-.matfn_nomatch
-	CPY #&07
-	BCS matfn_loop3			; If Y>=7
-	JSR MatchChr
-	BNE matfn_exitC0
-	INX
-	INY
-	BNE matfn_loop1			; next chr
-}
-.matfn_exitC0
-	CLC 				; exit with C=0
-.matfn_exit
-	RTS
-.MatchChr
-{
-	CMP workspace%+&CE
-	BEQ matchr_exit			; eg. If "*"
-	CMP workspace%+&CD
-	BEQ matchr_exit			; eg. If "#"
-	JSR IsAlphaChar
-	EOR (&B6),Y
-	BCS matchr_notalpha		; IF not alpah char
-	AND #&5F
-.matchr_notalpha
-	AND #&7F
-.matchr_exit
-	RTS 				; If n=1 then matched
-}
-
-
-ELSE
-
-.MatchChr
-	JSR RememberXYonly
-	JMP matchcharentry
-.MatchFilename
-{
-	JSR RememberXYonly
 
 .matchloop
 	LDA workspace%+&00,X
+	INX
 .^matchcharentry
 	CMP workspace%+&CE
 	BEQ matchfound		; eg. If "*"
@@ -816,7 +763,6 @@ ELSE
 	AND #&7F
 	BNE matfn_exitC0
 .matchr_exit
-	INX
 	INY
 	CPY #7
 	BCC matchloop
@@ -827,10 +773,6 @@ ELSE
 .matfn_exitC0
 	CLC 				; exit with C=0
 	RTS
-
-
-ENDIF
-
 
 
 .UcaseA2
