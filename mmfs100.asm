@@ -856,9 +856,9 @@ ENDIF
 	JSR prt_filename_Yoffset
 	TYA 				; Save offset
 	PHA
-	LDA #&60			; word &B0=1060
+	LDA #LO(workspace%+&60)			; word &B0=1060
 	STA &B0
-	LDA #HI(workspace%+&0060)
+	LDA #HI(workspace%+&60)
 	STA &B1
 	JSR ReadFileAttribsToB0_Yoffset	; create no. str
 	LDY #&02
