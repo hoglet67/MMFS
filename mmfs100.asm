@@ -722,11 +722,11 @@ ENDIF
 .get_cat_firstentry80
 .get_cat_firstentry81
 	JSR CheckCurDrvCat		; Get cat entry
-	LDX #&00				; now first byte @ &1000+X
+	LDX #LO(tempfilename1) 	; now first byte @ &1000+X
 	BEQ getcatentry2		; always
 
 .get_cat_nextentry
-	LDX #&00			; Entry: wrd &B6 -> first entry
+	LDX #LO(tempfilename1)	; Entry: wrd &B6 -> first entry
 	BEQ getcatsetupB7	; always ( almost certainly could be getcatloop2 )
 
 .get_cat_firstentry80fname
@@ -2866,11 +2866,11 @@ IF _INCLUDE_CMD_RENAME_
 	JMP errBADDRIVE
 .rname_ok
 	LDY &A8				; Copy filename
-	JSR Y_add8			; from C5 to catalog
+	;JSR Y_add8			; from C5 to catalog
 	LDX #&07
 .rname_loop
 	LDA &C5,X
-	STA disccataloguebuffer%+&07,Y
+	STA disccataloguebuffer%+&07+8,Y
 	DEY
 	DEX
 	BPL rname_loop			; else Save catalogue
@@ -5282,7 +5282,7 @@ ENDIF
 	JSR Channel_SetDirDrive_Yintch
 	TYA
 	CLC
-	ADC #&04
+	ADC #channeldata_ext-channeldata_ptr
 	JSR CmpPTR
 	BNE bp_noextend			; If PTR<>Sector Count, i.e Ptr<sc
 	JSR Channel_GetCatEntry_Yintch	; Enough space in gap?
