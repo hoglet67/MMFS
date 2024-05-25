@@ -4772,21 +4772,15 @@ ENDIF
 .chnlblock_loop1
 	LDA disccataloguebuffer%+&08,X			; Copy file name & attributes
 	STA channeldata_filename,Y			; to channel info block
-	;INY
 	LDA disccataloguebuffer%+&100+&08,X
 	STA chenneldata_attributes,Y
+	LDA #0
+	STA channeldata_ptr,Y
+	STA channeldata_ptr+8,Y
 	INY
 	INX
 	DEC workspace%+&C4
 	BNE chnlblock_loop1
-
-	LDX #&10
-	LDA #&00			; Clear rest of block
-.chnlblock_loop2
-	STA channeldata,Y
-	INY
-	DEX
-	BNE chnlblock_loop2
 
 	LDA workspace%+&C2			; A=intch
 	TAY
