@@ -96,6 +96,34 @@ buf%=disccataloguebuffer%
 cat%=disccataloguebuffer%
 FilesX8=disccataloguebuffer%+&105
 
+; Channel data buffer each channel is 32 bytes
+; 0th channel isn't
+; channel 1 to 5 are used.
+; channel 6 and 7 aren't used
+
+; this is reorganised to be more logical and save space
+channeldata = MA + &1100
+channeldata_filename = channeldata
+channeldata_filename6_readonly = channeldata+6
+channeldata_directory_locked = channeldata+7
+chenneldata_attributes = channeldata+8
+channeldata_load = channeldata+&8
+channeldata_exec = channeldata+&A
+channeldata_length = channeldata+&C
+channeldata_mixedbyte = channeldata+&E
+channeldata_sector = channeldata+&F
+channeldata_ptr = channeldata+&10 ; 3 bytes
+channeldata_bufferpage = channeldata + &13 ;
+channeldata_ext	= channeldata+&14 ; 3 bytes
+channeldata_drive_flags = channeldata + &17 ; b7:data in buffer b6 : new data: b5:Extended b4:EOF b1-b0 drive
+; &18 not used
+channeldata_sectorcount = channeldata + &19 ; 2 bytes
+channeldata_channelbit = channeldata + &1B ; bit mask
+channeldata_sectorinbuffer = channeldata + &1C ; 2 bytes
+;1e unused
+;1f unused
+
+
 INCLUDE "VERSION.asm"
 INCLUDE "SYSVARS.asm"			; OS constants
 
@@ -2251,7 +2279,7 @@ ENDIF
 	LDA workspace%+&00,Y
 	BCS stat_Y_gtreqC0
 .stat_Y_lessC0
-	LDA MA+&1100,Y
+	LDA channeldata,Y
 .stat_Y_gtreqC0
 	STA (&B0),Y
 	INY
@@ -3028,7 +3056,7 @@ ENDIF
 	STA workspace%+&00,Y
 	BCS copyfromPWS2
 .copyfromPWS1
-	STA MA+&1100,Y
+	STA channeldata,Y
 .copyfromPWS2
 	DEY
 	BNE copyfromPWStoSWS_loop
@@ -3045,7 +3073,7 @@ ENDIF
 	LDA #&3F
 	JSR ChannelFlags_ClearBits	; Clear bits 7 & 6, C=0
 	PLA
-	STA MA+&111D,Y			; Buffer sector hi?
+	STA channeldata_sectorinbuffer+1,Y	; invalidate sector in buffer by putting it out of range
 	SBC #&1F			; A=A-&1F-(1-C)=A-&20
 	BNE setchansloop
 	BEQ initdfs_noreset		; always
@@ -3996,14 +4024,14 @@ seqsem      =       mainws+$00DD	;$00=*SPOOL/*EXEC critical, close files on erro
 
 seqmap      =       mainws+$0100	;workspaces for channels $11..$15
 seqcat      =       seqmap+$0000	;when accessing the catalogue entry
-seqlh       =       seqcat+$000D	;top bits exec/length/load/LBA in catalogue entry
-seqloc      =       seqcat+$000F	;LSB of starting LBA in catalogue entry
-seqpl       =       seqmap+$0010	;LSB of sequential pointer (PTR)
-seqpm       =       seqmap+$0011	;2MSB of sequential pointer
-seqph       =       seqmap+$0012	;MSB of sequential pointer
-seqlma      =       seqmap+$0015	;2MSB of open file's extent
-seqlha      =       seqmap+$0016	;MSB of open file's extent
-seqdah      =       seqmap+$001D	;MSB of starting LBA
+;seqlh       =       seqcat+$000D	;top bits exec/length/load/LBA in catalogue entry
+;seqloc      =       seqcat+$000F	;LSB of starting LBA in catalogue entry
+;seqpl       =       seqmap+$0010	;LSB of sequential pointer (PTR)
+;channeldata_ptr+1       =       seqmap+$0011	;2MSB of sequential pointer
+;channeldata_ptr+2       =       seqmap+$0012	;MSB of sequential pointer
+;seqlma      =       seqmap+$0015	;2MSB of open file's extent
+;seqlha      =       seqmap+$0016	;MSB of open file's extent
+;seqdah      =       seqmap+$001D	;MSB of starting LBA
 
 \\ Zeri Page
 
@@ -4044,7 +4072,7 @@ lenhi       =       work  +$0007	;2MSB file length in OSFILE
 	TYA			;convert file handle to workspace pointer
 	JSR A_rolx5		;(file handle validated later)
 	TAY			;to Y as offset
-	LDA seqpl,Y		;get LSB of file pointer PTR
+	LDA channeldata_ptr,Y		;get LSB of file pointer PTR
 	CLC			;clear carry flag for two's complement
 .dcptr
 	EOR #$FF		;take two's complement
@@ -4122,11 +4150,11 @@ lenhi       =       work  +$0007	;2MSB file length in OSFILE
 	EOR #$04		;bit 2 = 1 if writing
 	AND #$E4		;if writing then point to allocation instead of EXT
 	TAY
-	LDA seqlma,Y		;get 2MSB of channel EXT
+	LDA channeldata_ext+1,Y		;get 2MSB of channel EXT
 	SEC
 	SBC dosram+$0A		;subtract 2MSB of PTR
 	STA dosram+$06		;=LSB maximum transfer size
-	LDA seqlha,Y		;get MSB of EXT
+	LDA channeldata_ext+2,Y		;get MSB of EXT
 	SBC dosram+$0B		;subtract MSB of PTR = MSB maximum
 	BCC throw		;if maximum<0 throw back
 	CMP dosram+$07		;else compare MSB maximum - MSB request
@@ -4141,7 +4169,7 @@ lenhi       =       work  +$0007	;2MSB file length in OSFILE
 	JSR Channel_SetDirDrv_GetCatEntry_Yintch ;ensure open file still in drive
 	JSR ChannelBufferToDisk_Yintch		;ensure buffer up-to-date on disc L6
 	LDA #$3F		;b7=0 buffer does not contain PTR, b6=0 buffer not changed
-	STA seqdah,Y		;set buffer LBA out of range to force re-reading
+	STA channeldata_sectorinbuffer+1,Y		;set buffer LBA out of range to force re-reading
 	JSR ChannelFlags_ClearBits		;clear b7,b6 of channel flags
 	LDA dosram+$01		;copy OSGBPB transfer address
 	STA lodlo		;to load address in OSFILE block
@@ -4151,11 +4179,11 @@ lenhi       =       work  +$0007	;2MSB file length in OSFILE
 	STA ldlow+$02
 	LDA dosram+$04
 	STA ldlow+$03
-	LDA seqloc,Y		;get LSB LBA of start of open file
+	LDA channeldata_sector,Y ;get LSB LBA of start of open file
 	CLC
 	ADC dosram+$0A		;add 2MSB of PTR
 	STA lbalo		;store LSB target LBA in OSFILE block
-	LDA seqlh,Y		;get MSB LBA
+	LDA channeldata_mixedbyte,Y		;get MSB LBA
 	ADC dosram+$0B		;add MSB of PTR
 	AND #$03		;mask MSB of target LBA
 	STA lbahi		;store MSB target LBA in OSFILE block
@@ -4187,12 +4215,12 @@ lenhi       =       work  +$0007	;2MSB file length in OSFILE
 	TYA			;set A=LSB transfer size in sectors
 	LDY dcby		;set Y=channel workspace offset
 	CLC			;add to open file's pointer
-	ADC seqpm,Y
-	STA seqpm,Y		;update PTR
+	ADC channeldata_ptr+1,Y
+	STA channeldata_ptr+1,Y		;update PTR
 	STA dosram+$0A		;update OSGBPB control block in workspace
 	TXA			;add MSB transfer size to MSB PTR
-	ADC seqph,Y
-	STA seqph,Y
+	ADC channeldata_ptr+2,Y
+	STA channeldata_ptr+2,Y
 	STA dosram+$0B		;(MSB OSGBPB P field cleared by upgbpb)
 	TYA
 	JSR CmpPTR		;compare PTR - EXT
@@ -4588,9 +4616,9 @@ ENDIF
 {
 	LDX #&06			; Copy filename from
 .chnl_getcatloop
-	LDA MA+&110C,Y			; channel info to &C5
+	LDA channeldata_filename6_readonly,Y			; channel info to &C5
 	STA &C5,X
-	DEY
+	;DEY
 	DEY
 	DEX
 	BPL chnl_getcatloop
@@ -4603,10 +4631,10 @@ ENDIF
 	RTS
 
 .Channel_SetDirDrive_Yintch
-	LDA MA+&110E,Y			; Directory
+	LDA channeldata_directory_locked,Y			; Directory
 	AND #&7F
 	STA DirectoryParam
-	LDA MA+&1117,Y			; Drive
+	LDA channeldata_drive_flags,Y			; Drive
 	JMP SetCurrentDrive_Adrive
 
 .CheckForDiskChange
@@ -4640,23 +4668,23 @@ ENDIF
 	PHA 				; Save A
 	JSR IsHndlinUse_Yintch		; (Saves X to &10C5)
 	BCS closefile_exit		; If file not open
-	LDA MA+&111B,Y			; bit mask
+	LDA channeldata_channelbit,Y			; bit mask
 	EOR #&FF
 	AND workspace%+&C0
 	STA workspace%+&C0			; Clear 'open' bit
-	LDA MA+&1117,Y			; A=flag byte
+	LDA channeldata_drive_flags,Y			; A=flag byte
 	AND #&60
 	BEQ closefile_exit		; If bits 5&6=0
 	JSR Channel_SetDirDrv_GetCatEntry_Yintch
-	LDA MA+&1117,Y			; If file extended and not
+	LDA channeldata_drive_flags,Y			; If file extended and not
 	AND #&20				; forcing buffer to disk
 	BEQ closefile_buftodisk		; update the file length
 	LDX workspace%+&C3			; X=cat offset
-	LDA MA+&1114,Y			; File lenth = EXTENT
+	LDA channeldata_ext+0,Y			; File lenth = EXTENT
 	STA disccataloguebuffer%+&100+&0C,X			; Len lo
-	LDA MA+&1115,Y
+	LDA channeldata_ext+1,Y
 	STA disccataloguebuffer%+&100+&0D,X			; Len mi
-	LDA MA+&1116,Y
+	LDA channeldata_ext+2,Y
 	JSR A_rolx4			; Len hi
 	EOR disccataloguebuffer%+&100+&0E,X			; "mixed byte"
 	AND #&30
@@ -4715,7 +4743,7 @@ ENDIF
 	JSR IsFileOpen_Yoffset		; Exits with Y=intch, A=flag
 	BCC findv_openchannel		; If file not open
 .findv_loop2
-	LDA MA+&110C,Y
+	LDA channeldata_filename6_readonly,Y
 	BPL errFILEOPEN			; If already opened for writing
 	PLP
 	PHP
@@ -4743,10 +4771,10 @@ ENDIF
 	STA workspace%+&C4
 .chnlblock_loop1
 	LDA disccataloguebuffer%+&08,X			; Copy file name & attributes
-	STA MA+&1100,Y			; to channel info block
-	INY
+	STA channeldata_filename,Y			; to channel info block
+	;INY
 	LDA disccataloguebuffer%+&100+&08,X
-	STA MA+&1100,Y
+	STA chenneldata_attributes,Y
 	INY
 	INX
 	DEC workspace%+&C4
@@ -4755,7 +4783,7 @@ ENDIF
 	LDX #&10
 	LDA #&00			; Clear rest of block
 .chnlblock_loop2
-	STA MA+&1100,Y
+	STA channeldata,Y
 	INY
 	DEX
 	BNE chnlblock_loop2
@@ -4763,40 +4791,40 @@ ENDIF
 	LDA workspace%+&C2			; A=intch
 	TAY
 	JSR A_rorx5
-	ADC #HI(MA+&1100)
-	STA MA+&1113,Y			; Buffer page
+	ADC #HI(channeldata)
+	STA channeldata_bufferpage,Y			; Buffer page
 	LDA workspace%+&C1
-	STA MA+&111B,Y			; Mask bit
+	STA channeldata_channelbit,Y			; Mask bit
 	ORA workspace%+&C0
 	STA workspace%+&C0			; Set bit in open flag byte
-	LDA MA+&1109,Y			; Length0
+	LDA channeldata_length,Y			; Length0
 	ADC #&FF			; If Length0>0 C=1
-	LDA MA+&110B,Y			; Length1
+	LDA channeldata_length+1,Y			; Length1
 	ADC #&00
-	STA MA+&1119,Y			; Sector count
-	LDA MA+&110D,Y			; Mixed byte
+	STA channeldata_sectorcount,Y			; Sector count
+	LDA channeldata_mixedbyte,Y			; Mixed byte
 	ORA #&0F
 	ADC #&00			; Add carry flag
 	JSR A_rorx4and3			; Length2
-	STA MA+&111A,Y
+	STA channeldata_sectorcount+1,Y
 	PLP
 	BVC chnlblock_setBit5		; If not read = write
 	BMI chnlblock_setEXT		; If updating
 	LDA #&80			; Set Bit7 = Read Only
-	ORA MA+&110C,Y
-	STA MA+&110C,Y
+	ORA channeldata_filename6_readonly,Y
+	STA channeldata_filename6_readonly,Y
 .chnlblock_setEXT
-	LDA MA+&1109,Y			; EXTENT=file length
-	STA MA+&1114,Y
-	LDA MA+&110B,Y
-	STA MA+&1115,Y
-	LDA MA+&110D,Y
+	LDA channeldata_length,Y			; EXTENT=file length
+	STA channeldata_ext,Y
+	LDA channeldata_length+1,Y
+	STA channeldata_ext+1,Y
+	LDA channeldata_mixedbyte,Y
 	JSR A_rorx4and3
-	STA MA+&1116,Y
+	STA channeldata_ext+2,Y
 .chnlblock_cont
 	LDA CurrentDrv			; Set drive
-	ORA MA+&1117,Y
-	STA MA+&1117,Y
+	ORA channeldata_drive_flags,Y
+	STA channeldata_drive_flags,Y
 	TYA 				; convert intch to handle
 	JSR A_rorx5
 	ORA #filehndl% 			; &10
@@ -4804,7 +4832,7 @@ ENDIF
 
 .chnlblock_setBit5
 	LDA #&20			; Set Bit5 = Update cat file len
-	STA MA+&1117,Y			; when channel closed
+	STA channeldata_drive_flags,Y			; when channel closed
 	BNE chnlblock_cont		; always
 }
 
@@ -4831,22 +4859,23 @@ ENDIF
 	LDA &B5
 	BIT workspace%+&C0
 	BEQ fop_channelnotopen		; If channel not open
-	LDA MA+&1117,Y
+	LDA channeldata_drive_flags,Y
 	EOR CurrentDrv
 	AND #&03
 	BNE fop_nothisfile		; If not current drv?
 .fop_cmpfn_loop
 	LDA disccataloguebuffer%+&08,X			; Compare filename
-	EOR MA+&1100,Y
+	EOR channeldata_filename,Y
 	AND #&7F
 	BNE fop_nothisfile
 	INX
 	INY
-	INY
+	;INY
 	DEC &B2
 	BNE fop_cmpfn_loop
 	SEC
 	BCS fop_matchifCset		; always
+
 .fop_channelnotopen
 	STY workspace%+&C2			; Y=intch = allocated to new channel
 	STA workspace%+&C1			; A=Channel Flag Bit
@@ -4942,11 +4971,11 @@ ENDIF
 	ASL A				; A becomes 0 or 4
 	ADC workspace%+&C2
 	TAY
-	LDA MA+&1110,Y
+	LDA channeldata_ptr+0,Y
 	STA &00,X
-	LDA MA+&1111,Y
+	LDA channeldata_ptr+1,Y
 	STA &01,X
-	LDA MA+&1112,Y
+	LDA channeldata_ptr+2,Y
 	STA &02,X
 	LDA #&00
 	STA &03,X
@@ -4963,34 +4992,34 @@ ENDIF
 	JSR CheckChannel_Yhndl_exYintch
 	JSR cmptoEXT
 	BCS truncate ; if new EXT <= EXT
-	LDA MA+&1110,Y	; save current ptr
+	LDA channeldata_ptr+0,Y	; save current ptr
 	PHA
-	LDA MA+&1111,Y
+	LDA channeldata_ptr+1,Y
 	PHA
-	LDA MA+&1112,Y
+	LDA channeldata_ptr+2,Y
 	PHA
 	JSR argsextendloop
 	PLA
-	STA MA+&1112,Y
+	STA channeldata_ptr+2,Y
 	PLA
-	STA MA+&1111,Y
+	STA channeldata_ptr+1,Y
 	PLA
-	STA MA+&1110,Y
+	STA channeldata_ptr+0,Y
 	JSR IsSeqPointerInBuffer_Yintch
 .truncate
-	LDA MA+&110C,Y
+	LDA channeldata_filename6_readonly,Y
 	BMI filereadonly
-	ORA MA+&110E,Y
+	ORA channeldata_directory_locked,Y
 	BMI filelocked
 	LDA #&20
 	JSR ChannelFlags_SetBits
 
 	LDA 0,X		; COPY new EXT to EXT
-	STA MA+&1114,Y
+	STA channeldata_ext+0,Y
 	LDA 1,X
-	STA MA+&1115,Y
+	STA channeldata_ext+1,Y
 	LDA 2,X
-	STA MA+&1116,Y
+	STA channeldata_ext+2,Y
 	TXA			; save Args block
 	PHA
 	JSR TYA_CmpPTR
@@ -5133,7 +5162,7 @@ ENDIF
 	JSR RememberXYonly
 	JSR CheckChannel_Yhndl_exYintch_TYA_CmpPTR	; A=Y
 	BNE bg_notEOF			; If PTR<>EXT
-	LDA MA+&1117,Y			; Already at EOF?
+	LDA channeldata_drive_flags,Y			; Already at EOF?
 	AND #&10
 	BNE errEOF			; IF bit 4 set
 	LDA #&10
@@ -5144,7 +5173,7 @@ ENDIF
 	RTS 				; C=1=EOF
 
 .bg_notEOF
-	LDA MA+&1117,Y
+	LDA channeldata_drive_flags,Y
 	BMI bg_samesector1		; If buffer ok
 	JSR Channel_SetDirDrive_Yintch
 	JSR ChannelBufferToDisk_Yintch	; Save buffer
@@ -5159,32 +5188,32 @@ ENDIF
 
 .CalcBufferSectorForPTR
 	CLC
-	LDA MA+&110F,Y			; Start Sector + Seq Ptr
-	ADC MA+&1111,Y
+	LDA channeldata_sector,Y			; Start Sector + Seq Ptr
+	ADC channeldata_ptr+1,Y
 	STA &C3
-	STA MA+&111C,Y			; Buffer sector
-	LDA MA+&110D,Y
+	STA channeldata_sectorinbuffer,Y			; Buffer sector
+	LDA channeldata_mixedbyte,Y
 	AND #&03
-	ADC MA+&1112,Y
+	ADC channeldata_ptr+2,Y
 	STA &C2
-	STA MA+&111D,Y
+	STA channeldata_sectorinbuffer+1,Y
 
 .ChannelFlags_SetBit7
 	LDA #&80			; Set/Clear flags (C=0 on exit)
 .ChannelFlags_SetBits
-	ORA MA+&1117,Y
+	ORA channeldata_drive_flags,Y
 	BNE chnflg_save
 .ChannelFlags_ClearBit7
 	LDA #&7F
 .ChannelFlags_ClearBits
-	AND MA+&1117,Y
+	AND channeldata_drive_flags,Y
 .chnflg_save
-	STA MA+&1117,Y
+	STA channeldata_drive_flags,Y
 	CLC
 	RTS
 
 .ChannelBufferToDisk_Yintch
-	LDA MA+&1117,Y
+	LDA channeldata_drive_flags,Y
 	AND #&40			; Bit 6 set?
 	BEQ chnbuf_exit2		; If no exit
 	CLC 				; C=0=write buffer
@@ -5193,7 +5222,7 @@ ENDIF
 {
 	INC workspace%+&DD			; Remember in case of error?
 	LDY workspace%+&C2			; Setup NMI vars
-	LDA MA+&1113,Y			; Buffer page
+	LDA channeldata_bufferpage,Y			; Buffer page
 	STA &BD				;Data ptr
 	LDA #&FF			; \ Set load address to host
 	STA workspace%+&74			; \
@@ -5204,9 +5233,9 @@ ENDIF
 	LDA #&01
 	STA &C1
 	BCS chnbuf_read			; IF c=1 load buffer else save
-	LDA MA+&111C,Y			; Buffer sector
+	LDA channeldata_sectorinbuffer,Y			; Buffer sector
 	STA &C3				; Start sec. b0-b7
-	LDA MA+&111D,Y
+	LDA channeldata_sectorinbuffer+1,Y
 	STA &C2				; "mixed byte"
 	JSR SaveMemBlock
 	LDY workspace%+&C2			; Y=intch
@@ -5240,9 +5269,9 @@ ENDIF
 .bp_entry
 {
 	PHA
-	LDA MA+&110C,Y
+	LDA channeldata_filename6_readonly,Y
 	BMI errFILEREADONLY
-	LDA MA+&110E,Y
+	LDA channeldata_directory_locked,Y
 	BMI errFILELOCKED2
 	JSR Channel_SetDirDrive_Yintch
 	TYA
@@ -5259,10 +5288,10 @@ ENDIF
 	LDA disccataloguebuffer%+&100+&06,X
 	SBC disccataloguebuffer%+&100+&0E,X			; Mixed byte
 	AND #&03			; hi byte
-	CMP MA+&111A,Y			; File size in sectors
+	CMP channeldata_sectorcount+1,Y			; File size in sectors
 	BNE bp_extendby100		; If must be <gap size
 	PLA
-	CMP MA+&1119,Y
+	CMP channeldata_sectorcount+0,Y
 	BNE bp_extendtogap		; If must be <gap size
 	STY &B4				; Error, save intch handle
 	STY workspace%+&C2			; for clean up
@@ -5273,10 +5302,10 @@ ENDIF
 	EQUS "Can't extend",0
 
 .bp_extendby100
-	LDA MA+&111A,Y			; Add maximum of &100
+	LDA channeldata_sectorcount+1,Y			; Add maximum of &100
 	CLC 				; to sector count
 	ADC #&01			; (i.e. 64K)
-	STA MA+&111A,Y			; [else set to size of gap]
+	STA channeldata_sectorcount+1,Y			; [else set to size of gap]
 	ASL A				; Update cat entry
 	ASL A
 	ASL A
@@ -5289,16 +5318,16 @@ ENDIF
 	LDA #&00
 .bp_extendtogap
 	STA disccataloguebuffer%+&100+&0D,X			; File len 1
-	STA MA+&1119,Y
+	STA channeldata_sectorcount+0,Y
 	LDA #&00
 	STA disccataloguebuffer%+&100+&0C,X			; File len 0
 	JSR SaveCatToDisk
 	LDY workspace%+&C2			; Y=intch
 .bp_noextend
-	LDA MA+&1117,Y
+	LDA channeldata_drive_flags,Y
 	BMI bp_savebyte			; If PTR in buffer
 	JSR ChannelBufferToDisk_Yintch	; Save buffer
-	LDA MA+&1114,Y			; EXT byte 0
+	LDA channeldata_ext+0,Y			; EXT byte 0
 	BNE bp_loadbuf			; IF <>0 load buffer
 	JSR TYA_CmpPTR			; A=Y
 	BNE bp_loadbuf			; If PTR<>EXT, i.e. PTR<EXT
@@ -5322,8 +5351,8 @@ ENDIF
 	JSR ChannelFlags_SetBits	; Set bit 5
 	LDX #&02			; EXT=PTR
 .bp_setextloop
-	LDA MA+&1110,Y
-	STA MA+&1114,Y
+	LDA channeldata_ptr+0,Y
+	STA channeldata_ext+0,Y
 	INY
 	DEX
 	BPL bp_setextloop
@@ -5333,11 +5362,11 @@ ENDIF
 
 
 .cmptoEXT
-	LDA MA+&1114,Y			; Compare ctl blk ptr
+	LDA channeldata_ext+0,Y			; Compare ctl blk ptr
 	CMP &00,X			; to existing EXT
-	LDA MA+&1115,Y			; Z=1 if same
+	LDA channeldata_ext+1,Y			; Z=1 if same
 	SBC &01,X			; (ch.1=&1138)
-	LDA MA+&1116,Y
+	LDA channeldata_ext+2,Y
 	SBC &02,X
 	RTS
 
@@ -5352,12 +5381,12 @@ ENDIF
 	BCS SetSeqPointer_Yintch	; If EXT >= new PTR
 
 .argsextendloop
-	LDA MA+&1114,Y			; else new PTR>EXT so pad with a 0
-	STA MA+&1110,Y
-	LDA MA+&1115,Y			; first, actual PTR=EXT
-	STA MA+&1111,Y
-	LDA MA+&1116,Y
-	STA MA+&1112,Y
+	LDA channeldata_ext+0,Y			; else new PTR>EXT so pad with a 0
+	STA channeldata_ptr+0,Y
+	LDA channeldata_ext+1,Y			; first, actual PTR=EXT
+	STA channeldata_ptr+1,Y
+	LDA channeldata_ext+2,Y
+	STA channeldata_ptr+2,Y
 	JSR IsSeqPointerInBuffer_Yintch	; Update flags
 	LDA &B6
 	PHA 				; Save &B6,&B7,&B8
@@ -5377,25 +5406,25 @@ ENDIF
 
 .SetSeqPointer_Yintch
 	LDA &00,X			; Set Sequential Pointer
-	STA MA+&1110,Y		; PTR #
+	STA channeldata_ptr+0,Y		; PTR #
 	LDA &01,X
-	STA MA+&1111,Y
+	STA channeldata_ptr+1,Y
 	LDA &02,X
-	STA MA+&1112,Y
+	STA channeldata_ptr+2,Y
 
 .IsSeqPointerInBuffer_Yintch
 	LDA #&6F			; Clear bits 7 & 4 of 1017+Y
 	JSR ChannelFlags_ClearBits
-	LDA MA+&110F,Y			; Start sector
-	ADC MA+&1111,Y			; Add sequ.ptr
+	LDA channeldata_sector,Y			; Start sector
+	ADC channeldata_ptr+1,Y			; Add sequ.ptr
 	STA workspace%+&C4
-	LDA MA+&110D,Y			; Mixed byte
+	LDA channeldata_mixedbyte,Y			; Mixed byte
 	AND #&03			; Start sector bits 8&9
-	ADC MA+&1112,Y
-	CMP MA+&111D,Y
+	ADC channeldata_ptr+2,Y
+	CMP channeldata_sectorinbuffer+1,Y
 	BNE bp_exit
 	LDA workspace%+&C4
-	CMP MA+&111C,Y
+	CMP channeldata_sectorinbuffer,Y
 	BNE bp_exit
 	JMP ChannelFlags_SetBit7	; Seq.Ptr in buffered sector
 
@@ -5405,14 +5434,14 @@ ENDIF
 	TYA
 .CmpPTR
 	TAX
-	LDA MA+&1112,Y ; PTR#
-	CMP MA+&1116,X ; EXT#
+	LDA channeldata_ptr+2,Y ; PTR#
+	CMP channeldata_ext+2,X ; EXT#
 	BNE cmpPE_exit
-	LDA MA+&1111,Y
-	CMP MA+&1115,X
+	LDA channeldata_ptr+1,Y
+	CMP channeldata_ext+1,X
 	BNE cmpPE_exit
-	LDA MA+&1110,Y
-	CMP MA+&1114,X
+	LDA channeldata_ptr+0,Y
+	CMP channeldata_ext+0,X
 .cmpPE_exit
 	RTS
 
@@ -5420,18 +5449,18 @@ ENDIF
 
 .load_then_incSeqPtr_Yintch
 {
-	LDA MA+&1110,Y			; Seq.Ptr
+	LDA channeldata_ptr,Y			; Seq.Ptr
 	STA &BA
-	LDA MA+&1113,Y			; Buffer page
+	LDA channeldata_bufferpage,Y			; Buffer page
 	STA &BB
 	TYA
 	TAX
-	INC MA+&1110,X			; Seq.Ptr+=1
+	INC channeldata_ptr+0,X			; Seq.Ptr+=1
 	BNE samesector
 	JSR ChannelFlags_ClearBit7	; PTR in new sector!
-	INC MA+&1111,X
+	INC channeldata_ptr+1,X
 	BNE samesector
-	INC MA+&1112,X
+	INC channeldata_ptr+2,X
 .samesector
 	LDX #&00
 	RTS
