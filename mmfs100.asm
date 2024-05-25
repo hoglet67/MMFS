@@ -5166,18 +5166,8 @@ ENDIF
 {
 	JSR RememberXYonly
 	JSR CheckChannel_Yhndl_exYintch_TYA_CmpPTR	; A=Y
-	BNE bg_notEOF			; If PTR<>EXT
-	LDA channeldata_drive_flags,Y			; Already at EOF?
-	AND #&10
-	BNE errEOF			; IF bit 4 set
-	LDA #&10
-	JSR ChannelFlags_SetBits	; Set bit 4
-	LDX workspace%+&C5
-	LDA #&FE
-	SEC
-	RTS 				; C=1=EOF
+	BEQ	bg_EOF 				; If PTR=EXT
 
-.bg_notEOF
 	LDA channeldata_drive_flags,Y
 	BMI bg_samesector1		; If buffer ok
 	JSR Channel_SetDirDrive_Yintch
@@ -5189,6 +5179,17 @@ ENDIF
 	LDA (&BA, X)			; Byte from buffer
 	CLC
 	RTS				; C=0=NOT EOF
+
+.bg_EOF
+	LDA channeldata_drive_flags,Y			; Already at EOF?
+	AND #&10
+	BNE errEOF			; IF bit 4 set
+	LDA #&10
+	JSR ChannelFlags_SetBits	; Set bit 4
+;	LDX workspace%+&C5 ; no idea what this is doing as XY are preserved
+	LDA #&FE 		   ; A is undefined when EOF
+	SEC
+	RTS 				; C=1=EOF
 }
 
 .CalcBufferSectorForPTR
