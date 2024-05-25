@@ -335,8 +335,8 @@ IF _MM32_
 	LDX #LO(mm32_taddr%)
 	LDY #HI(mm32_taddr%)
 ELSE
-	LDX #&72
-	LDY #HI(workspace%+&00)
+	LDX #LO(workspace%+&72)
+	LDY #HI(workspace%+&72)
 ENDIF
 
 	PLA
