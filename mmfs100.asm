@@ -730,9 +730,10 @@ ENDIF
 	BEQ getcatsetupB7	; always ( almost certainly could be getcatloop2 )
 
 .get_cat_firstentry80fname
-	LDX #&07			; copy filename from &C5 to &1058
-	LDA #&20			; set last char to " "
-	BNE getcatloopentry ; always
+	;LDX #&07			; copy filename from &C5 to &1058
+	;LDA #&20			; set last char to " "
+	;BNE getcatloopentry ; always
+	LDX #6				; no need to have any padding
 .getcatloop1
 	LDA &C5,X
 .getcatloopentry
