@@ -84,6 +84,7 @@ IF _SWRAM_ AND NOT(_MM32_)
 	disccataloguebuffer% = MA+&E00
 	workspace% = MA+ &1000
 	tempbuffer% = MA+ &1100
+
 ELSE
 	disccataloguebuffer% = MA+&E00
 	workspace% = MA+ &1000
@@ -91,6 +92,10 @@ ELSE
 ENDIF
 
 MP=HI(MA)
+
+tempfilename1 = MA+ &1000
+tempfilename2 = MA+ &1007
+
 
 buf%=disccataloguebuffer%
 cat%=disccataloguebuffer%
@@ -509,7 +514,7 @@ ENDIF
 	LDX #&20			; Get drive & dir (X="space")
 	JSR GSREAD_A			; get C
 	BCS errBadName			; IF end of string
-	STA workspace%+&00
+	STA tempfilename1
 	CMP #&2E			; C="."?
 	BNE rdafsp_notdot		; ignore leading ...'s
 .rdafsp_setdrv
@@ -538,7 +543,7 @@ ENDIF
 	BEQ rdafsp_setdrv
 	LDX #&01			; Read rest of filename
 .rdafsp_rdfnloop
-	STA workspace%+&00,X
+	STA tempfilename1,X
 	INX
 	JSR GSREAD_A
 	BCS rdafsp_padX			; IF end of string
@@ -551,15 +556,18 @@ ENDIF
 	LDX #&01			; Pad all with spaces
 .rdafsp_padX
 {
+	CPX #7
+	BEQ rdafsp_cpyfnstart
 	LDA #&20			; Pad with spaces
 .rdafsp_padloop
-	STA workspace%+&00,X
+	STA tempfilename1,X
 	INX
-	CPX #&40			; Why &40? : Wildcards buffer!
+	CPX #7			; Why &40? : Wildcards buffer! only 7 bytes needed
 	BNE rdafsp_padloop
-	LDX #&06			; Copy from &1000 to &C5
+.rdafsp_cpyfnstart
+	DEX				; Copy from &1000 to &C5
 .rdafsp_cpyfnloop
-	LDA workspace%+&00,X			; 7 byte filename
+	LDA tempfilename1,X			; 7 byte filename
 	STA &C5,X
 	DEX
 	BPL rdafsp_cpyfnloop
@@ -689,7 +697,7 @@ ENDIF
 	JSR ReadDirDrvParameters2	; Get dir
 .cmd_ex_nullstr
 	LDA #&2A			; "*"
-	STA workspace%+&00
+	STA tempfilename1
 	JSR Rdafsp_padall
 	JSR parameter_afsp
 	JSR getcatentry
@@ -728,12 +736,12 @@ ENDIF
 .getcatloop1
 	LDA &C5,X
 .getcatloopentry
-	STA workspace%+&58,X
+	STA tempfilename2,X
 	DEX
 	BPL getcatloop1
 
 	JSR CheckCurDrvCat		; catalogue entry matching
-	LDX #&58 				; string at &1058
+	LDX #LO(tempfilename2) 				; string was at &1058
 .getcatentry2
 	LDA #LO(disccataloguebuffer%)		; word &B6 = &E00 = PTR
 	STA &B6
@@ -776,7 +784,7 @@ ENDIF
 {
 
 .matchloop
-	LDA workspace%+&00,X
+	LDA tempfilename1,X
 	INX
 .^matchcharentry
 	CMP workspace%+&CE
@@ -2187,28 +2195,30 @@ ENDIF
 	CMP #&FF
 	BNE runfile_run			; If ExecAddr<>&FFFFFFFF
 	LDX #&06			; Else *EXEC file  (New to DFS)
+
 .runfile_exec_loop
-	LDA workspace%+&00,X			; Move filename
-	STA workspace%+&07,X
+	LDA tempfilename1,X			; Move filename
+	STA tempfilename2,X
 	DEX
 	BPL runfile_exec_loop
+
 	LDA #&0D
-	STA workspace%+&0E
+	STA tempfilename2+7
 	LDA #&45
-	STA workspace%+&00			; "E"
+	STA tempfilename1			; "E"
 	LDA #&3A			; ":"
-	STA workspace%+&02
+	STA tempfilename1+2
 	LDA CurrentDrv
 	ORA #&30
-	STA workspace%+&03			; Drive number X
+	STA tempfilename1+3			; Drive number X
 	LDA #&2E			; "."
-	STA workspace%+&01
-	STA workspace%+&04
-	STA workspace%+&06
+	STA tempfilename1+1
+	STA tempfilename1+4
+	STA tempfilename1+6
 	LDA DirectoryParam		; Directory D
-	STA workspace%+&05
-	LDX #&00			; "E.:X.D.FILENAM"
-	LDY #HI(workspace%+&00)
+	STA tempfilename1+5
+	LDX #LO(tempfilename1)			; "E.:X.D.FILENAM"
+	LDY #HI(tempfilename1)
 	JMP OSCLI
 
 .runfile_run
@@ -2336,7 +2346,7 @@ ENDIF
 	RTS
 }
 
-titlestr%=workspace%+&00
+titlestr%=tempfilename1
 
 IF _INCLUDE_CMD_TITLE_
 .CMD_TITLE
@@ -3773,8 +3783,8 @@ ENDIF
 	STA workspace%+&81			; GBPB to TUBE IF >=&80
 	LDA workspace%+&7F			; Tube op: 0 or 1
 	BCS gbpb_nottube2		; If not tube
-	LDX #&61
-	LDY #HI(workspace%+&00)
+	LDX #LO(workspace%+&61)
+	LDY #HI(workspace%+&61)
 
 	JSR TubeCode 			; (YX=addr,A=0:initrd,A=1:initwr,A=4:strexe) ; Init TUBE addr @ 1061
 .gbpb_nottube2
@@ -8118,12 +8128,13 @@ ENDIF
 }
 ENDIF
 
+
 	\\ *** Set up the string to be compared ***
 	\\ The match string is at (txtptr%)+Y
 	\\ Max length=12 chrs (but allow 0 terminator)
-dmStr%=workspace%+&00		; location of string
-dmLen%=workspace%+&0D		; length of string
-dmAmbig%=workspace%+&0E	; string terminated with *
+dmStr%=tempfilename1		; location of string
+dmLen%=tempfilename1+&0D		; length of string
+dmAmbig%=tempfilename1+&0E	; string terminated with *
 
 .DMatchInit
 {
