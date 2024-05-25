@@ -2231,9 +2231,9 @@ ENDIF
 	LDA &BF
 	STA workspace%+&75
 	JSR TUBE_CLAIM
-	LDX #&74			; Tell second processor
+	LDX #LO(workspace%+&74)			; Tell second processor
 	\ assume tube code doesn't change sw rom
-	LDY #HI(workspace%+&0074)
+	LDY #HI(workspace%+&74)
 	LDA #&04			; (Exec addr @ 1074)
 	JMP TubeCode			; YX=addr,A=0:initrd,A=1:initwr,A=4:strexe
 .runfile_inhost
