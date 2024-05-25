@@ -4677,7 +4677,8 @@ ENDIF
 .CloseFile_Yintch
 {
 	PHA 				; Save A
-	JSR IsHndlinUse_Yintch		; (Saves X to &10C5)
+	TXA : PHA
+	JSR IsHndlinUse_Yintch		;
 	BCS closefile_exit		; If file not open
 	LDA channeldata_channelbit,Y			; bit mask
 	EOR #&FF
@@ -4706,7 +4707,7 @@ ENDIF
 .closefile_buftodisk
 	JSR ChannelBufferToDisk_Yintch	; Restores Y
 .closefile_exit
-	LDX workspace%+&C5			; Restore X (IsHndlInUse)
+	PLA: TAX
 	PLA 				; Restore A
 	RTS
 }
@@ -5046,8 +5047,6 @@ ENDIF
 
 .IsHndlinUse_Yintch
 {
-	PHA				; Save A
-	STX workspace%+&C5			; Save X
 	TYA
 	AND #&E0
 	STA workspace%+&C2			; Save intch
@@ -5067,7 +5066,6 @@ ENDIF
 .hndlinuse_notused_C1
 	SEC
 .hndlinuse_used_C0
-	PLA
 	RTS
 }
 
@@ -5148,7 +5146,9 @@ ENDIF
 
 .CheckChannel_Yhndl_exYintch
 	JSR conv_Yhndl_intch_exYintch
+	PHA
 	JSR IsHndlinUse_Yintch
+	PLA
 	BCC checkchannel_okexit
 	JSR ClearEXECSPOOLFileHandle	; Next sub routine also calls this!
 
