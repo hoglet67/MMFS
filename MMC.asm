@@ -180,6 +180,8 @@ IF _DEVICE_!="1"
 	TAY
 	JMP MMC_GetByte
 ELSE
+	LDA #&AA \\ Some non zero value
+	TAY
 	RTS
 ENDIF
 	\ **** Set-up MMC command sequence ****
