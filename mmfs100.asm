@@ -63,6 +63,7 @@ ELIF _BP12K_
 	MA=&A200-&0E00
 	UTILSBUF=(&BF-&B6)+HI( MA+&E00)
 	MAEND=(UTILSBUF+1)<<8
+	MAEND =
 	_NON_WS_BUILD_COM = FALSE
 	guard_value=&C000
 ELIF _SWRAM_
@@ -2436,19 +2437,14 @@ ENDIF
 
 
 .fscv0_starOPT
+{
 	JSR RememberAXY
-	TXA
-	CMP #&04
+	CPX #&04
 	BEQ SetBootOption_Yoption
-	CMP #&05
+	CPX #&05
 	BEQ DiskTrapOption
-	CMP #&02
-	BCC opts0_1			; If A<2
-.errBADOPTION
-	JSR errBAD
-	EQUB &CB
-	EQUS "option",0
-
+	CPX #&02
+	BCS errBADOPTION		; If A>=2
 .opts0_1
 	LDX #&FF			; *OPT 0,Y or *OPT 1,Y
 	TYA
@@ -2472,7 +2468,7 @@ ENDIF
 	JMP SaveCatToDisk		; save cat
 
 .DiskTrapOption
-{
+
 IF NOT(_MASTER_)			; Master DFS always has higher priority
 	\ Bit 6 of the PagedROM_PrivWorkspaces = disable *DISC, *DISK commands etc.
 	TYA				; *OPT 5,Y
@@ -2493,6 +2489,11 @@ ENDIF
 ENDIF
 	RTS
 }
+
+.errBADOPTION
+	JSR errBAD
+	EQUB &CB
+	EQUS "option",0
 
 .errDISKFULL
 	JSR errDISK
