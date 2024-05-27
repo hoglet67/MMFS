@@ -61,10 +61,10 @@ ELIF _BP12K_
 	; needs to access user memory there. To use as much of it as possible up
 	; harmlessly, we situate our workspace in that range.
 	MA=&A200-&0E00
-	UTILSBUF=(&BF-&B6)+HI( MA+&E00)
+	;UTILSBUF=(&BF-&B6)+HI( MA+&E00)
+	UTILSBUF=(&BF-&B7)+HI( MA+&E00) ; not actually used
 	MAEND=(UTILSBUF+1)<<8
-	MAEND =
-	_NON_WS_BUILD_COM = FALSE
+	_NON_WS_BUILD_COM = TRUE ; doesn't need workspace
 	guard_value=&C000
 ELIF _SWRAM_
 	MA=&B700-&0E00
