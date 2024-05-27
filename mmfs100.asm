@@ -152,7 +152,7 @@ ENDIF
 ; B0 - BF FileSystem temporay workspace
 ; C0 - CF current File system workspace
 
-FSMessagesOnIfZero=workspace%+&C6
+FSMessagesOffIfZero=workspace%+&C6
 CMDEnabledIf1=workspace%+&C7
 DEFAULT_DIR=workspace%+&C9
 DEFAULT_DRIVE=workspace%+&CA
@@ -859,8 +859,8 @@ ENDIF
 }
 
 .prt_InfoMsg_Yoffset
-	BIT FSMessagesOnIfZero		; Print message
-	BMI print_infoline_exit
+	BIT FSMessagesOffIfZero		; Print message
+	BPL print_infoline_exit
 .prt_InfoLine_Yoffset
 	JSR RememberAXY			; Print info
 	JSR prt_filename_Yoffset
@@ -2445,13 +2445,12 @@ ENDIF
 	BEQ DiskTrapOption
 	CPX #&02
 	BCS errBADOPTION		; If A>=2
-.opts0_1
-	LDX #&FF			; *OPT 0,Y or *OPT 1,Y
+.opts0_1					; *OPT 0,Y or *OPT 1,Y
 	TYA
-	BEQ opts0_1_Y0
-	LDX #&00
+	BEQ	opts0_1_Y0
+	LDA #&FF
 .opts0_1_Y0
-	STX FSMessagesOnIfZero		; =NOT(Y=0), I.e. FF=messages off
+	STA FSMessagesOffIfZero		; = Y=0, I.e. &00 =messages off
 	RTS
 
 .SetBootOption_Yoption
@@ -3118,10 +3117,10 @@ ENDIF
 	LDY #&00
 	STY DEFAULT_DRIVE
 	STY workspace%+&C0
-
+	STY FSMessagesOffIfZero
 	DEY				; Y=&FF
 	STY CMDEnabledIf1
-	STY FSMessagesOnIfZero
+
 	STY workspace%+&DD
 }
 
