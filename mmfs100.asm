@@ -907,6 +907,9 @@ ENDIF
 	JMP PrintSpaceSPL
 }
 
+
+.ReadFileAttribsToWSDB_Yoffset
+	JSR SetParamBlockPointerB0
 .ReadFileAttribsToB0_Yoffset
 {
 	JSR RememberAXY			; Decode file attribs
@@ -2000,8 +2003,7 @@ ENDIF
 
 .osfileFF_loadfiletoaddr
 	JSR read_fspBA_reset_get_cat_firstentry80	; Get Load Addr etc.
-	JSR SetParamBlockPointerB0	; from catalogue
-	JSR ReadFileAttribsToB0_Yoffset	; (Just for info?)
+	JSR ReadFileAttribsToWSDB_Yoffset	; from catalogue (Just for info?)
 
 .LoadFile_Ycatoffset
 {
@@ -2072,8 +2074,7 @@ ENDIF
 
 .osfile0_savememblock
 	JSR CreateFile_FSP
-	JSR SetParamBlockPointerB0
-	JSR ReadFileAttribsToB0_Yoffset
+	JSR ReadFileAttribsToWSDB_Yoffset
 	; fall into SaveMemBlock
 
 	\\ **** Save block of memory ****
@@ -4296,24 +4297,29 @@ ENDIF
 	JSR ReadFileAttribsToB0_Yoffset
 	LDA #&01			; File type: 1=file found
 	RTS
+
 .osfile6_delfile
 	JSR CheckFileNotLocked		; DELETE FILE
 	JSR ReadFileAttribsToB0_Yoffset
 	JSR DeleteCatEntry_YFileOffset
 	JMP osfile_savecat_retA_1
+
 .osfile1_updatecat
 	JSR CheckFileExists		; UPDATE CAT ENTRY
 	JSR osfile_update_loadaddr_Xoffset
 	JSR osfile_update_execaddr_Xoffset
-	BVC osfile_updatelocksavecat
+	BVC osfile_updatelocksavecat ;  always
+
 .osfile3_wrexecaddr
 	JSR CheckFileExists		; WRITE EXEC ADDRESS
 	JSR osfile_update_execaddr_Xoffset
-	BVC osfile_savecat_retA_1
+	BVC osfile_savecat_retA_1 ; always
+
 .osfile2_wrloadaddr
 	JSR CheckFileExists		; WRITE LOAD ADDRESS
 	JSR osfile_update_loadaddr_Xoffset
-	BVC osfile_savecat_retA_1
+	BVC osfile_savecat_retA_1 ;always
+
 .osfile4_wrattribs
 	JSR CheckFileExists		; WRITE ATTRIBUTES
 	JSR CheckFileNotOpenY
@@ -4323,6 +4329,7 @@ ENDIF
 	JSR SaveCatToDisk
 	LDA #&01
 	RTS
+
 .osfile_update_loadaddr_Xoffset
 	JSR RememberAXY			; Update load address
 	LDY #&02
@@ -4338,6 +4345,7 @@ ENDIF
 	EOR disccataloguebuffer%+&100+&0E,X
 	AND #&0C
 	BPL osfile_savemixedbyte	; always
+
 .osfile_update_execaddr_Xoffset
 	JSR RememberAXY			; Update exec address
 	LDY #&06
@@ -4358,6 +4366,7 @@ ENDIF
 	STA disccataloguebuffer%+&100+&0E,X
 	CLV
 	RTS
+
 .osfile_updatelock
 	JSR RememberAXY			; Update file locked flag
 	LDY #&0E
