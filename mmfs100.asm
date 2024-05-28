@@ -1890,17 +1890,15 @@ cmdtab4= cmdtable4-cmdtable1
 	ASL A
 	TAX
 	LDA cmdaddr1+1,X		; Forget Y
-	BPL dommcinit
+	BMI gocmdcode2
+.dommcinit
+	JSR MMC_BEGIN2
+	ORA #&80
 .gocmdcode2
 	PHA				; Push sub address and
 	LDA cmdaddr1,X			; return to it!
 	PHA
 	RTS
-
-.dommcinit
-	JSR MMC_BEGIN2
-	ORA #&80
-	BNE gocmdcode2
 }
 
 IF _INCLUDE_CMD_WIPE_
@@ -2839,10 +2837,10 @@ IF _INCLUDE_CMD_RENAME_
 {
 	JSR parameter_fsp
 	JSR Param_SyntaxErrorIfNull
-	JSR read_fspTextPointer
+	JSR read_fspTextPointer ; filename at tempfilename1
 	TYA
 	PHA
-	JSR getcatentry
+	JSR getcatentry		; serach for file name at tempfilename1
 	JSR CheckFileNotLockedOrOpenY
 	STY &A8
 	PLA
