@@ -2037,19 +2037,61 @@ ENDIF
 	LDY &BA
 	JSR prt_InfoMsg_Yoffset		; pt. print file info
 	; Fall into  LoadMemBlockEX
-}
+
 
 	\\ **** Load block of memory ****
-.LoadMemBlockEX
+;.LoadMemBlockEX
 IF _SWRAM_
+
+	\ Check for exception - don't allow loading to memory >=&8000
+	\ i.e. don't overwrite filing system in SWRAM
+	MACRO CHECKFOREXCEPTION
 IF _MM32_
-	JSR CheckForException
+	b=&BC
+ELSE
+	b=workspace%+&90
+ENDIF
+
+	LDA workspace%+&74
+	AND workspace%+&75
+	ORA TubePresentIf0
+	EOR #&FF
+	BNE noexception			; If Tube Xfer
+
+IF _MM32_
+	LDA b+6
+	AND #&30
+	BNE errException		; If len >= &10000
+	LDA b+5
+	BMI errException		; If len >= &8000
+ENDIF
+
+	CLC
+	LDA b
+	ADC b+4
+	TAX
+	LDA b+1
+	BMI errException		; Start >= &8000
+	ADC b+5
+	BPL noexception			; OK if start+len <= &8000, i.e. start+len-1 < &8000
+	ASL A
+	BNE errException		; if start + len > &8000
+	TXA
+	BNE errException		; if start + len <> &8000
+.noexception
+	ENDMACRO
+
+
+
+IF _MM32_
+	CHECKFOREXCEPTION
 ELSE
 	JSR CalcRWVars
-	JSR CheckForException
+	CHECKFOREXCEPTION
 	JMP readblock
 ENDIF
 ENDIF
+}
 
 .LoadMemBlock
 IF _MM32_
@@ -2071,6 +2113,14 @@ ELSE
 	RTS
 }
 ENDIF
+
+IF _SWRAM_
+.errException
+	JSR ReportError
+	EQUB &FF
+	EQUS "Not allowed",0
+ENDIF
+
 
 .osfile0_savememblock
 	JSR CreateFile_FSP
@@ -7225,51 +7275,6 @@ ENDIF
 }
 ENDIF ;NOT(_MM32_)
 
-IF _SWRAM_
-	\ Check for exception - don't allow loading to memory >=&8000
-	\ i.e. don't overwrite filing system in SWRAM
-.CheckForException
-{
-IF _MM32_
-	b=&BC
-ELSE
-	b=workspace%+&90
-ENDIF
-
-	LDA workspace%+&74
-	AND workspace%+&75
-	ORA TubePresentIf0
-	EOR #&FF
-	BNE noexception			; If Tube Xfer
-
-IF _MM32_
-	LDA b+6
-	AND #&30
-	BNE errException		; If len >= &10000
-	LDA b+5
-	BMI errException		; If len >= &8000
-ENDIF
-
-	CLC
-	LDA b
-	ADC b+4
-	TAX
-	LDA b+1
-	BMI errException		; Start >= &8000
-	ADC b+5
-	BPL noexception			; OK if start+len <= &8000, i.e. start+len-1 < &8000
-	ASL A
-	BNE errException		; if start + len > &8000
-	TXA
-	BNE errException		; if start + len <> &8000
-.noexception
-	RTS
-.errException
-	JSR ReportError
-	EQUB &FF
-	EQUS "Not allowed",0
-}
-ENDIF
 
 .Set_CurDirDrv_ToDefaults_CheckCurDrvCat
 	JSR Set_CurDirDrv_ToDefaults
