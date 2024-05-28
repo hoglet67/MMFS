@@ -497,8 +497,11 @@ ENDIF
 	INY
 	RTS
 }
-
-.read_fspTextPointer
+.parameter_afsp_Param_SyntaxErrorIfNull_read_fspTextPointer
+	JSR parameter_afsp
+.Param_SyntaxErrorIfNull_read_fspTextPointer
+	JSR Param_SyntaxErrorIfNull
+;.read_fspTextPointer
 	JSR Set_CurDirDrv_ToDefaults	; **Read filename to &1000
 	JMP rdafsp_entry		; **1st pad &1000-&103F with spaces
 
@@ -673,8 +676,7 @@ ENDIF
 .parameter_afsp_Param_SyntaxErrorIfNull_getcatentry_fspTxtP
 	JSR parameter_afsp
 .Param_SyntaxErrorIfNull_getcatentry_fspTxtP
-	JSR Param_SyntaxErrorIfNull
-	JSR read_fspTextPointer  ; string is 7 chars with a space at 8th
+	JSR Param_SyntaxErrorIfNull_read_fspTextPointer  ; string is 7 chars with a space at 8th
 .getcatentry
 	JSR get_cat_firstentry80
 	BCS getcat_exit
@@ -2396,9 +2398,7 @@ ENDIF
 IF _INCLUDE_CMD_ACCESS_
 .CMD_ACCESS
 {
-	JSR parameter_afsp
-	JSR Param_SyntaxErrorIfNull
-	JSR read_fspTextPointer
+	JSR parameter_afsp_Param_SyntaxErrorIfNull_read_fspTextPointer
 	LDX #&00			; X=locked mask
 	JSR GSINIT_A
 	BNE cmdac_getparam		; If not null string
@@ -2836,8 +2836,7 @@ IF _INCLUDE_CMD_RENAME_
 .CMD_RENAME
 {
 	JSR parameter_fsp
-	JSR Param_SyntaxErrorIfNull
-	JSR read_fspTextPointer ; filename at tempfilename1
+	JSR Param_SyntaxErrorIfNull_read_fspTextPointer ; filename at tempfilename1
 	TYA
 	PHA
 	JSR getcatentry		; serach for file name at tempfilename1
@@ -2845,10 +2844,9 @@ IF _INCLUDE_CMD_RENAME_
 	STY &A8
 	PLA
 	TAY
-	JSR Param_SyntaxErrorIfNull
 	LDA CurrentDrv
 	PHA
-	JSR read_fspTextPointer
+	JSR Param_SyntaxErrorIfNull_read_fspTextPointer
 	PLA
 	CMP CurrentDrv
 	BNE jmpBADDRIVE
@@ -5948,10 +5946,9 @@ IF _INCLUDE_CMD_COPY_
 {
 	; AE AF used in printstring
 
-	JSR parameter_afsp ; &10CD = `#` &10CE =`*`
+	;JSR parameter_afsp ; &10CD = `#` &10CE =`*`
 	JSR Get_CopyDATA_Drives ; &A8 = source drive : &A9 destination drive
-	JSR Param_SyntaxErrorIfNull
-	JSR read_fspTextPointer ; &1000 = filename
+	JSR parameter_afsp_Param_SyntaxErrorIfNull_read_fspTextPointer; &1000 = filename
 	\ Source
 	LDA &A8 ; Already ranged checked drive number
 	STA CurrentDrv
