@@ -2081,8 +2081,6 @@ ENDIF
 .noexception
 	ENDMACRO
 
-
-
 IF _MM32_
 	CHECKFOREXCEPTION
 ELSE
@@ -2983,10 +2981,26 @@ ELSE
 ENDIF
 ;}
 .noesc
+.srv3_exit
 	RTS
 
-
-
+.SERVICE03_autoboot			; A=3 Autoboot
+{
+	BP12K_NEST
+	JSR RememberAXY
+	STY &B3				; if Y=0 then !BOOT
+	LDA #&7A			; Keyboard scan
+	JSR OSBYTE			; X=int.key.no
+	TXA
+	BMI jmpAUTOBOOT
+	CMP #&65			; "M" KEY
+	BNE srv3_exit
+	LDA #&78			; write current keys pressed info
+	JSR OSBYTE
+.jmpAUTOBOOT
+	;JMP AUTOBOOT
+	;; fall into AUTOBOOT
+}
 
 .AUTOBOOT
 IF _MM32_
@@ -3488,7 +3502,7 @@ ENDIF
 
 IF _MASTER_
 	BIT PagedROM_PrivWorkspaces,X
-	BMI srv3_exit			; PWS in hidden ram
+	BMI srv2_exit			; PWS in hidden ram
 ENDIF
 
 IF NOT(_SWRAM_)
@@ -3497,25 +3511,8 @@ IF NOT(_SWRAM_)
 		INY			; Utilities need a page too
 	ENDIF
 ENDIF
-}
-.srv3_exit
+.srv2_exit
 	RTS
-
-.SERVICE03_autoboot			; A=3 Autoboot
-{
-	BP12K_NEST
-	JSR RememberAXY
-	STY &B3				; if Y=0 then !BOOT
-	LDA #&7A			; Keyboard scan
-	JSR OSBYTE			; X=int.key.no
-	TXA
-	BMI jmpAUTOBOOT
-	CMP #&65			; "M" KEY
-	BNE srv3_exit
-	LDA #&78			; write current keys pressed info
-	JSR OSBYTE
-.jmpAUTOBOOT
-	JMP AUTOBOOT
 }
 
 .SERVICE04_unrec_command		; A=4 Unrec Command
