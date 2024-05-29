@@ -519,12 +519,13 @@ ENDIF
 	LDX #&20			; Get drive & dir (X="space")
 	JSR GSREAD_A			; get C
 	BCS errBadName			; IF end of string
-	STA tempfilename1
+
 	CMP #&2E			; C="."?
 	BNE rdafsp_notdot		; ignore leading ...'s
-.rdafsp_setdrv
+.rdafsp_setdir
 	STX DirectoryParam		; Save directory (X)
 	BEQ rdafsp_entry		; always
+
 .rdafsp_notdot
 	CMP #&3A			; C=":"? (Drive number follows)
 	BNE rdafsp_notcolon
@@ -541,11 +542,12 @@ ENDIF
 
 .rdafsp_notcolon
 {
+	STA tempfilename1
 	TAX 				; X=last Chr
 	JSR GSREAD_A			; get C
 	BCS Rdafsp_padall		; IF end of string
 	CMP #&2E			; C="."?
-	BEQ rdafsp_setdrv
+	BEQ rdafsp_setdir
 	LDX #&01			; Read rest of filename
 .rdafsp_rdfnloop
 	STA tempfilename1,X
