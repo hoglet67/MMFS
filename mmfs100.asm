@@ -374,14 +374,15 @@ ENDIF
 
 	\ As above sub, but can be spooled
 .PrintStringSPL
+; no longer preserves A
 {
-	STA &B3				; Save A
+	;STA &B3				; Save A
 	PLA 				; Pull calling address
 	STA &AE
 	PLA
 	STA &AF
-	LDA &B3				; Save A & Y
-	PHA
+	;LDA &B3				; Save A & Y
+	PHA					; push something on the stack to keep it balanced
 	TYA
 	PHA
 	LDY #&00
