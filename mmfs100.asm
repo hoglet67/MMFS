@@ -94,8 +94,9 @@ ENDIF
 
 MP=HI(MA)
 
-tempfilename1 = MA+ &1000
-tempfilename2 = MA+ &1007
+tempfilename1 = MA+ &1008 ; make sure there is free space before filename
+						  ; so that exec can put E.:X.D. infront
+tempfilename2 = MA+ &1000
 
 
 buf%=disccataloguebuffer%
@@ -2248,31 +2249,26 @@ ENDIF
 	AND disccataloguebuffer%+&100+&0B,Y
 	CMP #&FF
 	BNE runfile_run			; If ExecAddr<>&FFFFFFFF
-	LDX #&06			; Else *EXEC file  (New to DFS)
 
-.runfile_exec_loop
-	LDA tempfilename1,X			; Move filename
-	STA tempfilename2,X
-	DEX
-	BPL runfile_exec_loop
+	; filename1 has space infront to put "E.:X.D.FILENAM
 
 	LDA #&0D
-	STA tempfilename2+7
-	LDA #&45
-	STA tempfilename1			; "E"
-	LDA #&3A			; ":"
-	STA tempfilename1+2
+	STA tempfilename1+7		; terminate filename
+	LDA #&45				; "E"
+	STA tempfilename1-7
+	LDA #&3A				; ":"
+	STA tempfilename1-5
 	LDA CurrentDrv
 	ORA #&30
-	STA tempfilename1+3			; Drive number X
-	LDA #&2E			; "."
-	STA tempfilename1+1
-	STA tempfilename1+4
-	STA tempfilename1+6
+	STA tempfilename1-4		; Drive number X
+	LDA #&2E				; "."
+	STA tempfilename1-6
+	STA tempfilename1-3
+	STA tempfilename1-1
 	LDA DirectoryParam		; Directory D
-	STA tempfilename1+5
-	LDX #LO(tempfilename1)			; "E.:X.D.FILENAM"
-	LDY #HI(tempfilename1)
+	STA tempfilename1-2
+	LDX #LO(tempfilename1-7)			; "E.:X.D.FILENAM"
+	LDY #HI(tempfilename1-7)
 	JMP OSCLI
 
 .runfile_run
@@ -2400,7 +2396,7 @@ ENDIF
 	RTS
 }
 
-titlestr%=tempfilename1
+titlestr%=tempfilename2 ; Filename2 flows into filename1
 
 IF _INCLUDE_CMD_TITLE_
 .CMD_TITLE
