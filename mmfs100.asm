@@ -724,32 +724,19 @@ ENDIF
 	BCS cmd_info_loop
 	RTS
 
+
+
+.get_cat_nextentry
+	LDX #LO(tempfilename1)	; Entry: wrd &B6 -> first entry
+	BNE getcatsetupB7	; always ( almost certainly could be getcatloop2 )
+
 .read_fspBA_reset_get_cat_firstentry80
 	JSR read_fspBA_reset
 .get_cat_firstentry80
 .get_cat_firstentry81
 	JSR CheckCurDrvCat		; Get cat entry
 	LDX #LO(tempfilename1) 	; now first byte @ &1000+X
-	BEQ getcatentry2		; always
 
-.get_cat_nextentry
-	LDX #LO(tempfilename1)	; Entry: wrd &B6 -> first entry
-	BEQ getcatsetupB7	; always ( almost certainly could be getcatloop2 )
-
-.get_cat_firstentry80fname
-	;LDX #&07			; copy filename from &C5 to &1058
-	;LDA #&20			; set last char to " "
-	;BNE getcatloopentry ; always
-;	LDX #6				; no need to have any padding
-;.getcatloop1
-;	LDA &C5,X
-;.getcatloopentry
-;	STA tempfilename2,X
-;	DEX
-;	BPL getcatloop1
-
-	JSR CheckCurDrvCat		; catalogue entry matching
-	LDX #LO(tempfilename2) 				; string was at &1058
 .getcatentry2
 	LDA #LO(disccataloguebuffer%)		; word &B6 = &E00 = PTR
 	STA &B6
@@ -2581,7 +2568,10 @@ ENDIF
 	LDA DirectoryParam
 	PHA
 	JSR LoadCurDrvCat2		; Load cat ( BC to CB preserved)
-	JSR get_cat_firstentry80fname ; use filename @ &C5 which is copied to &1058
+	JSR CheckCurDrvCat		; catalogue entry matching
+	LDX #LO(tempfilename2) 				; string was at &1058
+
+	JSR getcatentry2; use filename @ &C5 which is copied to &1058
 	BCC cd_writedest_cat_nodel	; If file not found
 	JSR DeleteCatEntry_YFileOffset
 .cd_writedest_cat_nodel
