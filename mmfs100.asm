@@ -792,7 +792,7 @@ ENDIF
 {
 
 .matchloop
-	LDA tempfilename1,X
+	LDA tempfilename2,X
 	INX
 .^matchcharentry
 	CMP workspace%+&CE
@@ -8139,9 +8139,9 @@ ENDIF
 	\\ *** Set up the string to be compared ***
 	\\ The match string is at (txtptr%)+Y
 	\\ Max length=12 chrs (but allow 0 terminator)
-dmStr%=tempfilename1		; location of string
-dmLen%=tempfilename1+&0D		; length of string
-dmAmbig%=tempfilename1+&0E	; string terminated with *
+dmStr%=tempfilename2		; location of string
+dmLen%=tempfilename2+&0D		; length of string
+dmAmbig%=tempfilename2+&0E	; string terminated with *
 
 .DMatchInit
 {
