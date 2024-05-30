@@ -2047,9 +2047,11 @@ ENDIF
 ;.LoadMemBlockEX
 IF _SWRAM_
 
+IF NOT(_MM32_)
+	JSR CalcRWVars
+ENDIF
 	\ Check for exception - don't allow loading to memory >=&8000
 	\ i.e. don't overwrite filing system in SWRAM
-	MACRO CHECKFOREXCEPTION
 IF _MM32_
 	b=&BC
 ELSE
@@ -2083,13 +2085,8 @@ ENDIF
 	TXA
 	BNE errException		; if start + len <> &8000
 .noexception
-	ENDMACRO
 
-IF _MM32_
-	CHECKFOREXCEPTION
-ELSE
-	JSR CalcRWVars
-	CHECKFOREXCEPTION
+IF NOT(_MM32_)
 	JMP readblock
 ENDIF
 ENDIF
@@ -4780,7 +4777,7 @@ ENDIF
 .findv_createfile
 	PHP 				; Clear data
 	; A=0 BC-C3=0
-	LDX #&07			; 1074-107B=0
+	LDX #&07			; 1074-107B=0 ; &74 &75 &76 &77 &78 &79 &7A &7B
 .findv_loop1
 	STA &BC,X
 	STA workspace%+&74,X
