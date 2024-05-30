@@ -2568,7 +2568,7 @@ ENDIF
 	LDA DirectoryParam
 	PHA
 	JSR LoadCurDrvCat2		; Load cat ( BC to CB preserved)
-	JSR CheckCurDrvCat		; catalogue entry matching
+	;JSR CheckCurDrvCat		; catalogue entry matching
 	LDX #LO(tempfilename2) 				; string was at &1058
 
 	JSR getcatentry2; use filename @ &C5 which is copied to &1058
