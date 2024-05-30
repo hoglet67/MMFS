@@ -740,13 +740,13 @@ ENDIF
 	;LDX #&07			; copy filename from &C5 to &1058
 	;LDA #&20			; set last char to " "
 	;BNE getcatloopentry ; always
-	LDX #6				; no need to have any padding
-.getcatloop1
-	LDA &C5,X
-.getcatloopentry
-	STA tempfilename2,X
-	DEX
-	BPL getcatloop1
+;	LDX #6				; no need to have any padding
+;.getcatloop1
+;	LDA &C5,X
+;.getcatloopentry
+;	STA tempfilename2,X
+;	DEX
+;	BPL getcatloop1
 
 	JSR CheckCurDrvCat		; catalogue entry matching
 	LDX #LO(tempfilename2) 				; string was at &1058
@@ -6012,7 +6012,7 @@ IF _INCLUDE_CMD_COPY_
 .copy_loop2
 	LDA disccataloguebuffer%+&08,Y
 	STA &C5,X  ; store filename &C5-&CC
-
+	STA tempfilename2,X
 	LDA disccataloguebuffer%+&100+&08,Y
 	STA &BC,X	; load address, exec .... &BC- &C3
 
