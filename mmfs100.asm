@@ -94,9 +94,9 @@ ENDIF
 
 MP=HI(MA)
 
-tempfilename1 = MA+ &1008 ; make sure there is free space before filename
+tempfilename1 = MA+ &1108 ; make sure there is free space before filename
 						  ; so that exec can put E.:X.D. infront
-tempfilename2 = MA+ &1000
+tempfilename2 = MA+ &1100
 
 
 buf%=disccataloguebuffer%
@@ -4676,18 +4676,15 @@ ENDIF
 	JSR Channel_SetDirDrive_Yintch
 .Channel_GetCatEntry_Yintch
 {
-	LDX #&06			; Copy filename from
-.chnl_getcatloop
-	LDA channeldata_filename6_readonly,Y			; channel info to &C5
-	STA &C5,X
-	;DEY
-	DEY
-	DEX
-	BPL chnl_getcatloop
-	JSR get_cat_firstentry80fname
+	TYA						; Y points to filename in channel buffer
+	PHA
+	JSR CheckCurDrvCat
+	PLA
+	TAX						; use X as a point to filename
+	JSR getcatentry2
 	BCC errDISKCHANGED		; If file not found
-	STY workspace%+&C3			; ?&10C3=cat file offset
-	LDY workspace%+&C2			; Y=intch
+	STY workspace%+&C3		; ?&10C3=cat file offset
+	LDY workspace%+&C2		; Y=intch
 }
 .chkdskchangexit
 	RTS
