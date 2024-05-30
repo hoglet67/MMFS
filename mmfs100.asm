@@ -4073,7 +4073,7 @@ dosram      =       mainws+$0060	;copy of OSGBPB/OSFILE ctrl block; temp filenam
 acc         =       dosram+$000D	;temporary OSGBPB call number
 ltemp0      =       dosram+$000E	;temporary count of bytes remaining to transfer
 ldlow       =       mainws+$0072	;4 bytes; load address passed to OSFILE; Tube tx addr
-dcby        =       mainws+$00C2	;channel workspace pointer for current open file
+;dcby        =       mainws+$00C2	;channel workspace pointer for current open file
 seqsem      =       mainws+$00DD	;$00=*SPOOL/*EXEC critical, close files on error
 
 seqmap      =       mainws+$0100	;workspaces for channels $11..$15
@@ -4198,7 +4198,7 @@ lenhi       =       work  +$0007	;2MSB file length in OSFILE
 	TXA
 	ORA ltemp0+$01
 	TAX			;hold LSB of transfer length in X
-	LDA dcby		;get channel workspace offset
+	LDA workspace%+&C2		;get channel workspace offset
 	SEC
 	ADC acc			;add 1+call number, 2..5 to workspace offset
 	EOR #$04		;bit 2 = 1 if writing
@@ -4219,7 +4219,7 @@ lenhi       =       work  +$0007	;2MSB file length in OSFILE
 .sectr0					;transfer one or more sectors.
 	STX dosram+$06		;x=request, hold in 3MSB of L
 .sectr1
-	LDY dcby		;undo EXT/allocation fudge
+	LDY workspace%+&C2		;undo EXT/allocation fudge
 	JSR Channel_SetDirDrv_GetCatEntry_Yintch ;ensure open file still in drive
 	JSR ChannelBufferToDisk_Yintch		;ensure buffer up-to-date on disc L6
 	LDA #$3F		;b7=0 buffer does not contain PTR, b6=0 buffer not changed
@@ -4267,7 +4267,7 @@ lenhi       =       work  +$0007	;2MSB file length in OSFILE
 	INC dosram+$04
 .updp
 	TYA			;set A=LSB transfer size in sectors
-	LDY dcby		;set Y=channel workspace offset
+	LDY workspace%+&C2		;set Y=channel workspace offset
 	CLC			;add to open file's pointer
 	ADC channeldata_ptr+1,Y
 	STA channeldata_ptr+1,Y		;update PTR
@@ -4676,14 +4676,13 @@ ENDIF
 	JSR Channel_SetDirDrive_Yintch
 .Channel_GetCatEntry_Yintch
 {
-	TYA						; Y points to filename in channel buffer
-	PHA
+							; Y points to filename in channel buffer
 	JSR CheckCurDrvCat
-	PLA
-	TAX						; use X as a point to filename
+	LDX workspace%+&C2		; use X as a point to filename ( this is the same as Y)
 	JSR getcatentry2
 	BCC errDISKCHANGED		; If file not found
-	STY workspace%+&C3		; ?&10C3=cat file offset
+	TYA
+	TAX 					; X=cat offset
 	LDY workspace%+&C2		; Y=intch
 }
 .chkdskchangexit
@@ -4739,7 +4738,7 @@ ENDIF
 	LDA channeldata_drive_flags,Y			; If file extended and not
 	AND #&20				; forcing buffer to disk
 	BEQ closefile_buftodisk		; update the file length
-	LDX workspace%+&C3			; X=cat offset
+	; X=cat offset
 	LDA channeldata_ext+0,Y			; File lenth = EXTENT
 	STA disccataloguebuffer%+&100+&0C,X			; Len lo
 	LDA channeldata_ext+1,Y
@@ -5334,7 +5333,7 @@ ENDIF
 	JSR CmpPTR
 	BNE bp_noextend			; If PTR<>Sector Count, i.e Ptr<sc
 	JSR Channel_GetCatEntry_Yintch	; Enough space in gap?
-	LDX workspace%+&C3			; X=cat file offset
+	; X=cat file offset
 	SEC 				; Calc size of gap
 	LDA disccataloguebuffer%+&100+&07,X			; Next file start sector
 	SBC disccataloguebuffer%+&100+&0F,X			; This file start
