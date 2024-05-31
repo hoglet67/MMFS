@@ -3942,7 +3942,7 @@ ENDIF
 	JSR A_rorx4
 	JSR gbpb_gb_SAVEBYTE
 	LDA CurrentDrv			; Current drive
-	JMP gbpb_gb_SAVEBYTE
+	BPL gbpb_gb_SAVEBYTE	; always
 }
 
 	\\ READ CUR DRIVE/DIR
@@ -4325,7 +4325,7 @@ ENDIF
 	JSR CheckFileNotLocked		; DELETE FILE
 	JSR ReadFileAttribsToB0_Yoffset
 	JSR DeleteCatEntry_YFileOffset
-	JMP osfile_savecat_retA_1
+	JMP osfile_savecat_retA_1		; Carry is probably always set
 
 .osfile1_updatecat
 	JSR CheckFileExists		; UPDATE CAT ENTRY
@@ -5291,7 +5291,7 @@ ENDIF
 	EQUS "Read only",0
 
 .bput_Yintchan
-	JSR RememberAXY
+	JSR RememberXYonly
 	JMP bp_entry
 .BPUTV_ENTRY
 	JSR RememberAXY
