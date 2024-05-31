@@ -151,6 +151,10 @@ IF _NON_WS_BUILD_COM
 .loop_newline
 	JSR Utils_PrintLineNoA8
 	LDX #0
+	BEQ loop_line ; always
+
+.subpointer
+	JSR fpdec
 .loop_line
 	JSR OSRDCH
 	BCS Utils_ESCAPE_CloseFileY
@@ -167,9 +171,6 @@ IF _NON_WS_BUILD_COM
 	JSR fpdec
 	BNE clearline
 	BEQ loop_line
-.subpointer
-	JSR fpdec
-	JMP loop_line
 
 .fpdec
 	TXA
