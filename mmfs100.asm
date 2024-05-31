@@ -703,12 +703,11 @@ ENDIF
 	BEQ cmd_ex_nullstr		; If null string
 	JSR ReadDirDrvParameters2	; Get dir
 .cmd_ex_nullstr
-	LDA #&2A			; "*"
+	LDA #&2A				; "*"
 	STA tempfilename1
-	JSR Rdafsp_padall
-	JSR parameter_afsp
+	JSR parameter_afsp 		; Enable wildcards ( "*" )
 	JSR getcatentry
-	BCS cmd_info_loop ; always
+	BCS cmd_info_loop 		; always
 }
 
 	\ *INFO <afsp>
@@ -2569,9 +2568,9 @@ ENDIF
 	PHA
 	JSR LoadCurDrvCat2		; Load cat ( BC to CB preserved)
 	;JSR CheckCurDrvCat		; catalogue entry matching
-	LDX #LO(tempfilename2) 				; string was at &1058
+	LDX #LO(tempfilename2) 	; string was at &1058
 
-	JSR getcatentry2; use filename @ &C5 which is copied to &1058
+	JSR getcatentry2		;
 	BCC cd_writedest_cat_nodel	; If file not found
 	JSR DeleteCatEntry_YFileOffset
 .cd_writedest_cat_nodel
