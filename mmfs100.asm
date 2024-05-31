@@ -505,7 +505,7 @@ ENDIF
 	JSR Param_SyntaxErrorIfNull
 ;.read_fspTextPointer
 	JSR Set_CurDirDrv_ToDefaults	; **Read filename to &1000
-	JMP rdafsp_entry		; **1st pad &1000-&103F with spaces
+	BPL rdafsp_entry		; always
 
 .read_fspBA_reset
 	JSR Set_CurDirDrv_ToDefaults	; Reset cur dir & drive
@@ -1921,16 +1921,7 @@ IF _INCLUDE_CMD_WIPE_
 }
 ENDIF
 
-IF _INCLUDE_CMD_DELETE_
-.CMD_DELETE
-{
-	JSR parameter_fsp
-	JSR Param_SyntaxErrorIfNull_getcatentry_fspTxtP
-	JSR prt_InfoMsg_Yoffset
-	JSR DeleteCatEntry_YFileOffset
-	JMP SaveCatToDisk
-}
-ENDIF
+
 
 IF _INCLUDE_CMD_DESTROY_
 .CMD_DESTROY
@@ -7282,6 +7273,18 @@ ELSE
 	LDA CurrentDrv
 	STA CurrentCat
 	JMP MMC_END
+ENDIF
+
+IF _INCLUDE_CMD_DELETE_
+.CMD_DELETE
+{
+	JSR parameter_fsp
+	JSR Param_SyntaxErrorIfNull_getcatentry_fspTxtP
+	JSR prt_InfoMsg_Yoffset
+	JSR DeleteCatEntry_YFileOffset
+	;JMP SaveCatToDisk
+	; Fall into SaveCatToDisk
+}
 ENDIF
 
 	\\ **** Save catalogue of current drive ****
