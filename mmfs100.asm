@@ -4290,9 +4290,9 @@ lenhi       =       work  +$0007	;2MSB file length in OSFILE
 .docmd
 	CMP #3
 	BCC dowrcmd
-.dowrcmd
-	JMP LoadMemBlock        ; Commands 3/4 as reads
 .dordcmd
+	JMP LoadMemBlock        ; Commands 3/4 as reads
+.dowrcmd
 	JMP SaveMemBlock        ; Command 1/2 are writes
 
 ENDIF
