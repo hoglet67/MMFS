@@ -544,6 +544,7 @@ ENDIF
 .rdafsp_notcolon
 {
 	STA tempfilename1
+	STA &C5
 	TAX 				; X=last Chr
 	JSR GSREAD_A			; get C
 	BCS Rdafsp_padall		; IF end of string
@@ -552,6 +553,7 @@ ENDIF
 	LDX #&01			; Read rest of filename
 .rdafsp_rdfnloop
 	STA tempfilename1,X
+	STA &C5,X
 	INX
 	JSR GSREAD_A
 	BCS rdafsp_padX			; IF end of string
@@ -569,16 +571,12 @@ ENDIF
 	LDA #&20			; Pad with spaces
 .rdafsp_padloop
 	STA tempfilename1,X
+	STA &C5,X
 	INX
 	CPX #7			; Why &40? : Wildcards buffer! only 7 bytes needed
 	BNE rdafsp_padloop
 .rdafsp_cpyfnstart
-	DEX				; Copy from &1000 to &C5
-.rdafsp_cpyfnloop
-	LDA tempfilename1,X			; 7 byte filename
-	STA &C5,X
-	DEX
-	BPL rdafsp_cpyfnloop
+
 	RTS
 }
 
@@ -3699,11 +3697,13 @@ ENDIF	; End of MASTER ONLY service calls
 	STY &B1
 	STY workspace%+&DC
 
-	LDX #&00			; BA->filename
-	LDY #&00			; BC & 1074=load addr (32 bit)
-	JSR CopyWordB0BA		; BE & 1076=exec addr
+	LDX #&00
+	LDY #&00
+	JSR CopyWordB0BA	; &BA points to filename
 .filev_copyparams_loop
-	JSR CopyVarsB0BA		; C0 & 1078=start addr
+	JSR CopyVarsB0BA	; BC & 1074=load addr (32 bit)
+						; BE & 1076=exec addr
+						; C0 & 1078=start addr
 	CPY #&12			; C2 & 107A=end addr
 	BNE filev_copyparams_loop	; (lo word in zp, hi in page 10)
 
