@@ -5710,8 +5710,8 @@ IF _INCLUDE_CMD_COMPACT_
 	JSR PrintString			; "Compacting :"
 	EQUS "Compacting :"
 
-	STA &AE			; Source Drive No.
-	STA &AF			; Dest Drive No.
+	STA &A8			; Source Drive No.
+	STA &A9			; Dest Drive No.
 	JSR PrintNibble
 	JSR PrintNewLine
 	LDY #&00
@@ -5754,13 +5754,13 @@ IF _INCLUDE_CMD_COMPACT_
 	STA &BC
 	STA &C0
 	ADC disccataloguebuffer%+&100+&0D,Y			; A=Len1
-	STA &A8
+	STA &AE
 	LDA disccataloguebuffer%+&100+&0E,Y
 	PHP
 	JSR A_rorx4and3			; A=Len2
 	PLP
 	ADC #&00
-	STA &A9				; word C4=size in sectors
+	STA &AF				; word C4=size in sectors
 	LDA disccataloguebuffer%+&100+&0F,Y			; A=sec0
 	STA &AA
 	LDA disccataloguebuffer%+&100+&0E,Y
@@ -5772,10 +5772,10 @@ IF _INCLUDE_CMD_COMPACT_
 	CMP &AC
 	BNE compact_movefile		; If no
 	CLC
-	ADC &A8
+	ADC &AE
 	STA &AC
 	LDA &AD
-	ADC &A9
+	ADC &AF
 	STA &AD				; word C8 += word C4
 	JMP compact_fileinfo
 
