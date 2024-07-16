@@ -672,23 +672,7 @@ ENDIF
 	ASL A
 	ASL A
 	ASL A
-.getcat_exit
 	RTS
-
-.parameter_afsp_Param_SyntaxErrorIfNull_getcatentry_fspTxtP
-	JSR parameter_afsp
-.Param_SyntaxErrorIfNull_getcatentry_fspTxtP
-	JSR Param_SyntaxErrorIfNull_read_fspTextPointer  ; string is 7 chars with a space at 8th
-.getcatentry
-	JSR get_cat_firstentry80
-	BCS getcat_exit
-
-.err_FILENOTFOUND
-	JSR ReportError
-	EQUB &D6
-	EQUS "Not found",0		; Not Found error
-
-
 
 
 \ *EX (<dir>)
@@ -1978,10 +1962,25 @@ ENDIF
 .CMD_DRIVE
 	JSR Param_DriveNo_Syntax
 	STA DEFAULT_DRIVE
+.getcat_exit
 	RTS
+
+.parameter_afsp_Param_SyntaxErrorIfNull_getcatentry_fspTxtP
+	JSR parameter_afsp
+.Param_SyntaxErrorIfNull_getcatentry_fspTxtP
+	JSR Param_SyntaxErrorIfNull_read_fspTextPointer  ; string is 7 chars with a space at 8th
+.getcatentry
+	JSR get_cat_firstentry80
+	BCS getcat_exit
+
+.err_FILENOTFOUND
+	JSR ReportError
+	EQUB &D6
+	EQUS "Not found",0		; Not Found error
 
 .osfileFF_loadfiletoaddr
 	JSR read_fspBA_reset_get_cat_firstentry80	; Get Load Addr etc.
+	BCC err_FILENOTFOUND
 	JSR ReadFileAttribsToWSDB_Yoffset	; from catalogue (Just for info?)
 
 .LoadFile_Ycatoffset
