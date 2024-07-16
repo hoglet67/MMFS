@@ -249,9 +249,10 @@ ENDIF
 .build_loop2
 	LDA (bufferAC,X)			; Output line to file
 	JSR OSBPUT
-	INX
+	INC bufferAC
 .build_loop2entry
-	CPX tempAF
+	LDA bufferAC
+	CMP tempAF
 	BNE build_loop2
 	PLP
 	BCS Utils_ESCAPE_CloseFileY	; Escape pressed so exit
