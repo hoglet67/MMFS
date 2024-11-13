@@ -7580,8 +7580,11 @@ ELIF _DEVICE_="M"
 ELIF _DEVICE_="E"
 	INCLUDE "MMC_ElkPlus1.asm"
 ELIF _DEVICE_="P"
-   _VIA_BASE=&FE60
+   _VIA_BASE=?&FE60
 	INCLUDE "MMC_BeebPrinter.asm"
+ELIF _DEVICE_="C"
+   _VIA_BASE=?&FE60
+	INCLUDE "MMC_Compact.asm"
 ELIF _DEVICE_="G"
     IF _USE_MGC_SHIFTREG
         INCLUDE "MMC_MGCII_ShiftReg.asm"
