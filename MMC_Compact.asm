@@ -66,6 +66,11 @@ ENDMACRO
 \\ Ignore byte in
 .P1_WriteByte
 {
+    PHA
+    LDA ddrb%
+    ORA #&20   \\ Temporarily make PB5 (MOSI) an output
+    STA ddrb%
+    PLA
     ROR A
     ROR A
 FOR N, 0, 7
@@ -75,15 +80,20 @@ FOR N, 0, 7
     STA iorb%
     ROL A
 NEXT
+    PHA
+    LDA ddrb%
+    AND #&DF  \\ Revert PB5 (MOSI) to an input (so it's read as 1 due to pullup)
+    STA ddrb%
+    PLA
     RTS
 }
 
 \\ RESET DEVICE
 .MMC_DEVICE_RESET
     LDA ddrb%
-    AND #&7F   \\ PB7 is an input
-    ORA #&60   \\ PB6/5 are outputs
-    STA ddrb%
+    ORA #&40   \\ PB6 (SCLK) is an output always
+    AND #&5F   \\ PB7 (MISO) and PB5 (MOSI) are inputs
+    STA ddrb%  \\    except during write when we flip PB5 (MOSI)
     RTS
 
 \\ INITIALIZE DEVICE IN SPI MODE
