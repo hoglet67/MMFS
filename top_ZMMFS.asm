@@ -17,6 +17,8 @@ ELIF _DEVICE_='P'
     incbin  "build/P/SWMMFS.rom"
 ELIF _DEVICE_='M'
     incbin  "build/M/SWMMFS.rom"
+ELIF _DEVICE_='R'
+    incbin  "build/R/RMMMFS.rom"
 ELSE
     ERROR "Illegal device"
 ENDIF

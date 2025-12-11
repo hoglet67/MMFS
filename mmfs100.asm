@@ -7635,6 +7635,8 @@ ELIF _DEVICE_='T'
 	INCLUDE "MMC_UserPort.asm"
 ELIF _DEVICE_='M'
 	INCLUDE "MMC_MemoryMapped.asm"
+ELIF _DEVICE_='R'
+	INCLUDE "MMC_RamtopSD128.asm"
 ELIF _DEVICE_='E'
 	INCLUDE "MMC_ElkPlus1.asm"
 ELIF _DEVICE_='P'
