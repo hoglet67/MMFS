@@ -1,6 +1,6 @@
 \ Device: U=User Port, T=User Port Turbo, M=Memory Mapped, E=Elk Printer Port
 INCLUDE "DEVICE.asm"
-        
+
 _ELECTRON_=TRUE
 _TUBE_BASE=&FCE0
 
@@ -20,6 +20,6 @@ ELIF _DEVICE_='M'
 ELSE
     ERROR "Illegal device"
 ENDIF
-.end        
-        
+.end
+
 SAVE "", &8000, &C000
