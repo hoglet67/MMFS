@@ -11,6 +11,8 @@ ELIF _DEVICE_="M"
     EQUS " MM"
 ELIF _DEVICE_="1"
     EQUS " Pi1MHz"
+ELIF _DEVICE_="R"
+    EQUS " SPI"
 ENDIF
 ENDMACRO
 

@@ -54,7 +54,8 @@ do
     # U is normal User Port VIA based
     # T is User Port connected "TurboMMC" interface
     # E is Electron Plus One Printer Port connected interface (experimental)
-    # M is MemoryMapped IO based (typically &FE18, for BeebEm)
+    # M is Emulator/BeebFPGA Memory Mapped SPI (typically &FE18, for BeebEm)
+    # R is Ramtop ElkSD128 Memory Mapped SPI
     # P is Beeb Printer Port connected Interface (experimental)
     # C is Master Compact Expansion Port (experimental)
     # G is Mega Games Cartridge MKII
@@ -62,9 +63,9 @@ do
 
     if [ $system == "MMFS2" ]
     then
-        DEVICES="U U2 U3 T T2 T3 E M P C 1"
+        DEVICES="U U2 U3 T T2 T3 E M R P C 1"
     else
-        DEVICES="U U2 U3 T T2 T3 E M P C G 1"
+        DEVICES="U U2 U3 T T2 T3 E M R P C G 1"
     fi
 
     for device in $DEVICES
@@ -102,11 +103,14 @@ do
         elif [ $device == "M" ]
         then
             filelist="top_MMFS.asm top_MMFSDBG.asm top_SWMMFS.asm top_SWMMFS+.asm top_MAMMFS.asm top_E*.asm"
+        elif [ $device == "R" ]
+        then
+            filelist="top_R*MMFS.asm top_Z*.asm"
         elif [ $device == "P" ]
         then
             filelist="top_MMFS*.asm top_MAMMFS*.asm top_SWMMFS*.asm top_ZMMFS.asm"
         else
-            filelist="top_*MMFS*.asm"
+            filelist="top_E*.asm top_MAMMFS*.asm top_MMFS*.asm top_SWMMFS*.asm top_Z*.asm"
         fi
 
         for top in $filelist
