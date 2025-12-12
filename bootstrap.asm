@@ -10,7 +10,7 @@ include "SYSVARS.asm"
         org     &8000
 
 ; The included MMFS ROM is added to &4000 bytes (&3700 code, &900 workspace)
-; The guard is &CA00 as the workspace is allowed to "overflow"
+; The guard is &C900 as the workspace is allowed to "overflow"
         guard   &C900
 
 ; A fixed buffer is now used for the copying code, as it's now self modifying
