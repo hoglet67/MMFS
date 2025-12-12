@@ -29,7 +29,7 @@ echo Using $BEEBASM
 # E is Electron Plus One Printer Port connected interface (experimental)
 # M is MemoryMapped IO based (typically &FE18, for BeebEm)
 # P is Beeb Printer Port connected Interface (experimental)
-for device in U T E M P
+for device in U T E M R P
 do
     build=build/${device}
     mkdir -p ${build}
@@ -45,6 +45,9 @@ do
     if [ $device == "E" ]
     then
         filelist="top_E*.asm top_ZEMMFS.asm"
+    elif [ $device == "R" ]
+    then
+        filelist="top_R*.asm top_ZEMMFS.asm"
     elif [ $device == "P" ]
     then
         filelist="top_[MS]*.asm top_ZMMFS.asm"

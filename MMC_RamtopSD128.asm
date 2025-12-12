@@ -7,6 +7,8 @@
 \\ removing CMP #&00 and using JMP instead of JSR+RTS
 
 
+_PLUS1_     = TRUE
+
 spi_base    = &FC80
 
 spi_data    = spi_base
@@ -66,6 +68,7 @@ ENDMACRO
 }
 
 ENDIF
+
 
 \\ Read byte from SPI data port and return in A
 .MMC_GetByte
@@ -147,7 +150,7 @@ ENDIF
         RTS          ; This could use an existing RTS
 }
 
-IF _ELECTRON_
+IF _ELECTRON_ AND NOT(_PLUS1_)
 .MMC_SlowClocks
         JMP MMC_Clocks
 ENDIF
