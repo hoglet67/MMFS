@@ -19,33 +19,32 @@ sr%=&F8
 \\ Read byte (User Port)
 \\ Write FF
 .MMC_GetByte
-.P1_ReadByte
-
+{
         LDA #&00
         STA spi_active%
         LDA #$FF
         STA spi_port%
-.spi_readwaitidle
+.loop
         LDA spi_active%
         CMP #0
-        BNE spi_readwaitidle
+        BNE loop
         LDA spi_port%
         RTS
-
+}
 
 .spiwait
-.spi_waitidle
+{
+.loop
         LDA spi_active%
         CMP #0
-        BNE spi_waitidle
+        BNE loop
         RTS
+}
 
-
-
+\\ TODO: This code is currently unused
 
 \\ wait for response bit
 \\ ie for clear bit
-.P1_WaitResp
 {
 .loop
         DEY
@@ -64,14 +63,14 @@ sr%=&F8
 
 \\ Write byte (User Port)
 \\ Ignore byte in
-.P1_WriteByte
+.spi_write_byte
 {
         STA spi_port%
-.spi_waitwriteidle
+.loop
         LDA spi_active%
         CMP #0
-        BNE spi_waitwriteidle
-    RTS
+        BNE loop
+        RTS
 }
 
 \\ More generic code below tis point
@@ -79,22 +78,22 @@ sr%=&F8
 
 \\ RESET DEVICE
 .MMC_DEVICE_RESET
-    RTS
+        RTS
 
 .MMC_SlowClocks
-    JMP MMC_Clocks
+        JMP MMC_Clocks
 
 \\ *** Send &FF to MMC Y times ***
 \\ Y=0=256
 .MMC_16Clocks
-    LDY #2
+        LDY #2
 .MMC_Clocks
 {
 .loop
-    JSR P1_ReadByte  ; Writes &FF
-    DEY
-    BNE loop
-    RTS              ; A=SR, X=one%, Y=0
+        JSR MMC_GetByte  ; Writes &FF
+        DEY
+        BNE loop
+        RTS              ; A=SR, X=one%, Y=0
 }
 
 
@@ -103,79 +102,77 @@ sr%=&F8
 {
         LDX #0
         LDY #8
-.xdcmd1dcmd1
+.loop1
         LDA cmdseq%,X
         STA spi_port%                   ;\ 2 - write
 IF _DEBUG_MMC
-    JSR PrintHex
+        JSR PrintHex
 ENDIF
         JSR spiwait
         NOP                             ;\ 2
         NOP                             ;\ 2
         INX                             ;\ 2
         DEY                             ;\ 2
-        BNE xdcmd1dcmd1                 ;\ 2
+        BNE loop1                       ;\ 2
 IF _DEBUG_MMC
-    LDA #':'
-    JSR OSWRCH
+        LDA #':'
+        JSR OSWRCH
 ENDIF
         LDA #&FF
-
         \ Wait for response, Y=0
-.xwR1mm
-
+.loop2
         STA spi_port%                   ; assume A=&FF
         JSR spiwait                     ;\ 12
         LDA spi_port%
-        BPL xdcmdex
+        BPL done
         DEY
-        BNE xwR1mm
+        BNE loop2
         CMP #0
-.xdcmdex
+.done
 IF _DEBUG_MMC
         PHA
-    JSR PrintHex
-    JSR OSNEWL
+        JSR PrintHex
+        JSR OSNEWL
         PLA
 ENDIF
         RTS
 }
 
 
-
 \\ *** Wait for data token ***
 .MMC_WaitForData
 {
         LDX #&FF
-.tloop
+.loop
         STX spi_port%
         JSR spiwait
         LDA spi_port%
         CMP #&FE
-        BNE tloop
+        BNE loop
         RTS
 }
 
 \\ *** Read 256 bytes to datptr ***
 .MMC_Read256
         LDX #0
-        BEQ MMC_ReadX
+        BEQ mmc_read
 
     \\ *** Read "byteslastsector" bytes
     \\ to datptr ***
 .MMC_ReadBLS
         LDX byteslastsec%
 
-.MMC_ReadX
+.mmc_read
+{
         LDY #0
         LDA TubeNoTransferIf0
-        BNE MMC_ReadToTube
+        BNE tube_loop
 
-.MMC_ReadToMemory
+
         LDA #&01
         STA spi_active%
 
-.MMC_ReadToMemoryLoop
+.loop
         LDA #&FF
         STA spi_port%
         JSR spiwait
@@ -185,23 +182,23 @@ ENDIF
         STA (datptr%),Y
         INY
         DEX
-        BNE MMC_ReadToMemoryLoop
+        BNE loop
         LDA #&00
         STA spi_active%
         RTS
 
-.MMC_ReadToTube
+.tube_loop
         TXA
         PHA
-        JSR P1_ReadByte
+        JSR MMC_GetByte
         STA TUBE_R3_DATA
         PLA
         TAX
         INY
         DEX
-        BNE MMC_ReadToTube
+        BNE tube_loop
         RTS
-
+}
 
 \\ **** Read 256 bytes to buffer ****
 .MMC_ReadBuffer
@@ -210,7 +207,7 @@ ENDIF
         STY CurrentCat
         INY
 .loop
-        JSR P1_ReadByte
+        JSR MMC_GetByte
         STA buf%, Y
         INY
         BNE loop
@@ -223,26 +220,26 @@ ENDIF
         LDY #2
         JSR MMC_Clocks
         LDA #&FE
-        JMP P1_WriteByte
+        JMP spi_write_byte
 }
 
 
 .MMC_EndWrite
 {
         JSR MMC_16Clocks
-.ewu1
-        JSR P1_ReadByte
+.loop1
+        JSR MMC_GetByte
         TAY
         AND #&1F
         CMP #&1F
-        BEQ ewu1
+        BEQ loop1
         CMP #5
         BNE errWrite2
 
-.ewu2
-        JSR P1_ReadByte
+.loop2
+        JSR MMC_GetByte
         CMP #&FF
-        BNE ewu2
+        BNE loop2
         RTS
 }
 
@@ -257,7 +254,7 @@ ENDIF
         BNE tube
 .loop1
         LDA (datptr%),Y
-        JSR P1_WriteByte
+        JSR spi_write_byte
         INY
         BNE loop1
         RTS
@@ -265,7 +262,7 @@ ENDIF
         LDY #0
 .loop2
         LDA TUBE_R3_DATA
-        JSR P1_WriteByte
+        JSR spi_write_byte
         INY
         BNE loop2
         LDA #&00
@@ -279,7 +276,7 @@ ENDIF
         LDY #0
 .loop
         LDA buf%,Y
-        JSR P1_WriteByte
+        JSR spi_write_byte
         INY
         BNE loop
         RTS
