@@ -7977,6 +7977,8 @@ ELIF _DEVICE_="M"
 	INCLUDE "MMC_MemoryMapped.asm"
 ELIF _DEVICE_="E"
 	INCLUDE "MMC_ElkPlus1.asm"
+ELIF _DEVICE_="S"
+	INCLUDE "MMC_ElkSD_Plus1.asm"
 ELIF _DEVICE_="P"
    _VIA_BASE=?&FE60
 	INCLUDE "MMC_BeebPrinter.asm"
