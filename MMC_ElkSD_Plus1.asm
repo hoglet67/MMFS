@@ -15,11 +15,67 @@ spi_active%=&FC81
 \\ This is unused on the Electron, according to the EAUG
 sr%=&F8
 
+IF _ELECTRON_
+
+MACRO DO_JSR_MAP
+ENDMACRO
+
+MACRO DO_JSR_UNMAP
+ENDMACRO
+
+MACRO DO_INLINE_MAP
+ENDMACRO
+
+MACRO DO_INLINE_UNMAP
+ENDMACRO
+
+ELSE
+
+acccon% = &FE34
+
+MACRO DO_JSR_MAP
+        JSR map_internal_io
+ENDMACRO
+
+MACRO DO_JSR_UNMAP
+        JSR unmap_internal_io
+ENDMACRO
+
+MACRO DO_INLINE_MAP
+        PHA
+        LDA acccon%
+        STA &90            ;; TODO: Use of &90 is dodgy
+        ORA #&20
+        STA acccon%
+        PLA
+ENDMACRO
+
+MACRO DO_INLINE_UNMAP
+        LDA &90            ;; TODO: Use of &90 is dodgy
+        STA acccon%
+ENDMACRO
+
+.map_internal_io
+{
+        DO_INLINE_MAP
+        RTS
+}
+
+.unmap_internal_io
+{
+        PHA
+        DO_INLINE_UNMAP
+        PLA
+        RTS
+}
+
+ENDIF
 
 \\ Read byte (User Port)
 \\ Write FF
 .MMC_GetByte
 {
+        DO_JSR_MAP
         LDA #&00
         STA spi_active%
         LDA #$FF
@@ -29,6 +85,7 @@ sr%=&F8
         CMP #0
         BNE loop
         LDA spi_port%
+        DO_JSR_UNMAP
         RTS
 }
 
@@ -46,6 +103,7 @@ sr%=&F8
 \\ wait for response bit
 \\ ie for clear bit
 {
+        DO_JSR_MAP
 .loop
         DEY
         BEQ timeout
@@ -58,8 +116,25 @@ sr%=&F8
         BCS loop
 .timeout
         LDA spi_port%
+        DO_JSR_UNMAP
         RTS
 }
+
+\\ Write byte in A to SPI data port
+IF NOT(_ELECTRON_)
+.spi_write_byte_remap
+{
+        DO_INLINE_MAP
+        STA spi_port%
+.loop
+        LDA spi_active%
+        CMP #&00
+        BNE loop
+        DO_INLINE_UNMAP
+        LDA #&00
+        RTS
+}
+ENDIF
 
 \\ Write byte (User Port)
 \\ Ignore byte in
@@ -70,6 +145,9 @@ sr%=&F8
         LDA spi_active%
         CMP #0
         BNE loop
+IF NOT(_ELECTRON_)
+        LDA #&00     ; This is unnecessary
+ENDIF
         RTS
 }
 
@@ -78,15 +156,27 @@ sr%=&F8
 
 \\ RESET DEVICE
 .MMC_DEVICE_RESET
-        RTS
+{
+        RTS          ; This could use an existing RTS
+}
 
+IF _ELECTRON_
 .MMC_SlowClocks
         JMP MMC_Clocks
+ENDIF
+
+\\ *** Send &FF to MMC two times ***
+.MMC_16Clocks
+        LDY #2
+        \\ fall through to
 
 \\ *** Send &FF to MMC Y times ***
 \\ Y=0=256
-.MMC_16Clocks
-        LDY #2
+IF NOT(_ELECTRON_)
+.MMC_SlowClocks
+        \\ fall through to
+ENDIF
+
 .MMC_Clocks
 {
 .loop
@@ -100,6 +190,7 @@ sr%=&F8
 
 .MMC_DoCommand
 {
+        DO_JSR_MAP
         LDX #0
         LDY #8
 .loop1
@@ -135,6 +226,7 @@ IF _DEBUG_MMC
         JSR OSNEWL
         PLA
 ENDIF
+        DO_JSR_UNMAP
         RTS
 }
 
@@ -142,6 +234,7 @@ ENDIF
 \\ *** Wait for data token ***
 .MMC_WaitForData
 {
+        DO_JSR_MAP
         LDX #&FF
 .loop
         STX spi_port%
@@ -149,6 +242,7 @@ ENDIF
         LDA spi_port%
         CMP #&FE
         BNE loop
+        DO_JSR_UNMAP
         RTS
 }
 
@@ -168,7 +262,7 @@ ENDIF
         LDA TubeNoTransferIf0
         BNE tube_loop
 
-
+        DO_JSR_MAP
         LDA #&01
         STA spi_active%
 
@@ -177,7 +271,9 @@ ENDIF
         STA spi_port%
         JSR spiwait
         NOP
+IF _ELECTRON_
         NOP
+ENDIF
         LDA spi_port%
         STA (datptr%),Y
         INY
@@ -185,6 +281,7 @@ ENDIF
         BNE loop
         LDA #&00
         STA spi_active%
+        DO_JSR_UNMAP
         RTS
 
 .tube_loop
@@ -220,7 +317,11 @@ ENDIF
         LDY #2
         JSR MMC_Clocks
         LDA #&FE
+IF _ELECTRON_
         JMP spi_write_byte
+ELSE
+        JMP spi_write_byte_remap
+ENDIF
 }
 
 
@@ -248,6 +349,7 @@ ENDIF
 \\ **** Write 256 bytes from dataptr% ****
 .MMC_Write256
 {
+        DO_JSR_MAP
         LDA #&01
         STA spi_active%
         LDY TubeNoTransferIf0
@@ -257,6 +359,7 @@ ENDIF
         JSR spi_write_byte
         INY
         BNE loop1
+        DO_JSR_UNMAP
         RTS
 .tube
         LDY #0
@@ -267,6 +370,7 @@ ENDIF
         BNE loop2
         LDA #&00
         STA spi_active%
+        DO_JSR_UNMAP
         RTS
 }
 
@@ -276,7 +380,11 @@ ENDIF
         LDY #0
 .loop
         LDA buf%,Y
+IF _ELECTRON_
         JSR spi_write_byte
+ELSE
+        JSR spi_write_byte_remap
+ENDIF
         INY
         BNE loop
         RTS
