@@ -39,5 +39,9 @@ TUBE_R3_DATA  =_TUBE_BASE + &05
 TUBE_R4_STATUS=_TUBE_BASE + &06
 TUBE_R4_DATA  =_TUBE_BASE + &07
 
-MAGIC0=&19
-MAGIC1=&67
+; Addess of the magic number (added to SWRAM builds only)
+MAGIC_ADDRESS=?&B6FE
+
+; 16-bit magic number
+MAGIC0=?&19
+MAGIC1=?&67

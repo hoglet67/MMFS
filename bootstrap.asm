@@ -10,7 +10,7 @@ include "SYSVARS.asm"
         org     &8000
 
 ; The included MMFS ROM is added to &4000 bytes (&3700 code, &900 workspace)
-; The guard is &CA00 as the workspace is allowed to "overflow"
+; The guard is &C900 as the workspace is allowed to "overflow"
         guard   &C900
 
 ; A fixed buffer is now used for the copying code, as it's now self modifying
@@ -76,13 +76,37 @@ ENDIF
         equb    &01
         equs    "MMFS Bootstrap"
         equb    &00
+IF _DEVICE_="S"
+        equs    "1.3"
+ELSE
         equs    "1.1"
+ENDIF
 .copyr  equb    &00
         equs    "(C) Martin Mathers, David Banks, Steven Fosdick"
         equb    &00
 
-.serv   cmp     #&01
+.serv
+IF _DEVICE_="S"
+        ;; Unlock the code part of the RAM
+        pha
+        lda     &fc82
+        sta     &f8
+        lda     #&80
+        sta     &fc82
+        pla
+ENDIF
+        cmp     #&01
         beq     absws
+IF _DEVICE_="S"
+        jmp     lock_ram
+        rts
+.lock_ram
+        ;; Lock the code part of the RAM
+        pha
+        lda     &f8
+        sta     &fc82
+        pla
+ENDIF
         rts
 
 .absws  tya
@@ -159,7 +183,11 @@ ENDIF
         tay
         lda     #&01            ; and dont "claim" this call - others ROMS
         ldx     ourrom          ; restore the current ROM number in X
+IF _DEVICE_="S"
+        jmp     lock_ram
+ELSE
         rts                     ; can claim workspace (we don't).
+ENDIF
 
 .normsg equs    "No sideways RAM found for MMFS"
         equb    &0d,&0a,&00
@@ -193,10 +221,10 @@ ENDIF
 
 ;; Step 2: Test if that pre-existing rom image is SWMMFS
 ;; so we re-use the same slot again and again
-        lda     &b6fe
+        lda     MAGIC_ADDRESS
         cmp     #MAGIC0
         bne     romnxt
-        lda     &b6ff
+        lda     MAGIC_ADDRESS+1
         cmp     #MAGIC1
         bne     romnxt
 
@@ -265,7 +293,7 @@ ENDIF
         inc     code_buffer + patch1 + 2 - base
         inc     code_buffer + patch2 + 2 - base
         lda     code_buffer + patch2 + 2 - base
-        cmp     #&b7
+        cmp     #(MAGIC_ADDRESS DIV 256)+1
         bne     cploop
 IF mode=1
         beq     exit            ; success: exit with Z=0
@@ -294,7 +322,11 @@ ENDIF
         lda     #&01            ; and dont "claim" this call - others ROMS
         ldx     ourrom          ; restore the current ROM number in X
         page_rom_x
+IF _DEVICE_="S"
+        jmp     lock_ram
+ELSE
         rts                     ; can claim workspace (we don't).
+ENDIF
 .copyen
 
         align   &100
@@ -306,7 +338,11 @@ ENDIF
         lda     #&01            ; and dont "claim" this call - others ROMS
         ldx     ourrom          ; restore the current ROM number in X
         page_rom_x
+IF _DEVICE_="S"
+        jmp     lock_ram
+ELSE
         rts                     ; can claim workspace (we don't).
+ENDIF
 .cmpfai ldx     ourrom
         page_rom_x
         jmp     romfai

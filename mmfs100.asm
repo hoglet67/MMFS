@@ -5,6 +5,9 @@
 
 \** MAIN CODE **\
 
+INCLUDE "VERSION.asm"
+INCLUDE "SYSVARS.asm"			; OS constants
+
 \\ Include *DONBOOT and code to load the default drives on startup
 \\ (costs 45 bytes)
 _DONBOOT_=NOT(_MM32_)
@@ -68,9 +71,9 @@ ELIF _SWRAM_
 	MA=&B700-&0E00
 	_NON_WS_BUILD_COM = TRUE ; doesn't need workspace
 	; UTILSBUF=&BF			; Utilities buffer page
-	guard_value=&B6FE
+	guard_value=MAGIC_ADDRESS
 ;; Add a special marker that ZMMFS uses to identify an already installed SWMMFS
-   	org &B6FE
+   	org MAGIC_ADDRESS
    	EQUB MAGIC0
    	EQUB MAGIC1
 ELSE
@@ -79,9 +82,6 @@ ELSE
 	guard_value=&C000
 ENDIF
 MP=HI(MA)
-
-INCLUDE "VERSION.asm"
-INCLUDE "SYSVARS.asm"			; OS constants
 
 DirectoryParam=&CC
 CurrentDrv=&CD

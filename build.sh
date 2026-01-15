@@ -99,7 +99,7 @@ do
             filelist="top_E*.asm top_MAMMFS.asm top_MMFS.asm top_ZEMMFS.asm"
         elif [ $device == "S" ]
         then
-            filelist="top_R*.asm"
+            filelist="top_R*.asm top_ZEMMFS.asm"
         elif [ $device == "G" ]
         then
             filelist="top_MGC*.asm"
