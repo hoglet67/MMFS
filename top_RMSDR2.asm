@@ -2,6 +2,7 @@ INCLUDE "DEVICE.asm"
 
 _SWRAM_=TRUE            ; Sideways RAM Version
 _ROMS_=FALSE            ; Exclude *ROMS command
+_TUBEHOST_=FALSE        ; Exclude Tube Host (for space reasons)
 
 INCLUDE "DEFAULTS.asm"
 
