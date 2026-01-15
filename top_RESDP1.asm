@@ -8,10 +8,11 @@ _TUBE_BASE=&FCE0        ; Base Address of Tube
 
 INCLUDE "DEFAULTS.asm"
 
+; This matches the name used in the 1.60 build Ramtop posted
 MACRO BASE_NAME
-    EQUS "ElkSD128 "
+    EQUS "Electron "
     SYSTEM_NAME
-    EQUS " SPI"
+    EQUS " SWRAM 16K"
 ENDMACRO
 
 INCLUDE "mmfs100.asm"
