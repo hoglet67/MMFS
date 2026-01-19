@@ -18,34 +18,33 @@ acccon% = &FE34
 
 MACRO DO_INLINE_MAP
         LDA acccon%
-        STA &90            ;; TODO: Use of &90 is dodgy
+        STA &90                  ; TODO: Use of &90 is dodgy
         ORA #&20
         STA acccon%
 ENDMACRO
 
 MACRO DO_INLINE_UNMAP
-        LDA &90            ;; TODO: Use of &90 is dodgy
+        LDA &90                  ; TODO: Use of &90 is dodgy
         STA acccon%
 ENDMACRO
 
 .map_internal_io
 {
-        DO_INLINE_MAP      ; corrupts A
+        DO_INLINE_MAP            ; corrupts A
         RTS
 }
 
 .unmap_internal_io
 {
         PHA
-        DO_INLINE_UNMAP    ; currupts A
+        DO_INLINE_UNMAP          ; corrupts A
         PLA
         RTS
 }
 
 ENDIF
 
-\\ Read byte (User Port)
-\\ Write FF
+\\ Read byte from SPI data port (simultaneously writing &FF)
 .MMC_GetByte
 {
 IF _MASTERSD_
@@ -79,20 +78,19 @@ IF _MASTERSD_
 .spi_write_byte_remap
 {
         PHA
-        DO_INLINE_MAP     ; corrupts A
+        DO_INLINE_MAP            ; corrupts A
         PLA
         STA spi_port%
 .loop
         LDA spi_active%
         BNE loop
-        DO_INLINE_UNMAP   ; corrupts A
+        DO_INLINE_UNMAP          ; corrupts A
         LDA #&00
         RTS
 }
 ENDIF
 
-\\ Write byte (User Port)
-\\ Ignore byte in
+\\ Write byte to SPI data port (returns A=0)
 .spi_write_byte
 {
         STA spi_port%
@@ -100,18 +98,17 @@ ENDIF
         LDA spi_active%
         BNE loop
 IF _MASTERSD_
-        LDA #&00     ; This is unnecessary
+        LDA #&00                 ; This is unnecessary
 ENDIF
         RTS
 }
 
 \\ More generic code below tis point
 
-
 \\ RESET DEVICE
 .MMC_DEVICE_RESET
 {
-        RTS          ; This could use an existing RTS
+        RTS                      ; This could use an existing RTS
 }
 
 \\ *** Send &FF to MMC two times ***
@@ -127,10 +124,10 @@ ENDIF
 .MMC_Clocks
 {
 .loop
-        JSR MMC_GetByte  ; Writes &FF
+        JSR MMC_GetByte          ; Writes &FF
         DEY
         BNE loop
-        RTS              ; A=SR, X=one%, Y=0
+        RTS                      ; A=SR, X=one%, Y=0
 }
 
 
@@ -159,7 +156,7 @@ ENDIF
         LDA #&FF
         \ Wait for response, Y=0
 .loop2
-        STA spi_port%                   ; assume A=&FF
+        STA spi_port%            ; assume A=&FF
         JSR spiwait
         LDA spi_port%
         BPL done
@@ -173,9 +170,9 @@ IF _DEBUG_MMC
         PLA
 ENDIF
 IF _MASTERSD_
-        JMP unmap_internal_io           ; includes PHA/PLA which sets flags on exit
+        JMP unmap_internal_io    ; includes PHA/PLA which sets flags on exit
 ELSE
-        CMP #0                          ; set flags on exit
+        CMP #0                   ; set flags on exit
         RTS
 ENDIF
 }
@@ -206,8 +203,7 @@ ENDIF
         LDX #0
         BEQ mmc_read
 
-    \\ *** Read "byteslastsector" bytes
-    \\ to datptr ***
+\\ *** Read "byteslastsector" bytes to datptr ***
 .MMC_ReadBLS
         LDX byteslastsec%
 
