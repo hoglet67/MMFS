@@ -143,16 +143,16 @@ ENDIF
         LDY #8
 .loop1
         LDA cmdseq%,X
-        STA spi_port%                   ;\ 2 - write
+        STA spi_port%
 IF _DEBUG_MMC
         JSR PrintHex
 ENDIF
         JSR spiwait
-        NOP                             ;\ 2
-        NOP                             ;\ 2
-        INX                             ;\ 2
-        DEY                             ;\ 2
-        BNE loop1                       ;\ 2
+        NOP
+        NOP
+        INX
+        DEY
+        BNE loop1
 IF _DEBUG_MMC
         LDA #':'
         JSR OSWRCH
@@ -161,7 +161,7 @@ ENDIF
         \ Wait for response, Y=0
 .loop2
         STA spi_port%                   ; assume A=&FF
-        JSR spiwait                     ;\ 12
+        JSR spiwait
         LDA spi_port%
         BPL done
         DEY
