@@ -17,12 +17,10 @@ IF _MASTERSD_
 acccon% = &FE34
 
 MACRO DO_INLINE_MAP
-        PHA
         LDA acccon%
         STA &90            ;; TODO: Use of &90 is dodgy
         ORA #&20
         STA acccon%
-        PLA
 ENDMACRO
 
 MACRO DO_INLINE_UNMAP
@@ -32,14 +30,14 @@ ENDMACRO
 
 .map_internal_io
 {
-        DO_INLINE_MAP
+        DO_INLINE_MAP      ; corrupts A
         RTS
 }
 
 .unmap_internal_io
 {
         PHA
-        DO_INLINE_UNMAP
+        DO_INLINE_UNMAP    ; currupts A
         PLA
         RTS
 }
@@ -51,7 +49,7 @@ ENDIF
 .MMC_GetByte
 {
 IF _MASTERSD_
-        JSR map_internal_io
+        JSR map_internal_io      ; corrupts A
 ENDIF
         LDA #&00
         STA spi_active%
@@ -80,12 +78,14 @@ ENDIF
 IF _MASTERSD_
 .spi_write_byte_remap
 {
-        DO_INLINE_MAP
+        PHA
+        DO_INLINE_MAP     ; corrupts A
+        PLA
         STA spi_port%
 .loop
         LDA spi_active%
         BNE loop
-        DO_INLINE_UNMAP
+        DO_INLINE_UNMAP   ; corrupts A
         LDA #&00
         RTS
 }
@@ -138,7 +138,7 @@ ENDIF
 .MMC_DoCommand
 {
 IF _MASTERSD_
-        JSR map_internal_io
+        JSR map_internal_io      ; corrupts A
 ENDIF
         LDX #0
         LDY #8
@@ -185,7 +185,7 @@ ENDIF
 .MMC_WaitForData
 {
 IF _MASTERSD_
-        JSR map_internal_io
+        JSR map_internal_io      ; corrupts A
 ENDIF
         LDX #&FF
 .loop
@@ -218,7 +218,7 @@ ENDIF
         BNE tube_loop
 
 IF _MASTERSD_
-        JSR map_internal_io
+        JSR map_internal_io      ; corrupts A
 ENDIF
         LDA #&01
         STA spi_active%
@@ -304,7 +304,7 @@ ENDIF
 .MMC_Write256
 {
 IF _MASTERSD_
-        JSR map_internal_io
+        JSR map_internal_io      ; corrupts A
 ENDIF
         LDA #&01
         STA spi_active%
