@@ -65,14 +65,6 @@ ELSE
 ENDIF
 }
 
-.spiwait
-{
-.loop
-        LDA spi_active%
-        BNE loop
-        RTS
-}
-
 \\ Write byte in A to SPI data port
 IF _MASTERSD_
 .spi_write_byte_remap
@@ -94,6 +86,11 @@ ENDIF
 .spi_write_byte
 {
         STA spi_port%
+        \\ fall through to
+}
+
+.spiwait
+{
 .loop
         LDA spi_active%
         BNE loop
