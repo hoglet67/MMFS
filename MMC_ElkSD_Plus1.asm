@@ -113,11 +113,6 @@ ENDIF
         RTS          ; This could use an existing RTS
 }
 
-IF _ELECTRON_
-.MMC_SlowClocks
-        JMP MMC_Clocks
-ENDIF
-
 \\ *** Send &FF to MMC two times ***
 .MMC_16Clocks
         LDY #2
@@ -125,10 +120,8 @@ ENDIF
 
 \\ *** Send &FF to MMC Y times ***
 \\ Y=0=256
-IF _MASTERSD_
 .MMC_SlowClocks
         \\ fall through to
-ENDIF
 
 .MMC_Clocks
 {
