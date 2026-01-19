@@ -62,7 +62,6 @@ ENDIF
         STA spi_port%
 .loop
         LDA spi_active%
-        CMP #0
         BNE loop
         LDA spi_port%
 IF _MASTERSD_
@@ -75,7 +74,6 @@ ENDIF
 {
 .loop
         LDA spi_active%
-        CMP #0
         BNE loop
         RTS
 }
@@ -114,7 +112,6 @@ IF _MASTERSD_
         STA spi_port%
 .loop
         LDA spi_active%
-        CMP #&00
         BNE loop
         DO_INLINE_UNMAP
         LDA #&00
@@ -129,7 +126,6 @@ ENDIF
         STA spi_port%
 .loop
         LDA spi_active%
-        CMP #0
         BNE loop
 IF _MASTERSD_
         LDA #&00     ; This is unnecessary
