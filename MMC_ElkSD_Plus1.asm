@@ -10,36 +10,14 @@
 spi_port%=&FC80
 spi_active%=&FC81
 
-
+_MASTERSD_ = not(_ELECTRON_)
 
 \\ This is unused on the Electron, according to the EAUG
 sr%=&F8
 
-IF _ELECTRON_
-
-MACRO DO_JSR_MAP
-ENDMACRO
-
-MACRO DO_JSR_UNMAP
-ENDMACRO
-
-MACRO DO_INLINE_MAP
-ENDMACRO
-
-MACRO DO_INLINE_UNMAP
-ENDMACRO
-
-ELSE
+IF _MASTERSD_
 
 acccon% = &FE34
-
-MACRO DO_JSR_MAP
-        JSR map_internal_io
-ENDMACRO
-
-MACRO DO_JSR_UNMAP
-        JSR unmap_internal_io
-ENDMACRO
 
 MACRO DO_INLINE_MAP
         PHA
@@ -75,7 +53,9 @@ ENDIF
 \\ Write FF
 .MMC_GetByte
 {
-        DO_JSR_MAP
+IF _MASTERSD_
+        JSR map_internal_io
+ENDIF
         LDA #&00
         STA spi_active%
         LDA #$FF
@@ -85,7 +65,9 @@ ENDIF
         CMP #0
         BNE loop
         LDA spi_port%
-        DO_JSR_UNMAP
+IF _MASTERSD_
+        JSR unmap_internal_io
+ENDIF
         RTS
 }
 
@@ -103,7 +85,9 @@ ENDIF
 \\ wait for response bit
 \\ ie for clear bit
 {
-        DO_JSR_MAP
+IF _MASTERSD_
+        JSR map_internal_io
+ENDIF
 .loop
         DEY
         BEQ timeout
@@ -116,12 +100,14 @@ ENDIF
         BCS loop
 .timeout
         LDA spi_port%
-        DO_JSR_UNMAP
+IF _MASTERSD_
+        JSR unmap_internal_io
+ENDIF
         RTS
 }
 
 \\ Write byte in A to SPI data port
-IF NOT(_ELECTRON_)
+IF _MASTERSD_
 .spi_write_byte_remap
 {
         DO_INLINE_MAP
@@ -145,7 +131,7 @@ ENDIF
         LDA spi_active%
         CMP #0
         BNE loop
-IF NOT(_ELECTRON_)
+IF _MASTERSD_
         LDA #&00     ; This is unnecessary
 ENDIF
         RTS
@@ -172,7 +158,7 @@ ENDIF
 
 \\ *** Send &FF to MMC Y times ***
 \\ Y=0=256
-IF NOT(_ELECTRON_)
+IF _MASTERSD_
 .MMC_SlowClocks
         \\ fall through to
 ENDIF
@@ -190,7 +176,9 @@ ENDIF
 
 .MMC_DoCommand
 {
-        DO_JSR_MAP
+IF _MASTERSD_
+        JSR map_internal_io
+ENDIF
         LDX #0
         LDY #8
 .loop1
@@ -226,7 +214,9 @@ IF _DEBUG_MMC
         JSR OSNEWL
         PLA
 ENDIF
-        DO_JSR_UNMAP
+IF _MASTERSD_
+        JSR unmap_internal_io
+ENDIF
         RTS
 }
 
@@ -234,7 +224,9 @@ ENDIF
 \\ *** Wait for data token ***
 .MMC_WaitForData
 {
-        DO_JSR_MAP
+IF _MASTERSD_
+        JSR map_internal_io
+ENDIF
         LDX #&FF
 .loop
         STX spi_port%
@@ -242,7 +234,9 @@ ENDIF
         LDA spi_port%
         CMP #&FE
         BNE loop
-        DO_JSR_UNMAP
+IF _MASTERSD_
+        JSR unmap_internal_io
+ENDIF
         RTS
 }
 
@@ -262,7 +256,9 @@ ENDIF
         LDA TubeNoTransferIf0
         BNE tube_loop
 
-        DO_JSR_MAP
+IF _MASTERSD_
+        JSR map_internal_io
+ENDIF
         LDA #&01
         STA spi_active%
 
@@ -281,7 +277,9 @@ ENDIF
         BNE loop
         LDA #&00
         STA spi_active%
-        DO_JSR_UNMAP
+IF _MASTERSD_
+        JSR unmap_internal_io
+ENDIF
         RTS
 
 .tube_loop
@@ -317,10 +315,10 @@ ENDIF
         LDY #2
         JSR MMC_Clocks
         LDA #&FE
-IF _ELECTRON_
-        JMP spi_write_byte
-ELSE
+IF _MASTERSD_
         JMP spi_write_byte_remap
+ELSE
+        JMP spi_write_byte
 ENDIF
 }
 
@@ -344,12 +342,12 @@ ENDIF
         RTS
 }
 
-
-
 \\ **** Write 256 bytes from dataptr% ****
 .MMC_Write256
 {
-        DO_JSR_MAP
+IF _MASTERSD_
+        JSR map_internal_io
+ENDIF
         LDA #&01
         STA spi_active%
         LDY TubeNoTransferIf0
@@ -359,7 +357,9 @@ ENDIF
         JSR spi_write_byte
         INY
         BNE loop1
-        DO_JSR_UNMAP
+IF _MASTERSD_
+        JSR unmap_internal_io
+ENDIF
         RTS
 .tube
         LDY #0
@@ -370,7 +370,9 @@ ENDIF
         BNE loop2
         LDA #&00
         STA spi_active%
-        DO_JSR_UNMAP
+IF _MASTERSD_
+        JSR unmap_internal_io
+ENDIF
         RTS
 }
 
@@ -380,10 +382,10 @@ ENDIF
         LDY #0
 .loop
         LDA buf%,Y
-IF _ELECTRON_
-        JSR spi_write_byte
-ELSE
+IF _MASTERSD_
         JSR spi_write_byte_remap
+ELSE
+        JSR spi_write_byte
 ENDIF
         INY
         BNE loop
