@@ -165,7 +165,6 @@ ENDIF
         BPL done
         DEY
         BNE loop2
-        CMP #0
 .done
 IF _DEBUG_MMC
         PHA
@@ -174,8 +173,9 @@ IF _DEBUG_MMC
         PLA
 ENDIF
 IF _MASTERSD_
-        JMP unmap_internal_io
+        JMP unmap_internal_io           ; includes PHA/PLA which sets flags on exit
 ELSE
+        CMP #0                          ; set flags on exit
         RTS
 ENDIF
 }
