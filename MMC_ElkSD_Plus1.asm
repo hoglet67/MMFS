@@ -12,9 +12,6 @@ spi_active%=&FC81
 
 _MASTERSD_ = not(_ELECTRON_)
 
-\\ This is unused on the Electron, according to the EAUG
-sr%=&F8
-
 IF _MASTERSD_
 
 acccon% = &FE34
@@ -75,32 +72,6 @@ ENDIF
 .loop
         LDA spi_active%
         BNE loop
-        RTS
-}
-
-\\ TODO: This code is currently unused
-
-\\ wait for response bit
-\\ ie for clear bit
-{
-IF _MASTERSD_
-        JSR map_internal_io
-ENDIF
-.loop
-        DEY
-        BEQ timeout
-        LDA #&FF
-        STA spi_port%
-        JSR spiwait
-        LDA spi_port%
-        STA sr%
-        ROL sr%
-        BCS loop
-.timeout
-        LDA spi_port%
-IF _MASTERSD_
-        JSR unmap_internal_io
-ENDIF
         RTS
 }
 
