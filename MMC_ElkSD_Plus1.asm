@@ -97,10 +97,7 @@ ENDIF
 .loop
         LDA spi_active%
         BNE loop
-IF _MASTERSD_
-        LDA #&00                 ; This is unnecessary
-ENDIF
-        RTS
+        RTS                      ; exit with A=0
 }
 
 \\ More generic code below tis point
