@@ -148,8 +148,6 @@ IF _DEBUG_MMC
         JSR PrintHex
 ENDIF
         JSR spiwait
-        NOP
-        NOP
         INX
         DEY
         BNE loop1
@@ -226,10 +224,6 @@ ENDIF
         LDA #&FF
         STA spi_port%
         JSR spiwait
-        NOP
-IF _ELECTRON_
-        NOP
-ENDIF
         LDA spi_port%
         STA (datptr%),Y
         INY
