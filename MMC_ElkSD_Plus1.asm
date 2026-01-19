@@ -62,9 +62,10 @@ ENDIF
         BNE loop
         LDA spi_port%
 IF _MASTERSD_
-        JSR unmap_internal_io
-ENDIF
+        JMP unmap_internal_io
+ELSE
         RTS
+ENDIF
 }
 
 .spiwait
@@ -173,9 +174,10 @@ IF _DEBUG_MMC
         PLA
 ENDIF
 IF _MASTERSD_
-        JSR unmap_internal_io
-ENDIF
+        JMP unmap_internal_io
+ELSE
         RTS
+ENDIF
 }
 
 
@@ -193,9 +195,10 @@ ENDIF
         CMP #&FE
         BNE loop
 IF _MASTERSD_
-        JSR unmap_internal_io
-ENDIF
+        JMP unmap_internal_io
+ELSE
         RTS
+ENDIF
 }
 
 \\ *** Read 256 bytes to datptr ***
@@ -232,9 +235,10 @@ ENDIF
         LDA #&00
         STA spi_active%
 IF _MASTERSD_
-        JSR unmap_internal_io
-ENDIF
+        JMP unmap_internal_io
+ELSE
         RTS
+ENDIF
 
 .tube_loop
         TXA
@@ -312,9 +316,11 @@ ENDIF
         INY
         BNE loop1
 IF _MASTERSD_
-        JSR unmap_internal_io
-ENDIF
+        JMP unmap_internal_io
+ELSE
         RTS
+ENDIF
+
 .tube
         LDY #0
 .loop2
@@ -325,9 +331,10 @@ ENDIF
         LDA #&00
         STA spi_active%
 IF _MASTERSD_
-        JSR unmap_internal_io
-ENDIF
+        JMP unmap_internal_io
+ELSE
         RTS
+ENDIF
 }
 
 \\ **** Write 256 bytes from buffer ****
