@@ -4,8 +4,42 @@
 \\ &FC81 is status and control port, read LSB for SPI controller state (0 = idle, 1 = busy)
 \\ and write for clock speed control (0 = slow clock, 1 = fast clock)
 \\
-\\ On ElkSD-Plus1 Rev 2 hardware slow clock sets SPI CLK to PHI0/8, fast clock is 2MHz
-
+\\ The only timimg sensitive code is the Tube Transfer code, which
+\\ needs to transfer no faster than 24us per byte. See cycle counts
+\\ inline.
+\\
+\\ ElkSD-Plus1 Rev 2 timings:
+\\
+\\    Slow clock:
+\\        250KHz max, min period 4us
+\\        8 PHI0 cycles, timings depend on CPU cycle stretching
+\\        SPI byte transfer: 32us
+\\
+\\    Fast clock:
+\\        2MHz, period 0.5us (250ns high, 250ns low)
+\\        SPI byte transfer: 4us
+\\
+\\    Tube Transfer timimgs (measured on scope)
+\\        (these need to be >= 24us)
+\\        LOAD: SD Card -> Tube (e.g.  Read256): 25.0us
+\\        SAVE: Tube -> SD Card (e.g. Write256): 25.0us
+\\        (these now both use the Fast clock)
+\\
+\\ MasterSD Rev 2 timings:
+\\
+\\    Slow clock:
+\\        333KHz, period 3.0us (1us high, 2us low)
+\\        SPI byte transfer: 24us
+\\
+\\    Fast clock:
+\\        666KHz, period 1.5us (0.5us high, 1us low)
+\\        SPI byte transfer: 12us
+\\
+\\    Tube Transfer timimgs (measured on scope)
+\\        (these need to be >= 24us)
+\\        LOAD: SD Card -> Tube (e.g.  Read256): 30.0us
+\\        SAVE: Tube -> SD Card (e.g. Write256): 29.5us
+\\        (these now both use the Fast clock)
 
 spi_port%=&FC80
 spi_active%=&FC81
@@ -59,7 +93,7 @@ ENDIF
         BNE loop
         LDA spi_port%
 IF _MASTERSD_
-        JMP unmap_internal_io
+        JMP unmap_internal_io    ; preserves A
 ELSE
         RTS
 ENDIF
@@ -186,7 +220,7 @@ ENDIF
         CMP #&FE
         BNE loop
 IF _MASTERSD_
-        JMP unmap_internal_io
+        JMP unmap_internal_io    ; preserves A
 ELSE
         RTS
 ENDIF
@@ -198,6 +232,26 @@ ENDIF
         BEQ mmc_read
 
 \\ *** Read "byteslastsector" bytes to datptr ***
+\\ On exit: Y=number of bytes transferred (0=256)
+\\
+\\ Tube Timing notes:
+\\
+\\ All numbers are 2MHz cycles
+\\
+\\ ElkSDP1:
+\\    Tube and Internal FCxx slow down to 1MHz
+\\    RAM slow down to 1MHz
+\\    JSR/RTS take 9 cycles as they includes 3 RAM accesses
+\\    LDA/STA to IO takes 5 or 6 cycles depending on phase
+\\    SPI transfer takes 4us, so 1 iteration of spiwait loop
+\\
+\\ MasterSD:
+\\    Everything (including Tube and internal FCxx) accessed at 2MHz
+\\    JSR takes 6 cycles
+\\    RTS takes 6 cycles
+\\    LDA/STA to IO takes 4 cycles
+\\    SPI transfer takes 12us, so 4 iteration of spiwait loop
+
 .MMC_ReadBLS
         LDX byteslastsec%
 
@@ -222,20 +276,20 @@ ENDIF
         BEQ done                 ; branch always
 .tube
         LDY #0
-.loop2
-        LDA #&FF
-        STA spi_port%
-        JSR spiwait
-        LDA spi_port%
-        STA TUBE_R3_DATA
-        INY
-        DEX
-        BNE loop2
-.done
-        LDA #&00
-        STA spi_active%
+.loop2                           ; ElkSDP1            MasterSD
+        LDA #&FF                 ; 2                  2
+        STA spi_port%            ; 5                  4
+        JSR spiwait              ; 9+5+2+9            6+(4+3)*3+4+2+6
+        LDA spi_port%            ; 5                  4
+        STA TUBE_R3_DATA         ; 6                  4
+        INY                      ; 2                  2
+        DEX                      ; 2                  2
+        BNE loop2                ; 3                  3
+.done                            ; ---                ---
+        LDA #&00                 ; 50 = 25us          60 = 30us
+        STA spi_active%          ; ---                ---
 IF _MASTERSD_
-        JMP unmap_internal_io
+        JMP unmap_internal_io    ; preserves A
 ELSE
         RTS
 ENDIF
@@ -289,6 +343,25 @@ ENDIF
 }
 
 \\ **** Write 256 bytes from dataptr% ****
+\\
+\\ Tube Timing notes:
+\\
+\\ All numbers are 2MHz cycles
+\\
+\\ ElkSDP1:
+\\    Tube and Internal FCxx slow down to 1MHz
+\\    RAM slow down to 1MHz
+\\    JSR/RTS take 9 cycles as they includes 3 RAM accesses
+\\    LDA/STA to IO takes 5 or 6 cycles depending on phase
+\\    SPI transfer takes 4us, so 2 iterations of spiwait loop
+\\
+\\ MasterSD:
+\\    Everything (including Tube and internal FCxx) accessed at 2MHz
+\\    JSR takes 6 cycles
+\\    RTS takes 6 cycles
+\\    LDA/STA to IO takes 4 cycles
+\\    SPI transfer takes 12us, so 5 iterations of spiwait loop
+
 .MMC_Write256
 {
 IF _MASTERSD_
@@ -306,16 +379,16 @@ ENDIF
         BEQ done                 ; branch always
 .tube
         LDY #0
-.loop2
-        LDA TUBE_R3_DATA
-        JSR spi_write_byte
-        INY
-        BNE loop2
-.done
-        LDA #&00
-        STA spi_active%
+.loop2                           ; ElkSDP1            MasterSD
+        LDA TUBE_R3_DATA         ; 6                  4
+        JSR spi_write_byte       ; 9+6+(5+3)*1+5+2+9  6+4+(4+3)*4+4+2+6
+        INY                      ; 2                  2
+        BNE loop2                ; 3                  3
+.done                            ; ---                ---
+        LDA #&00                 ; 50 = 25us          59 = 29.5us
+        STA spi_active%          ; ---                ---
 IF _MASTERSD_
-        JMP unmap_internal_io
+        JMP unmap_internal_io    ; preserves A
 ELSE
         RTS
 ENDIF
