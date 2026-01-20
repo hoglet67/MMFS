@@ -305,12 +305,7 @@ ENDIF
         JSR spi_write_byte
         INY
         BNE loop1
-IF _MASTERSD_
-        JMP unmap_internal_io
-ELSE
-        RTS
-ENDIF
-
+        BEQ done                 ; branch always
 .tube
         LDY #0
 .loop2
@@ -318,6 +313,7 @@ ENDIF
         JSR spi_write_byte
         INY
         BNE loop2
+.done
         LDA #&00
         STA spi_active%
 IF _MASTERSD_
