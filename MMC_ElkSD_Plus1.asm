@@ -203,17 +203,14 @@ ENDIF
 
 .mmc_read
 {
-        LDY #0
-        LDA TubeNoTransferIf0
-        BNE tube_loop
-
 IF _MASTERSD_
         JSR map_internal_io      ; corrupts A
 ENDIF
         LDA #&01
         STA spi_active%
-
-.loop
+        LDY TubeNoTransferIf0
+        BNE tube
+.loop1
         LDA #&FF
         STA spi_port%
         JSR spiwait
@@ -221,7 +218,20 @@ ENDIF
         STA (datptr%),Y
         INY
         DEX
-        BNE loop
+        BNE loop1
+        BEQ done                 ; branch always
+.tube
+        LDY #0
+.loop2
+        LDA #&FF
+        STA spi_port%
+        JSR spiwait
+        LDA spi_port%
+        STA TUBE_R3_DATA
+        INY
+        DEX
+        BNE loop2
+.done
         LDA #&00
         STA spi_active%
 IF _MASTERSD_
@@ -229,18 +239,6 @@ IF _MASTERSD_
 ELSE
         RTS
 ENDIF
-
-.tube_loop
-        TXA
-        PHA
-        JSR MMC_GetByte
-        STA TUBE_R3_DATA
-        PLA
-        TAX
-        INY
-        DEX
-        BNE tube_loop
-        RTS
 }
 
 \\ **** Read 256 bytes to buffer ****
