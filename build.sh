@@ -139,14 +139,21 @@ do
                 exit
             fi
 
-            # Create the .inf file
-            echo -e "\$."${name}"\t8000\t8000" > ${build}/${name}.inf
+            # Exclude the Ramtop ESD128 build to avoid accidents!
+            # (the right way to use this is the ZEMMFS wrapper)
 
-            # Add into the SSD
-            tools/mmb_utils/putfile.pl ${ssd} ${build}/${name}
+            if [ "${name}" != "RESD128" ]
+            then
 
-            # Delete the .inf file
-            rm -f ${build}/${name}.inf
+                # Create the .inf file
+                echo -e "\$."${name}"\t8000\t8000" > ${build}/${name}.inf
+
+                # Add into the SSD
+                tools/mmb_utils/putfile.pl ${ssd} ${build}/${name}
+
+                # Delete the .inf file
+                rm -f ${build}/${name}.inf
+            fi
 
             # Report end of code
             grep "code ends at" ${build}/${name}.log
@@ -180,5 +187,9 @@ do
     do
         mv build/${device} build/${system}
     done
+
+    # Manually adjust the artefacts in the Ramtop builds
+    cat build/${system}/S/RESD128.log >> build/${system}/S/ZEMMFS.log
+    rm -f build/${system}/S/RESD128.*
 
 done # for system in mmfs mmfs2
