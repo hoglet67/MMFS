@@ -2235,7 +2235,7 @@ Rfault=&FF
 	LDY #6
 	LDA (cb),Y		; A=FDC command
 
-	LDX #owtableZ
+	LDX #owtableZ-1
 
 .loop1
 	CMP owtable1,X
