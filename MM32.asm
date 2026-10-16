@@ -122,6 +122,9 @@ ENDIF
 
 .init
 {
+IF _PI1MHZ_FILES_
+	JMP pi1mhz_init		; MM32_Pi1MHz.asm
+ELSE
 	JSR read_VBR
 	BCC faterr		; Couldn't read VBR
 
@@ -227,8 +230,10 @@ ENDIF
 	JSR ReportError
 	EQUB &FF
 	EQUS "Card format?",0
+ENDIF
 }
 
+IF NOT(_PI1MHZ_FILES_)
 \\ Read VBR, on exit C=1 if successful,
 \\ and lba_fat% contains LBA of FAT.
 .read_VBR
@@ -302,9 +307,11 @@ ENDIF
 	CLC
 	RTS
 }
+ENDIF
 }
 
 
+IF NOT(_PI1MHZ_FILES_)	; MM32_Pi1MHz.asm has these
 \\ Initialise CLUST_X, SECT_X and ATTRIB_X
 \\ Copies cluster from chain index.
 \\ On entry Y=index (0=Drive 0, 1=Drive 1 or 2=Current Dir)
@@ -546,6 +553,7 @@ ENDIF
 
 
 
+ENDIF
 \\ Scan the current directory
 \\ On exit: C=0 if file/dir found
 .mm32_Scan_Dir
@@ -560,7 +568,11 @@ ENDIF
 	JSR mm32_SECT_X_Address
 	BCS exit	; If overflow error (C=1)
 
+IF _PI1MHZ_FILES_
+	JSR pi1mhz_dir_block	; block CLUST_X of the directory, made by the Pi
+ELSE
 	JSR mm32_readblock
+ENDIF
 
 	JSR scan_block
 	BCC exit	; File/Dir found
@@ -709,6 +721,10 @@ ENDIF
 	z = mm32_zptr%
 	LDA #&80	; Set 'L' flag in logging printout
 	STA mm32_attrib%
+IF _PI1MHZ_FILES_
+	LDA #1
+	JMP pi1mhz_set_locked
+ELSE
 	LDY #11
 	LDA (z),Y	; Attribs
 	ORA #&01	; Set r/o bit
@@ -716,6 +732,7 @@ ENDIF
 	LDA #&FF	; Writeback flag
 	STA &AB
 	RTS
+ENDIF
 }
 
 \\ Clear read only bit
@@ -724,6 +741,9 @@ ENDIF
 	z = mm32_zptr%
 	LDA #&00	; Clear 'L' flag in logging printout
 	STA mm32_attrib%
+IF _PI1MHZ_FILES_
+	JMP pi1mhz_set_locked	; A=0
+ELSE
 	LDY #11
 	LDA (z),Y	; Attribs
 	AND #&FE	; Clear r/o bit
@@ -731,9 +751,15 @@ ENDIF
 	LDA #&FF	; Writeback flag
 	STA &AB
 	RTS
+ENDIF
 }
 
-IF _MM32_DRENAME
+IF _MM32_DRENAME AND _PI1MHZ_FILES_
+.rename_fat_file
+	JMP pi1mhz_rename		; the Pi renames it in the directory
+ENDIF
+
+IF _MM32_DRENAME AND NOT(_PI1MHZ_FILES_)
 \\ Rename a file
 .rename_fat_file
 {
@@ -1525,6 +1551,9 @@ ENDIF
 
 .okay
 	\ File/Directory Found
+IF _PI1MHZ_FILES_
+	PHA						; The flags (8 for a directory)
+ENDIF
 	JSR mm32_upd_dsktbl
 	LDY #26					; Copy cluster number from directory
 	LDA (z),Y
@@ -1565,7 +1594,20 @@ ENDIF
 	JSR mm32_clear_cluster_index_x	; Unload other drive
 
 	\ Copy cluster number from mm32_cluster% to CHAIN_INDEX.
-.l1	JSR CheckCRC7
+.l1
+IF _PI1MHZ_FILES_
+	JSR pi1mhz_attach		; open the file / change the directory on the Pi
+	PLA
+	BCC attached
+	AND #$02				; Autoload mode?
+	BNE quiet
+	JMP err_FILENOTFOUND
+.quiet
+	SEC
+	RTS
+.attached
+ENDIF
+	JSR CheckCRC7
 	LDX CurrentDrv
 	LDA mm32_cluster%
 	STA CHAIN_INDEX,X
@@ -1621,6 +1663,9 @@ ENDIF
 \\ Note, for directory 0 = root, for drives it means they are "empty".
 .mm32_clear_cluster_index_x
 {
+IF _PI1MHZ_FILES_
+	JSR pi1mhz_release	; X, Y preserved
+ENDIF
 	JSR CheckCRC7		; X preserved
 	LDA #0
 	STA CHAIN_INDEX,X
@@ -2089,6 +2134,23 @@ ENDIF
 	DEY
 	BNE loop1
 }
+IF _PI1MHZ_FILES_
+\\ The block's address: sec% = block * 2 (256-byte sectors), C=0.  The
+\\ driver sends it as a byte offset in the drive's file.
+.mm32_SECT_X_Address
+	LDA CLUST_X
+	ASL A
+	STA sec%
+	LDA CLUST_X+1
+	ROL A
+	STA sec%+1
+	LDA #0
+	ROL A
+	STA sec%+2
+	CLC
+.l2rts
+	RTS
+ELSE
 \\ Calculate address of sector SECT_X in cluster CLUST_X.
 \\ Exit: C=1 if error (overflow)
 .mm32_SECT_X_Address
@@ -2150,6 +2212,7 @@ ENDIF
 
 .l2rts
 	RTS
+ENDIF
 
 
 

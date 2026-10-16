@@ -8780,6 +8780,9 @@ ENDIF
 
 IF _MM32_ ; MM 11/05/19
 	INCLUDE "MM32.asm"
+IF _PI1MHZ_FILES_
+	INCLUDE "MM32_Pi1MHz.asm"
+ENDIF
 ENDIF
 
 	\ Optional extras!

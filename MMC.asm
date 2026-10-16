@@ -180,9 +180,13 @@ IF _DEVICE_!="1"
 	TAY
 	JMP MMC_GetByte
 ELSE
+IF _PI1MHZ_FILES_ AND _MM32_
+	JMP pi1mhz_boot_id
+ELSE
 	LDA #&AA
 	TAY
 	RTS
+ENDIF
 ENDIF
 	\ **** Set-up MMC command sequence ****
 .MMC_SetupWrite
@@ -855,11 +859,19 @@ ENDIF
 	RTS
 
 .errCardChanged
+IF _PI1MHZ_FILES_ AND _MM32_
+	\ The Pi has restarted (a new boot id) and let go of the drives'
+	\ files and directory: start again, as after a hard reset
+	LDA #0
+	STA CLUST_SIZE		; mm32_init_dos runs next
+	JMP ResetCRC7
+ELSE
 	LDA #0
 	STA MMC_STATE
 	JSR ReportError
 	EQUB &FF
 	EQUS "Wrong card!",0
+ENDIF
 }
 
 	\\ **** END MMC TRANSACTION ****
