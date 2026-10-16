@@ -15,3 +15,4 @@ _DEBUG_MMC=?FALSE        ; Enable debugging of MMC initialization
 _DFS_EMUL=?TRUE          ; Use DFS filesystem number + handles
 _FASTGBPB_=?TRUE         ; Include FAST OSGBPB
 _DEFAULT_LIB_DRIVE_=?0   ; Default drive for *LIB
+_PI1MHZ_FILES_=?(_DEVICE_="1" AND NOT(_MM32_)) ; Pi1MHz: BEEB.MMB through the Pi's file service, not raw card sectors

@@ -10,6 +10,72 @@ discaccess = &FCA6
 ;byteCounter% = MA+&10FF
 ;lowByteStore% = MA+&10FE
 
+IF _PI1MHZ_FILES_
+	\\ BEEB.MMB is a file the Pi holds open, read and written through its
+	\\ FAT service: no raw card sectors, so it may be fragmented, on any
+	\\ storage the Pi uses (SD card, USB drive, network share).
+	\\ The command block is page pi1mhz_block of JIM &FF; writing that
+	\\ page to discaccess+4 starts a command, and its low nibble is the
+	\\ service's file handle (14: the helpers use 12, 13 and 15).
+pi1mhz_block = &FE
+
+	\\ RESET DEVICE: called at the start of every transaction.  A BBC
+	\\ reset (or a helper's file use) closes the Pi's files, while a soft
+	\\ BREAK keeps MMC_SECTOR_VALID: reopen the image when it has gone.
+.MMC_DEVICE_RESET
+{
+	JSR pi1mhz_point
+	LDA #6 : STA discaccess+3	; fsize: fails unless open
+	JSR pi1mhz_go
+	BEQ open
+	LDX #3				; open read-write, else read-only
+.try
+	JSR pi1mhz_point
+	LDA #2 : STA discaccess+3	; fopen
+	STA discaccess+3
+	STX discaccess+3		; mode: FA_READ 1, FA_WRITE 2
+	LDY #&FF
+.name
+	INY
+	LDA pi1mhz_image,Y
+	STA discaccess+3
+	BNE name
+	JSR pi1mhz_go
+	BEQ open
+	DEX
+	DEX
+	BPL try
+	JSR ReportError
+	EQUB &FF
+	EQUS "Image not found!",0
+
+.open
+	\\ the data buffer, &FFE000, in the block (+4)
+	JSR pi1mhz_point
+	LDA #4   : STA discaccess
+	LDA #0   : STA discaccess+3
+	LDY #&E0 : STY discaccess+3
+	LDY #&FF : STY discaccess+3
+	STA discaccess+3
+	RTS				; A=0
+}
+
+.pi1mhz_point			; discaccess -> the command block
+	LDA #0 : STA discaccess
+	LDA #pi1mhz_block : STA discaccess+1
+	LDA #&FF : STA discaccess+2
+	RTS
+
+.pi1mhz_go			; start the command; exit A=result, Z=OK
+	LDA #pi1mhz_block : STA discaccess+4
+.pi1mhz_wait
+	LDA discaccess+4
+	BMI pi1mhz_wait
+	RTS
+
+.pi1mhz_image
+	EQUS "/BEEB.MMB",0
+ELSE
 	\\ RESET DEVICE
 .MMC_DEVICE_RESET
     ; setup discaccess buffer in FRED.
@@ -43,6 +109,7 @@ discaccess = &FCA6
     STA discaccess+3
 	; return A=0
 	RTS
+ENDIF
 
     \\ only used during init sequence
     \\ mainly for sdhc2 cards and for GetIDCRC so we can just return a constant
@@ -91,6 +158,27 @@ discaccess = &FCA6
 	; C is set
 	LDA #0 ; set up read sector A= 0 ( read sector command)
 .setup_buffer
+IF _PI1MHZ_FILES_
+	; C=1 read: start it now; C=0 write: MMC_EndWrite starts it
+	PHP
+	PHA
+	JSR pi1mhz_point
+	PLA
+	ORA #4 : STA discaccess+3	; 4 = seek+read, 5 = seek+write
+	LDA #0 : STA discaccess+3	; 512 bytes
+	LDA #2 : STA discaccess+3
+	LDA #0 : STA discaccess+3
+	LDX #8 : STX discaccess
+	; byte offset in the image = block * 512
+	STA discaccess+3
+	LDA cmdseq%+5 : ASL A : STA discaccess+3
+	LDA cmdseq%+4 : ROL A : STA discaccess+3
+	LDA cmdseq%+3 : ROL A : STA discaccess+3
+	PLP
+	BCC skip
+	LDA #pi1mhz_block : STA discaccess+4 ; start read
+.skip
+ELSE
     LDX #0   : STX discaccess
 	LDY #&F0 : STY discaccess+1
     LDX #&FF : STX discaccess+2
@@ -107,6 +195,7 @@ discaccess = &FCA6
 	BCC skip
     STY discaccess+4 ; start read sector
 .skip
+ENDIF
 
     ; setup pointer to buffer
 	LDX #&E0 : STX discaccess+1
@@ -177,7 +266,11 @@ ENDIF
 	\\ **** Complete Write Operation *****
 
 .MMC_EndWrite
+IF _PI1MHZ_FILES_
+	LDA #pi1mhz_block : STA discaccess+4 ; start the write
+ELSE
     LDA #&F0 : STA discaccess+4 ; start write sector
+ENDIF
     ; wait for write to complete
 	NOP
 	\\ Wait for sector to be complete
