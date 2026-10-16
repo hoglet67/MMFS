@@ -11,14 +11,24 @@ discaccess = &FCA6
 ;lowByteStore% = MA+&10FE
 
 IF _PI1MHZ_FILES_
-	\\ BEEB.MMB is a file the Pi holds open, read and written through its
-	\\ FAT service: no raw card sectors, so it may be fragmented, on any
-	\\ storage the Pi uses (SD card, USB drive, network share).
-	\\ The command block is page pi1mhz_block of JIM &FF; writing that
-	\\ page to discaccess+4 starts a command, and its low nibble is the
-	\\ service's file handle (14: the helpers use 12, 13 and 15).
-pi1mhz_block = &FE
+	\\ The disc images are files the Pi holds open, read and written
+	\\ through its FAT service: no raw card sectors, so they may be
+	\\ fragmented, on any storage the Pi uses (SD card, USB drive, share).
+	\\ A slot's command block is page P of JIM &FF; writing P to
+	\\ discaccess+4 starts a command, and P's low nibble is the service's
+	\\ file handle.  The helpers use 12, 13 and 15, so MMFS has BEEB.MMB on
+	\\ 14 (&FE) and MMFS2 its drives 0 and 1 on 11 (&FB) and 10 (&FA).
+	\\ pi1mhz_slot holds the page in use.
+IF _MM32_
+pi1mhz_slot = &CE		; FRAG_X: set by mm32_SECT_X_First for the drive
+ENDIF
 
+IF _MM32_
+	\\ RESET DEVICE: nothing - every command sets its whole block
+.MMC_DEVICE_RESET
+	LDA #0
+	RTS
+ELSE
 	\\ RESET DEVICE: called at the start of every transaction.  A BBC
 	\\ reset (or a helper's file use) closes the Pi's files, while a soft
 	\\ BREAK keeps MMC_SECTOR_VALID: reopen the image when it has gone.
@@ -60,21 +70,33 @@ pi1mhz_block = &FE
 	RTS				; A=0
 }
 
-.pi1mhz_point			; discaccess -> the command block
+.pi1mhz_mmb
+	EQUB &FE
+pi1mhz_slot = pi1mhz_mmb	; always BEEB.MMB's
+.pi1mhz_image
+	EQUS "/BEEB.MMB",0
+ENDIF
+
+.pi1mhz_point			; discaccess -> the slot's command block
 	LDA #0 : STA discaccess
-	LDA #pi1mhz_block : STA discaccess+1
+	LDA pi1mhz_slot : STA discaccess+1
 	LDA #&FF : STA discaccess+2
 	RTS
 
 .pi1mhz_go			; start the command; exit A=result, Z=OK
-	LDA #pi1mhz_block : STA discaccess+4
+	LDA pi1mhz_slot : STA discaccess+4
 .pi1mhz_wait
 	LDA discaccess+4
 	BMI pi1mhz_wait
 	RTS
 
-.pi1mhz_image
-	EQUS "/BEEB.MMB",0
+.pi1mhz_buffer			; the block's +4: the 512-byte buffer, &FFE000
+	LDA #0   : STA discaccess+3
+	LDA #&E0 : STA discaccess+3
+	LDA #&FF : STA discaccess+3
+	LDA #0   : STA discaccess+3
+	RTS
+
 ELSE
 	\\ RESET DEVICE
 .MMC_DEVICE_RESET
@@ -168,15 +190,15 @@ IF _PI1MHZ_FILES_
 	LDA #0 : STA discaccess+3	; 512 bytes
 	LDA #2 : STA discaccess+3
 	LDA #0 : STA discaccess+3
-	LDX #8 : STX discaccess
+	JSR pi1mhz_buffer
 	; byte offset in the image = block * 512
-	STA discaccess+3
+	STA discaccess+3		; A=0
 	LDA cmdseq%+5 : ASL A : STA discaccess+3
 	LDA cmdseq%+4 : ROL A : STA discaccess+3
 	LDA cmdseq%+3 : ROL A : STA discaccess+3
 	PLP
 	BCC skip
-	LDA #pi1mhz_block : STA discaccess+4 ; start read
+	LDA pi1mhz_slot : STA discaccess+4 ; start read
 .skip
 ELSE
     LDX #0   : STX discaccess
@@ -267,7 +289,7 @@ ENDIF
 
 .MMC_EndWrite
 IF _PI1MHZ_FILES_
-	LDA #pi1mhz_block : STA discaccess+4 ; start the write
+	LDA pi1mhz_slot : STA discaccess+4 ; start the write
 ELSE
     LDA #&F0 : STA discaccess+4 ; start write sector
 ENDIF
@@ -280,6 +302,24 @@ ENDIF
 .loop
     LDA discaccess+4
     BMI loop
+IF _PI1MHZ_FILES_
+	; the Pi's answer: a missing or unreadable image is an error, not
+	; whatever the buffer held.  20 on a read = short: past the end of a
+	; cut-down image, the Pi fills the rest with zeros.  20 on a write
+	; = not all written (the card is full).  The error shows the result.
+	BEQ ok
+	PHA
+	LDA cmdseq%+1
+	CMP #read_single_block
+	BNE wr
+	PLA
+	CMP #20
+	BEQ ok
+	JMP errRead
+.wr	PLA
+	JMP errWrite
+.ok
+ENDIF
 	    ; setup pointer to buffer
 	LDA #&E0 : STA discaccess+1
     LDA #0   : STA discaccess

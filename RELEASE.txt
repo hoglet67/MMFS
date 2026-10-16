@@ -23,6 +23,12 @@ contain versions for specific types of SD Card interface hardware:
 - P: Beeb/Master Printer Port interface
 - M: MemoryMapped IO interface (typically &FE18, for BeebEm)
 - G: Mega Games Cartridge MKII (in development)
+- 1: Pi1MHz (a Raspberry Pi on the 1MHz bus). The disc images are files
+  on the Pi's own storage (its SD card or USB drive), which the Pi opens
+  by name for MMFS through its FAT service, so BEEB.MMB and the .SSD/.DSD
+  files may be fragmented. MMFS2 needs Pi1MHz firmware
+  with the slot directory commands; on older firmware it says
+  "Pi1MHz too old".
 
 Turbo and Non-Turbo interfaces are incompatible with each other and
 need different versions of MMFS. If you are not sure if you have a
