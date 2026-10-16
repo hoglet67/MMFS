@@ -6727,7 +6727,7 @@ ENDIF
 cmdseq%=MA+&1087
 par%=MA+&1089
 
-IF NOT(_MM32_)
+IF NOT(_MM32_) AND NOT(_PI1MHZ_FILES_)
 	\ Include FAT routines here
 
 INCLUDE "FAT.asm"
@@ -6795,11 +6795,13 @@ IF NOT(_MM32_)
 	\\ Default image: BEEB.MMB
 .MMC_Sector_Reset
 {
+IF NOT(_PI1MHZ_FILES_)
 	LDY #&A
 .loop	LDA filemmb,Y
 	STA fatfilename%,Y
 	DEY
 	BPL loop
+ENDIF
 
 	\\ Search for Image File
 	\\ Name at file at fatfilename%
@@ -6811,11 +6813,19 @@ IF NOT(_MM32_)
 	STA MMC_SECTOR_VALID
 	JSR ResetCRC7
 
+IF _PI1MHZ_FILES_
+	\ The Pi has BEEB.MMB open (MMC_DEVICE_RESET): its sector 0 is
+	\ offset 0 of the file
+	STA sec%
+	STA sec%+1
+	STA sec%+2
+ELSE
 	JSR FATLoadRootDirectory
 	BCC nofat
 	JSR FATSearchRootDirectory
 	BCS fileerr
 .nofat
+ENDIF
 
 	LDA sec%
 	STA MMC_SECTOR
@@ -6863,6 +6873,7 @@ IF _LARGEMMB_
 ENDIF
 	JMP ResetCRC7
 
+IF NOT(_PI1MHZ_FILES_)
 .fileerr
 	JSR ReportError
 	EQUB &FF
@@ -6870,6 +6881,7 @@ ENDIF
 
 .filemmb
 	EQUS "BEEB    MMB"
+ENDIF
 }
 
 	\\ **** Check drive not write protected ****
