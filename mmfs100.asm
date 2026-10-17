@@ -340,12 +340,12 @@ ENDIF
 	JMP pstr_loop
 }
 
-IF _MM32_
-	\ Print space, on exit A=&20
+	\ Print spaces, not spooled like the text they pad; on exit A=&20
+.Print2Spaces
+	JSR PrintSpace
 .PrintSpace
 	LDA #' '
 	BNE PrintChrA
-ENDIF
 
 .PrintNibFullStop
 	JSR PrintNibble
@@ -397,9 +397,7 @@ ENDIF
 	JSR NibToASC
 	JMP OSWRCH
 
-	\\ Print spaces, exit C=0 A preserved
-.Print2SpacesSPL
-	JSR PrintSpaceSPL		; Print 2 spaces
+	\\ Print space, exit C=0 A preserved
 .PrintSpaceSPL
 	PHA				; Print space
 	LDA #&20
@@ -552,8 +550,8 @@ ENDIF
 	PHP
 	AND #&7F			; directory
 	BNE prt_filename_prtchr
-	JSR Print2SpacesSPL		; if no dir. print "  "
-	BEQ prt_filename_nodir		; always?
+	JSR Print2Spaces		; if no dir. print "  "
+	BNE prt_filename_nodir		; always
 .prt_filename_prtchr
 	JSR PrintChrA			; print dir
 	JSR PrintFullStop		; print "."
@@ -566,7 +564,7 @@ ENDIF
 	INY
 	DEX
 	BPL prt_filename_loop
-	JSR Print2SpacesSPL		; print "  "
+	JSR Print2Spaces		; print "  "
 	LDA #&20			; " "
 	PLP
 	BPL prt_filename_notlocked
@@ -577,7 +575,7 @@ ENDIF
 }
 
 .prt_Yspaces
-	JSR PrintSpaceSPL
+	JSR PrintSpace
 	DEY
 	BNE prt_Yspaces
 	RTS
@@ -831,7 +829,7 @@ ENDIF
 	STA &B1
 	JSR ReadFileAttribsToB0_Yoffset	; create no. str
 	LDY #&02
-	JSR PrintSpaceSPL		; print "  "
+	JSR PrintSpace			; print " "
 	JSR PrintHex3Byte		; Load address
 	JSR PrintHex3Byte		; Exec address
 	JSR PrintHex3Byte		; Length
@@ -861,7 +859,7 @@ ENDIF
 	DEX
 	BNE printhex3byte_loop
 	JSR Y_add7
-	JMP PrintSpaceSPL
+	JMP PrintSpace
 }
 
 
@@ -1410,7 +1408,7 @@ ENDIF
 	INY
 	STY &A8
 	LDY &AB				; Y=cat offset
-	JSR Print2SpacesSPL		; print 2 spaces
+	JSR Print2Spaces		; print 2 spaces
 	JSR prt_filename_Yoffset	; Print filename
 	JMP cat_sortloop1
 }
