@@ -757,6 +757,14 @@ IF _MM32_DRENAME
 	LDA #mm32_hash
 	STA endchar
 	LDA #11
+	JSR copy_and_pad_with_spaces
+
+	; Write the directory to the card
+	JSR MMC_WriteCatalogue
+
+	; End mm32_Scan_Dir
+	CLC
+	RTS
 
 	; Copy part of the name, up to A characters, pad with spaces,
 	; end at the char stored at 'endchar'
@@ -782,14 +790,8 @@ IF _MM32_DRENAME
 .pad
 	CPY maxindex
 	BNE padloop
-
-}
-	; Write the directory to the card
-	JSR MMC_WriteCatalogue
-
-	; End mm32_Scan_Dir
-	CLC
 	RTS
+}
 }
 ENDIF
 
