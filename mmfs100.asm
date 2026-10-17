@@ -4173,6 +4173,11 @@ lenhi       =       work  +$0007	;2MSB file length in OSFILE
 	STX dosram+$06		;x=request, hold in 3MSB of L
 .sectr1
 	LDY dcby		;undo EXT/allocation fudge
+	LDA acc			;writing (call 1 or 2)?
+	CMP #3
+	BCS sectr2		;if not then no write checks
+	JSR CheckChannelWritable_Yintch ;else "Read only"/"Locked" as BPUT would
+.sectr2
 	JSR Channel_SetDirDrv_GetCatEntry_Yintch ;ensure open file still in drive
 	JSR ChannelBufferToDisk_Yintch		;ensure buffer up-to-date on disc L6
 	LDA #$3F		;b7=0 buffer does not contain PTR, b6=0 buffer not changed
@@ -5265,6 +5270,14 @@ ENDIF
 	EQUB &C1
 	EQUS "Read only",0
 
+	\ Error unless channel Y may be written to
+.CheckChannelWritable_Yintch
+	LDA MA+&110C,Y
+	BMI errFILEREADONLY
+	LDA MA+&110E,Y
+	BMI errFILELOCKED2
+	RTS
+
 .bput_Yintchan
 	JSR RememberAXY
 	JMP bp_entry
@@ -5274,10 +5287,7 @@ ENDIF
 .bp_entry
 {
 	PHA
-	LDA MA+&110C,Y
-	BMI errFILEREADONLY
-	LDA MA+&110E,Y
-	BMI errFILELOCKED2
+	JSR CheckChannelWritable_Yintch
 	JSR Channel_SetDirDrive_Yintch
 	TYA
 	CLC
