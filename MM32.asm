@@ -783,6 +783,14 @@ IF _MM32_DRENAME AND NOT(_PI1MHZ_FILES_)
 	LDA #mm32_hash
 	STA endchar
 	LDA #11
+	JSR copy_and_pad_with_spaces
+
+	; Write the directory to the card
+	JSR MMC_WriteCatalogue
+
+	; End mm32_Scan_Dir
+	CLC
+	RTS
 
 	; Copy part of the name, up to A characters, pad with spaces,
 	; end at the char stored at 'endchar'
@@ -808,14 +816,8 @@ IF _MM32_DRENAME AND NOT(_PI1MHZ_FILES_)
 .pad
 	CPY maxindex
 	BNE padloop
-
-}
-	; Write the directory to the card
-	JSR MMC_WriteCatalogue
-
-	; End mm32_Scan_Dir
-	CLC
 	RTS
+}
 }
 ENDIF
 
@@ -1629,23 +1631,6 @@ ENDIF
 ;	jsr mm32_prtcurdrv
 ;	jsr PrintNewLine
 
-	tbl = mm32_drvtbl%
-	MaxLen = 16
-
-	LDX #0
-	LDA CurrentDrv
-	ASL A
-	ASL A
-	ASL A
-	ASL A
-	TAY
-	LDA #' '
-.s0 STA tbl,Y
-	INX
-    INY
-	CPX #MaxLen
-	BNE s0
-
 	LDY #0
 	;JMP mm32_clear_cluster_index
 }
@@ -1660,7 +1645,8 @@ ENDIF
 
 \\ Reset cluster number in CHAIN_INDEX
 \\ On entry: X=index, Y=attributes
-\\ Note, for directory 0 = root, for drives it means they are "empty".
+\\ Note, for directory 0 = root, for drives it means they are "empty",
+\\ and the drive's name in mm32_drvtbl% is cleared for *DDRIVE.
 .mm32_clear_cluster_index_x
 {
 IF _PI1MHZ_FILES_
@@ -1672,6 +1658,17 @@ ENDIF
 	STA CHAIN_INDEX+3,X
 	TYA
 	STA CHAIN_INDEX+6,X
+	CPX #2			; X=2 is the directory, not a drive
+	BCS done
+	TXA
+	ASL A
+	ASL A
+	ASL A
+	ASL A
+	TAY
+	LDA #' '		; Not mm32_hash: *DDRIVE shows <Empty>
+	STA mm32_drvtbl%,Y
+.done
 	JMP ResetCRC7
 }
 
@@ -1926,6 +1923,16 @@ IF _MM32_DRENAME
 	; Read first parameter
 	CLC
 	JSR mm32_param_filename
+	BCS badname
+
+	; Check it is a file name (not "." or ".."), keeping Y for the
+	; second parameter
+	TYA
+	PHA
+	JSR mm32_check_filename
+	PLA
+	TAY
+	BCC badname
 
 	; Save it for later
 	JSR mm32_swap_str_16_32
@@ -1933,6 +1940,7 @@ IF _MM32_DRENAME
 	; Read the second parameter
 	CLC
 	JSR mm32_param_filename
+	BCS badname
 
 	; Check the name is sensible
 	JSR mm32_check_filename
@@ -1968,11 +1976,13 @@ IF _MM32_DRENAME
 }
 
 \\ Check that the filename at mm32_str%+16 is valid
-\\ This is for names of created files - "." and ".." are not valid
+\\ This is for names of created files - "." and ".." are not valid,
+\\ and the name must fit 8.3, as it is written into the directory entry
 .mm32_check_filename
 {
 	str = mm32_str%+16
 	numdots = &BA
+	partleft = &BB	; characters still allowed in this part, plus one
 
 	LDA str
 	CMP #mm32_hash
@@ -1985,6 +1995,8 @@ IF _MM32_DRENAME
 
 	LDX #1
 	STX numdots   ; How many more dots we will allow
+	LDA #8+1
+	STA partleft  ; Up to 8 characters before the dot
 
 .checknameloop
 	LDA str,X
@@ -1998,7 +2010,13 @@ IF _MM32_DRENAME
 	BNE notdot
 	DEC numdots
 	BMI badname
+	LDA #3+1
+	STA partleft  ; Up to 3 characters after it
+	BNE checknameloop ; always
+
 .notdot
+	DEC partleft
+	BEQ badname
 
 	LDY #invalid_chars_end-invalid_chars
 .checkcharloop
@@ -2186,6 +2204,7 @@ ELSE
 	BCC l4
 
 	INC sec%+2
+	BEQ ovf			; Past 24 bits
 
 .l4	SEC				; sec% += (CLUST_SIZE - SECT_X)
 	LDA CLUST_SIZE
@@ -2199,6 +2218,11 @@ ELSE
 	BNE l5
 
 	INC sec%+2
+	BNE l5
+
+.ovf
+	SEC				; Exit with C=1
+	RTS
 
 .l5 ; fall into mm32_lba_to_256	JMP mm32_lba_to_256
 }
