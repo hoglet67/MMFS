@@ -8526,6 +8526,7 @@ IF _INCLUDE_CMD_DFREE_
 
 	; GetDisk returns unformatted disk
 	JSR GetDiskFirstAllX
+	BCS dffin			; No discs at all
 .dfreelp
 	BPL dffmted
 	LDX #dfFree%

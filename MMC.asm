@@ -808,10 +808,25 @@ IF _DONBOOT_
 	STA &B8
 	LDA MA+&0E04, X
 	STA &B9
+	\\ A disc number that is not in the MMB (garbage in a chunk's
+	\\ header) leaves the drive empty, not pointing past the end
+	TXA
+	PHA
+	LDX #&B8
+	JSR calculate_div_mod_511_zp_x	; C=1 if chunk >= NUM_CHUNKS
+	PLA
+	TAX
+	BCS empty
 	JSR LoadDriveX
+.next
 	DEX
 	BPL loop
 	RTS
+.empty
+	JSR CheckCRC7
+	TXA				; Bit 7 clear = no disc
+	JSR storeDRIVE_INDEX4_ResetCRC7
+	JMP next
 }
 	\\ Load the first sector of the disk table, taking account of chunk base
 .LoadBaseSector
