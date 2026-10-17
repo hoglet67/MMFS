@@ -6708,6 +6708,7 @@ errptr%=&B8
 .rmmc_j100
 	LDA #0
 	STA &100,Y
+	JSR TUBE_RELEASE		; as ReportError2 does
 	JMP &100
 }
 ENDIF
