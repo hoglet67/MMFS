@@ -2628,14 +2628,14 @@ ENDIF
 	LDA #&00
 	STA MA+&1075
 	LDA &C2
-	AND #&08
-	STA MA+&1074
-	BEQ ldadd_nothost
+	JSR A_rorx2and3
+	CMP #&03
+	BNE ldadd_nothost
 .SetLoadAddrToHost
 	LDA #&FF
 	STA MA+&1075
-	STA MA+&1074
 .ldadd_nothost
+	STA MA+&1074
 	RTS
 
 .LoadandEexeAddrHi2
