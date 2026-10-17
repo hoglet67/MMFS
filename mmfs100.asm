@@ -1173,6 +1173,12 @@ rn%=&B0
 	BMI rnnotval
 	CMP #10
 	BCS rnnotval
+IF _LARGEMMB_
+	\\ N>=1024 would give N*10>=8192 (too big) and can overflow 16 bits
+	LDX rn%+1
+	CPX #4
+	BCS rnnotval			; C=0 if not
+ENDIF
 
 	\\ N=N*2+N*8+A
 	PHA				;\ 2
