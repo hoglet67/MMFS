@@ -8336,7 +8336,9 @@ ENDIF
 IF NOT(_MM32_)
 IF _INCLUDE_CMD_DBASE_
 	\\ *DBASE <dno>
-	\\ Takes effect on next Ctrl-BREAK
+	\\ Takes effect at once (and is kept for the next Ctrl-BREAK); the
+	\\ drives are reloaded as at Ctrl-BREAK, as they hold disc numbers
+	\\ relative to the base
 .CMD_DBASE
 	JSR GSINIT_A
 	BEQ info
@@ -8351,7 +8353,8 @@ IF _INCLUDE_CMD_DBASE_
 	JSR LoadDiskTable
 	LDA CHUNK_BASE
 	STA MA+&E09
-	JMP SaveDiskTable
+	JSR SaveDiskTable
+	JMP MMC_LoadDisks
 .info
 	JSR PrintString
 	EQUS "MMB Base: "
