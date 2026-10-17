@@ -2147,6 +2147,7 @@ ENDIF
 	BCC l4
 
 	INC sec%+2
+	BEQ ovf			; Past 24 bits
 
 .l4	SEC				; sec% += (CLUST_SIZE - SECT_X)
 	LDA CLUST_SIZE
@@ -2160,6 +2161,11 @@ ENDIF
 	BNE l5
 
 	INC sec%+2
+	BNE l5
+
+.ovf
+	SEC				; Exit with C=1
+	RTS
 
 .l5 ; fall into mm32_lba_to_256	JMP mm32_lba_to_256
 }
