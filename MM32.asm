@@ -1883,6 +1883,16 @@ IF _MM32_DRENAME
 	; Read first parameter
 	CLC
 	JSR mm32_param_filename
+	BCS badname
+
+	; Check it is a file name (not "." or ".."), keeping Y for the
+	; second parameter
+	TYA
+	PHA
+	JSR mm32_check_filename
+	PLA
+	TAY
+	BCC badname
 
 	; Save it for later
 	JSR mm32_swap_str_16_32
@@ -1890,6 +1900,7 @@ IF _MM32_DRENAME
 	; Read the second parameter
 	CLC
 	JSR mm32_param_filename
+	BCS badname
 
 	; Check the name is sensible
 	JSR mm32_check_filename
@@ -1925,11 +1936,13 @@ IF _MM32_DRENAME
 }
 
 \\ Check that the filename at mm32_str%+16 is valid
-\\ This is for names of created files - "." and ".." are not valid
+\\ This is for names of created files - "." and ".." are not valid,
+\\ and the name must fit 8.3, as it is written into the directory entry
 .mm32_check_filename
 {
 	str = mm32_str%+16
 	numdots = &BA
+	partleft = &BB	; characters still allowed in this part, plus one
 
 	LDA str
 	CMP #mm32_hash
@@ -1942,6 +1955,8 @@ IF _MM32_DRENAME
 
 	LDX #1
 	STX numdots   ; How many more dots we will allow
+	LDA #8+1
+	STA partleft  ; Up to 8 characters before the dot
 
 .checknameloop
 	LDA str,X
@@ -1955,7 +1970,13 @@ IF _MM32_DRENAME
 	BNE notdot
 	DEC numdots
 	BMI badname
+	LDA #3+1
+	STA partleft  ; Up to 3 characters after it
+	BNE checknameloop ; always
+
 .notdot
+	DEC partleft
+	BEQ badname
 
 	LDY #invalid_chars_end-invalid_chars
 .checkcharloop
