@@ -6140,7 +6140,6 @@ IF _INCLUDE_CMD_FORM_VERIFY_
 ;;{
 {
 	STA &C9
-	STA &B2				; If -ve, check go ok, calc. memory
 	BPL vform3_ok			; If verifying
 
 	JSR Param_SyntaxErrorIfNull	; Get number of tracks (40/80)
@@ -6160,6 +6159,8 @@ ENDIF
 	JMP errSYNTAX
 
 .vform3_ok
+	LDA &C9				; Set after Param_ReadNum, which uses &B2
+	STA &B2				; If -ve, check go ok, calc. memory
 	JSR GSINIT_A
 	STY &CA
 	BNE vform5_driveloop
