@@ -1589,23 +1589,6 @@ ENDIF
 ;	jsr mm32_prtcurdrv
 ;	jsr PrintNewLine
 
-	tbl = mm32_drvtbl%
-	MaxLen = 16
-
-	LDX #0
-	LDA CurrentDrv
-	ASL A
-	ASL A
-	ASL A
-	ASL A
-	TAY
-	LDA #' '
-.s0 STA tbl,Y
-	INX
-    INY
-	CPX #MaxLen
-	BNE s0
-
 	LDY #0
 	;JMP mm32_clear_cluster_index
 }
@@ -1620,7 +1603,8 @@ ENDIF
 
 \\ Reset cluster number in CHAIN_INDEX
 \\ On entry: X=index, Y=attributes
-\\ Note, for directory 0 = root, for drives it means they are "empty".
+\\ Note, for directory 0 = root, for drives it means they are "empty",
+\\ and the drive's name in mm32_drvtbl% is cleared for *DDRIVE.
 .mm32_clear_cluster_index_x
 {
 	JSR CheckCRC7		; X preserved
@@ -1629,6 +1613,17 @@ ENDIF
 	STA CHAIN_INDEX+3,X
 	TYA
 	STA CHAIN_INDEX+6,X
+	CPX #2			; X=2 is the directory, not a drive
+	BCS done
+	TXA
+	ASL A
+	ASL A
+	ASL A
+	ASL A
+	TAY
+	LDA #' '		; Not mm32_hash: *DDRIVE shows <Empty>
+	STA mm32_drvtbl%,Y
+.done
 	JMP ResetCRC7
 }
 
