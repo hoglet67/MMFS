@@ -340,12 +340,12 @@ ENDIF
 	JMP pstr_loop
 }
 
-IF _MM32_
-	\ Print space, on exit A=&20
+	\ Print spaces, not spooled like the text they pad; on exit A=&20
+.Print2Spaces
+	JSR PrintSpace
 .PrintSpace
 	LDA #' '
 	BNE PrintChrA
-ENDIF
 
 .PrintNibFullStop
 	JSR PrintNibble
@@ -397,9 +397,7 @@ ENDIF
 	JSR NibToASC
 	JMP OSWRCH
 
-	\\ Print spaces, exit C=0 A preserved
-.Print2SpacesSPL
-	JSR PrintSpaceSPL		; Print 2 spaces
+	\\ Print space, exit C=0 A preserved
 .PrintSpaceSPL
 	PHA				; Print space
 	LDA #&20
@@ -552,8 +550,8 @@ ENDIF
 	PHP
 	AND #&7F			; directory
 	BNE prt_filename_prtchr
-	JSR Print2SpacesSPL		; if no dir. print "  "
-	BEQ prt_filename_nodir		; always?
+	JSR Print2Spaces		; if no dir. print "  "
+	BNE prt_filename_nodir		; always
 .prt_filename_prtchr
 	JSR PrintChrA			; print dir
 	JSR PrintFullStop		; print "."
@@ -566,7 +564,7 @@ ENDIF
 	INY
 	DEX
 	BPL prt_filename_loop
-	JSR Print2SpacesSPL		; print "  "
+	JSR Print2Spaces		; print "  "
 	LDA #&20			; " "
 	PLP
 	BPL prt_filename_notlocked
@@ -577,7 +575,7 @@ ENDIF
 }
 
 .prt_Yspaces
-	JSR PrintSpaceSPL
+	JSR PrintSpace
 	DEY
 	BNE prt_Yspaces
 	RTS
@@ -831,7 +829,7 @@ ENDIF
 	STA &B1
 	JSR ReadFileAttribsToB0_Yoffset	; create no. str
 	LDY #&02
-	JSR PrintSpaceSPL		; print "  "
+	JSR PrintSpace			; print " "
 	JSR PrintHex3Byte		; Load address
 	JSR PrintHex3Byte		; Exec address
 	JSR PrintHex3Byte		; Length
@@ -861,7 +859,7 @@ ENDIF
 	DEX
 	BNE printhex3byte_loop
 	JSR Y_add7
-	JMP PrintSpaceSPL
+	JMP PrintSpace
 }
 
 
@@ -1173,6 +1171,12 @@ rn%=&B0
 	BMI rnnotval
 	CMP #10
 	BCS rnnotval
+IF _LARGEMMB_
+	\\ N>=1024 would give N*10>=8192 (too big) and can overflow 16 bits
+	LDX rn%+1
+	CPX #4
+	BCS rnnotval			; C=0 if not
+ENDIF
 
 	\\ N=N*2+N*8+A
 	PHA				;\ 2
@@ -1404,7 +1408,7 @@ ENDIF
 	INY
 	STY &A8
 	LDY &AB				; Y=cat offset
-	JSR Print2SpacesSPL		; print 2 spaces
+	JSR Print2Spaces		; print 2 spaces
 	JSR prt_filename_Yoffset	; Print filename
 	JMP cat_sortloop1
 }
@@ -2624,14 +2628,14 @@ ENDIF
 	LDA #&00
 	STA MA+&1075
 	LDA &C2
-	AND #&08
-	STA MA+&1074
-	BEQ ldadd_nothost
+	JSR A_rorx2and3
+	CMP #&03
+	BNE ldadd_nothost
 .SetLoadAddrToHost
 	LDA #&FF
 	STA MA+&1075
-	STA MA+&1074
 .ldadd_nothost
+	STA MA+&1074
 	RTS
 
 .LoadandEexeAddrHi2
@@ -4173,6 +4177,11 @@ lenhi       =       work  +$0007	;2MSB file length in OSFILE
 	STX dosram+$06		;x=request, hold in 3MSB of L
 .sectr1
 	LDY dcby		;undo EXT/allocation fudge
+	LDA acc			;writing (call 1 or 2)?
+	CMP #3
+	BCS sectr2		;if not then no write checks
+	JSR CheckChannelWritable_Yintch ;else "Read only"/"Locked" as BPUT would
+.sectr2
 	JSR Channel_SetDirDrv_GetCatEntry_Yintch ;ensure open file still in drive
 	JSR ChannelBufferToDisk_Yintch		;ensure buffer up-to-date on disc L6
 	LDA #$3F		;b7=0 buffer does not contain PTR, b6=0 buffer not changed
@@ -5265,6 +5274,14 @@ ENDIF
 	EQUB &C1
 	EQUS "Read only",0
 
+	\ Error unless channel Y may be written to
+.CheckChannelWritable_Yintch
+	LDA MA+&110C,Y
+	BMI errFILEREADONLY
+	LDA MA+&110E,Y
+	BMI errFILELOCKED2
+	RTS
+
 .bput_Yintchan
 	JSR RememberAXY
 	JMP bp_entry
@@ -5274,10 +5291,7 @@ ENDIF
 .bp_entry
 {
 	PHA
-	LDA MA+&110C,Y
-	BMI errFILEREADONLY
-	LDA MA+&110E,Y
-	BMI errFILELOCKED2
+	JSR CheckChannelWritable_Yintch
 	JSR Channel_SetDirDrive_Yintch
 	TYA
 	CLC
@@ -6140,7 +6154,6 @@ IF _INCLUDE_CMD_FORM_VERIFY_
 ;;{
 {
 	STA &C9
-	STA &B2				; If -ve, check go ok, calc. memory
 	BPL vform3_ok			; If verifying
 
 	JSR Param_SyntaxErrorIfNull	; Get number of tracks (40/80)
@@ -6160,6 +6173,8 @@ ENDIF
 	JMP errSYNTAX
 
 .vform3_ok
+	LDA &C9				; Set after Param_ReadNum, which uses &B2
+	STA &B2				; If -ve, check go ok, calc. memory
 	JSR GSINIT_A
 	STY &CA
 	BNE vform5_driveloop
@@ -6691,6 +6706,7 @@ errptr%=&B8
 .rmmc_j100
 	LDA #0
 	STA &100,Y
+	JSR TUBE_RELEASE		; as ReportError2 does
 	JMP &100
 }
 ENDIF
@@ -8318,7 +8334,9 @@ ENDIF
 IF NOT(_MM32_)
 IF _INCLUDE_CMD_DBASE_
 	\\ *DBASE <dno>
-	\\ Takes effect on next Ctrl-BREAK
+	\\ Takes effect at once (and is kept for the next Ctrl-BREAK); the
+	\\ drives are reloaded as at Ctrl-BREAK, as they hold disc numbers
+	\\ relative to the base
 .CMD_DBASE
 	JSR GSINIT_A
 	BEQ info
@@ -8333,7 +8351,8 @@ IF _INCLUDE_CMD_DBASE_
 	JSR LoadDiskTable
 	LDA CHUNK_BASE
 	STA MA+&E09
-	JMP SaveDiskTable
+	JSR SaveDiskTable
+	JMP MMC_LoadDisks
 .info
 	JSR PrintString
 	EQUS "MMB Base: "
@@ -8495,6 +8514,7 @@ IF _INCLUDE_CMD_DFREE_
 
 	; GetDisk returns unformatted disk
 	JSR GetDiskFirstAllX
+	BCS dffin			; No discs at all
 .dfreelp
 	BPL dffmted
 	LDX #dfFree%
