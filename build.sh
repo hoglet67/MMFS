@@ -54,17 +54,18 @@ do
     # U is normal User Port VIA based
     # T is User Port connected "TurboMMC" interface
     # E is Electron Plus One Printer Port connected interface (experimental)
-    # M is MemoryMapped IO based (typically &FE18, for BeebEm)
+    # M is Emulator/BeebFPGA Memory Mapped SPI (typically &FE18, for BeebEm)
     # P is Beeb Printer Port connected Interface (experimental)
     # C is Master Compact Expansion Port (experimental)
     # G is Mega Games Cartridge MKII
     # 1 is Pi1MHz
+    # S is ElkSD-Plus1 & ElkVGA
 
     if [ $system == "MMFS2" ]
     then
-        DEVICES="U U2 U3 T T2 T3 E M P C 1"
+        DEVICES="U U2 U3 T T2 T3 E M P C 1 S"
     else
-        DEVICES="U U2 U3 T T2 T3 E M P C G 1"
+        DEVICES="U U2 U3 T T2 T3 E M P C G 1 S"
     fi
 
     for device in $DEVICES
@@ -96,6 +97,9 @@ do
         if [ $device == "E" ]
         then
             filelist="top_E*.asm top_MAMMFS.asm top_MMFS.asm top_ZEMMFS.asm"
+        elif [ $device == "S" ]
+        then
+            filelist="top_R*.asm top_ZEMMFS.asm"
         elif [ $device == "G" ]
         then
             filelist="top_MGC*.asm"
@@ -106,7 +110,7 @@ do
         then
             filelist="top_MMFS*.asm top_MAMMFS*.asm top_SWMMFS*.asm top_ZMMFS.asm"
         else
-            filelist="top_*MMFS*.asm"
+            filelist="top_E*.asm top_MAMMFS*.asm top_MMFS*.asm top_SWMMFS*.asm top_Z*.asm"
         fi
 
         for top in $filelist
@@ -135,14 +139,21 @@ do
                 exit
             fi
 
-            # Create the .inf file
-            echo -e "\$."${name}"\t8000\t8000" > ${build}/${name}.inf
+            # Exclude the Ramtop ESD128 build to avoid accidents!
+            # (the right way to use this is the ZEMMFS wrapper)
 
-            # Add into the SSD
-            tools/mmb_utils/putfile.pl ${ssd} ${build}/${name}
+            if [ "${name}" != "RESD128" ]
+            then
 
-            # Delete the .inf file
-            rm -f ${build}/${name}.inf
+                # Create the .inf file
+                echo -e "\$."${name}"\t8000\t8000" > ${build}/${name}.inf
+
+                # Add into the SSD
+                tools/mmb_utils/putfile.pl ${ssd} ${build}/${name}
+
+                # Delete the .inf file
+                rm -f ${build}/${name}.inf
+            fi
 
             # Report end of code
             grep "code ends at" ${build}/${name}.log
@@ -176,5 +187,9 @@ do
     do
         mv build/${device} build/${system}
     done
+
+    # Manually adjust the artefacts in the Ramtop builds
+    cat build/${system}/S/RESD128.log >> build/${system}/S/ZEMMFS.log
+    rm -f build/${system}/S/RESD128.*
 
 done # for system in mmfs mmfs2
